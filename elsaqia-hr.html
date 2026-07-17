@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#111827">
+<title>الساقية | الشؤون الإدارية</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+:root{
+  --navy-950:#0b1220; --navy-900:#111827; --navy-800:#1a2436; --navy-700:#1f2937;
+  --slate-500:#64748b; --slate-300:#cbd5e1; --slate-100:#f1f5f9;
+  --paper:#f7f6f3; --surface:#ffffff; --border:#e6e2d9;
+  --ac-700:#9a4a0a; --ac-600:#b45309; --ac-500:#d97706; --ac-100:#fef3e2; --ac-pale:#fdf8f0;
+  --ok-700:#166534; --ok-600:#16a34a; --ok-100:#dcfce7;
+  --danger-600:#dc2626; --danger-100:#fee2e2;
+  --warn-600:#ca8a04; --warn-100:#fef9c3;
+  --r:14px; --rs:9px; --shadow:0 1px 3px rgba(15,23,32,.06),0 1px 2px rgba(15,23,32,.04);
+  --shadow-lg:0 10px 30px rgba(15,23,32,.12);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'Cairo',sans-serif;color:var(--navy-900);background:var(--paper)}
+#app,#auth-screen{height:100%}
+.hidden{display:none!important}
+button,input,select,textarea{font-family:'Cairo',sans-serif}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-thumb{background:var(--slate-300);border-radius:8px}
+
+/* ── AUTH ── */
+#auth-screen{display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 30% 20%,#1a2436 0%,var(--navy-950) 60%);padding:20px}
+.auth-card{width:100%;max-width:380px;background:var(--surface);border-radius:var(--r);box-shadow:var(--shadow-lg);padding:36px 30px;text-align:center}
+.auth-logo{width:62px;height:62px;border-radius:16px;background:linear-gradient(135deg,var(--ac-600),var(--ac-500));display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:26px;color:#fff}
+.auth-title{font-size:19px;font-weight:800;color:var(--navy-900)}
+.auth-sub{font-size:12.5px;color:var(--slate-500);margin-top:4px;margin-bottom:24px}
+.fg{margin-bottom:14px;text-align:right}
+.fl{display:block;font-size:12px;font-weight:700;color:var(--slate-500);margin-bottom:5px}
+.fc{width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:var(--rs);font-size:14px;color:var(--navy-900);background:#fafaf8;outline:none;transition:.15s}
+.fc:focus{border-color:var(--ac-500);background:#fff;box-shadow:0 0 0 3px var(--ac-100)}
+.auth-btn{width:100%;padding:13px;margin-top:6px;background:linear-gradient(135deg,var(--ac-600),var(--ac-500));color:#fff;border:none;border-radius:var(--rs);font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:.15s}
+.auth-btn:hover{filter:brightness(1.06)}
+.auth-btn:disabled{opacity:.6;cursor:default}
+.auth-err{color:var(--danger-600);font-size:12.5px;margin-top:12px;min-height:16px;font-weight:600}
+
+/* ── LAYOUT ── */
+#app{display:flex}
+.sidebar{width:250px;flex-shrink:0;background:var(--navy-950);color:#fff;display:flex;flex-direction:column;height:100vh;position:sticky;top:0}
+.sb-brand{padding:22px 20px 18px;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(255,255,255,.08)}
+.sb-brand-ic{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--ac-600),var(--ac-500));display:flex;align-items:center;justify-content:center;font-size:15px}
+.sb-brand-txt{font-size:14.5px;font-weight:800}
+.sb-brand-sub{font-size:10.5px;color:rgba(255,255,255,.45)}
+.sb-nav{flex:1;overflow-y:auto;padding:14px 12px}
+.nav-group-lbl{font-size:10.5px;color:rgba(255,255,255,.35);font-weight:700;padding:14px 10px 6px;text-transform:uppercase;letter-spacing:.5px}
+.nav-link{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:9px;color:rgba(255,255,255,.7);font-size:13.5px;font-weight:600;cursor:pointer;transition:.15s;margin-bottom:2px}
+.nav-link i{width:18px;text-align:center;font-size:14px}
+.nav-link:hover{background:rgba(255,255,255,.06);color:#fff}
+.nav-link.active{background:linear-gradient(135deg,var(--ac-700),var(--ac-600));color:#fff}
+.nav-link.soon{opacity:.4;cursor:default}
+.nav-link.soon:hover{background:none;color:rgba(255,255,255,.7)}
+.soon-tag{margin-inline-start:auto;font-size:9px;background:rgba(255,255,255,.1);padding:2px 6px;border-radius:5px}
+.sb-user{padding:14px;border-top:1px solid rgba(255,255,255,.08)}
+.sb-user-row{display:flex;align-items:center;gap:9px;margin-bottom:10px}
+.sb-avatar{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,var(--ac-600),var(--ac-500));display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0}
+.sb-user-name{font-size:12.5px;font-weight:700}
+.sb-user-role{font-size:10.5px;color:rgba(255,255,255,.4)}
+.logout-btn{width:100%;padding:9px;border-radius:9px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.6);cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;gap:6px}
+.logout-btn:hover{background:rgba(255,255,255,.1);color:#fff}
+
+.main{flex:1;min-width:0;padding:26px 30px;max-width:1400px}
+.page{display:none}
+.page.active{display:block}
+.ph{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:22px}
+.ph-title{font-size:21px;font-weight:800;color:var(--navy-900)}
+.ph-sub{font-size:12.5px;color:var(--slate-500);margin-top:3px}
+.ph-acts{display:flex;gap:8px;flex-wrap:wrap}
+
+/* ── COMPONENTS ── */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden;margin-bottom:16px}
+.card-body{padding:20px}
+.btn{padding:9px 16px;border-radius:var(--rs);font-size:13px;font-weight:700;cursor:pointer;border:none;display:inline-flex;align-items:center;gap:7px;transition:.15s;white-space:nowrap}
+.btn-ac{background:linear-gradient(135deg,var(--ac-600),var(--ac-500));color:#fff}
+.btn-ac:hover{filter:brightness(1.06)}
+.btn-navy{background:var(--navy-900);color:#fff}
+.btn-ghost{background:#fff;border:1.5px solid var(--border);color:var(--navy-900)}
+.btn-ghost:hover{background:var(--slate-100)}
+.btn-red{background:var(--danger-100);color:var(--danger-600)}
+.btn-red:hover{background:#fecaca}
+.btn-sm{padding:6px 11px;font-size:12px}
+.btn-xs{padding:4px 8px;font-size:11px}
+.btn-ic{padding:6px 9px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-bottom:22px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:18px;box-shadow:var(--shadow)}
+.stat-ic{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;margin-bottom:10px}
+.stat-val{font-size:24px;font-weight:900;color:var(--navy-900)}
+.stat-lbl{font-size:12px;color:var(--slate-500);margin-top:2px}
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{background:var(--slate-100);color:var(--slate-500);font-size:11.5px;font-weight:700;text-align:right;padding:11px 14px}
+.tbl td{padding:11px 14px;font-size:13px;border-top:1px solid var(--border);color:var(--navy-900)}
+.tbl tr:hover td{background:#fafaf8}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.bg-ok{background:var(--ok-100);color:var(--ok-700)}
+.bg-danger{background:var(--danger-100);color:var(--danger-600)}
+.bg-ac{background:var(--ac-100);color:var(--ac-700)}
+.bg-slate{background:var(--slate-100);color:var(--slate-500)}
+.empty{text-align:center;padding:50px 20px;color:var(--slate-500)}
+.empty i{font-size:34px;margin-bottom:12px;opacity:.4}
+.empty p{font-size:13px;max-width:340px;margin:0 auto}
+.frow{display:grid;gap:12px}
+.frow.c2{grid-template-columns:1fr 1fr}
+.frow.c3{grid-template-columns:1fr 1fr 1fr}
+@media(max-width:640px){.frow.c2,.frow.c3{grid-template-columns:1fr}}
+
+/* ── MODAL ── */
+.overlay{position:fixed;inset:0;background:rgba(11,18,32,.55);display:flex;align-items:center;justify-content:center;z-index:200;padding:16px;opacity:0;pointer-events:none;transition:opacity .15s}
+.overlay.open{opacity:1;pointer-events:auto}
+.modal{background:#fff;border-radius:var(--r);width:100%;max-width:520px;max-height:90vh;display:flex;flex-direction:column;box-shadow:var(--shadow-lg)}
+.mh{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border)}
+.mh-title{font-size:15.5px;font-weight:800}
+.mclose{background:none;border:none;font-size:20px;color:var(--slate-500);cursor:pointer;line-height:1}
+.mb{padding:20px;overflow-y:auto}
+.mf{display:flex;justify-content:flex-end;gap:8px;padding:14px 20px;border-top:1px solid var(--border)}
+
+/* ── TOAST ── */
+#toast-wrap{position:fixed;bottom:20px;left:20px;z-index:400;display:flex;flex-direction:column;gap:8px}
+.toast{background:var(--navy-900);color:#fff;padding:12px 18px;border-radius:9px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:9px;box-shadow:var(--shadow-lg);animation:toastIn .2s}
+.toast.success{background:var(--ok-700)}
+.toast.error{background:var(--danger-600)}
+@keyframes toastIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── MOBILE ── */
+.mbtn{display:none}
+@media(max-width:900px){
+  .sidebar{position:fixed;right:0;top:0;z-index:150;transform:translateX(100%);transition:transform .2s}
+  .sidebar.open{transform:translateX(0)}
+  .main{padding:18px 16px;width:100%}
+  .mbtn{display:flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:9px;background:var(--navy-900);color:#fff;border:none;font-size:16px;cursor:pointer;margin-bottom:14px}
+  #sb-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:140}
+  #sb-backdrop.open{display:block}
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════ AUTH ══════════ -->
+<div id="auth-screen">
+  <div class="auth-card">
+    <div class="auth-logo"><i class="fas fa-users"></i></div>
+    <div class="auth-title">الشؤون الإدارية</div>
+    <div class="auth-sub">شركة الساقية</div>
+    <div class="fg">
+      <label class="fl">البريد الإلكتروني</label>
+      <input class="fc" id="a-email" type="email" placeholder="example@elsaqia.com" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <div class="fg">
+      <label class="fl">كلمة المرور</label>
+      <input class="fc" id="a-pass" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="auth-btn" id="login-btn" onclick="doLogin()"><i class="fas fa-sign-in-alt"></i>دخول</button>
+    <div class="auth-err" id="auth-err"></div>
+  </div>
+</div>
+
+<!-- ══════════ APP ══════════ -->
+<div id="app" class="hidden">
+  <div id="sb-backdrop" onclick="toggleSidebar(false)"></div>
+  <div class="sidebar" id="sidebar">
+    <div class="sb-brand">
+      <div class="sb-brand-ic"><i class="fas fa-users"></i></div>
+      <div>
+        <div class="sb-brand-txt">الشؤون الإدارية</div>
+        <div class="sb-brand-sub">شركة الساقية</div>
+      </div>
+    </div>
+    <div class="sb-nav">
+      <div class="nav-group-lbl">الرئيسية</div>
+      <div class="nav-link" data-page="dashboard" onclick="goPage('dashboard')"><i class="fas fa-th-large"></i>لوحة التحكم</div>
+
+      <div class="nav-group-lbl">الموظفين</div>
+      <div class="nav-link" data-page="employees" onclick="goPage('employees')"><i class="fas fa-id-card"></i>الموظفين</div>
+      <div class="nav-link" data-page="departments" onclick="goPage('departments')"><i class="fas fa-sitemap"></i>الأقسام</div>
+
+      <div class="nav-group-lbl">قريباً</div>
+      <div class="nav-link soon"><i class="fas fa-fingerprint"></i>الحضور والانصراف<span class="soon-tag">قريباً</span></div>
+      <div class="nav-link soon"><i class="fas fa-calendar-minus"></i>الإجازات<span class="soon-tag">قريباً</span></div>
+      <div class="nav-link soon"><i class="fas fa-file-invoice-dollar"></i>المصاريف الإدارية<span class="soon-tag">قريباً</span></div>
+    </div>
+    <div class="sb-user">
+      <div class="sb-user-row">
+        <div class="sb-avatar" id="sb-avatar-txt">?</div>
+        <div>
+          <div class="sb-user-name" id="sb-user-name">—</div>
+          <div class="sb-user-role" id="sb-user-role">—</div>
+        </div>
+      </div>
+      <button class="logout-btn" onclick="doLogout()"><i class="fas fa-sign-out-alt"></i>تسجيل الخروج</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <button class="mbtn" onclick="toggleSidebar(true)"><i class="fas fa-bars"></i></button>
+
+    <!-- DASHBOARD -->
+    <div class="page" id="page-dashboard">
+      <div class="ph"><div><div class="ph-title">لوحة التحكم</div><div class="ph-sub" id="dash-date"></div></div></div>
+      <div class="stats" id="dash-stats"></div>
+      <div class="card"><div class="card-body" id="dash-depts"></div></div>
+    </div>
+
+    <!-- EMPLOYEES -->
+    <div class="page" id="page-employees">
+      <div class="ph">
+        <div><div class="ph-title">الموظفين</div><div class="ph-sub" id="emp-count-sub">—</div></div>
+        <div class="ph-acts">
+          <select class="fc" id="emp-filter-dept" style="max-width:170px" onchange="renderEmployees()"><option value="">كل الأقسام</option></select>
+          <button class="btn btn-ac btn-sm" onclick="openEmpModal()"><i class="fas fa-plus"></i>إضافة موظف</button>
+        </div>
+      </div>
+      <div class="card"><table class="tbl">
+        <thead><tr><th>الاسم</th><th>الوظيفة</th><th>القسم</th><th>تاريخ التعيين</th><th>الحالة</th><th></th></tr></thead>
+        <tbody id="emp-body"></tbody>
+      </table></div>
+    </div>
+
+    <!-- DEPARTMENTS -->
+    <div class="page" id="page-departments">
+      <div class="ph">
+        <div><div class="ph-title">الأقسام</div><div class="ph-sub">أقسام الشركة ومدير كل قسم</div></div>
+        <div class="ph-acts"><button class="btn btn-ac btn-sm" onclick="openDeptModal()"><i class="fas fa-plus"></i>قسم جديد</button></div>
+      </div>
+      <div class="stats" id="dept-cards"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ MODALS ══════════ -->
+<div class="overlay" id="mo-emp">
+  <div class="modal">
+    <div class="mh"><span class="mh-title" id="emp-modal-title">إضافة موظف</span><button class="mclose" onclick="closeM('mo-emp')">×</button></div>
+    <div class="mb">
+      <div class="fg"><label class="fl">الاسم الكامل</label><input class="fc" id="emp-name" placeholder="اسم الموظف"></div>
+      <div class="frow c2">
+        <div class="fg"><label class="fl">الوظيفة</label><input class="fc" id="emp-job" placeholder="مثال: عامل إنتاج"></div>
+        <div class="fg"><label class="fl">القسم</label><select class="fc" id="emp-dept"></select></div>
+      </div>
+      <div class="frow c2">
+        <div class="fg"><label class="fl">تاريخ التعيين</label><input class="fc" type="date" id="emp-hire"></div>
+        <div class="fg"><label class="fl">الراتب الأساسي (ج.م)</label><input class="fc" type="number" id="emp-salary" placeholder="0"></div>
+      </div>
+      <div class="frow c2">
+        <div class="fg"><label class="fl">رقم الهاتف</label><input class="fc" id="emp-phone" placeholder="01xxxxxxxxx"></div>
+        <div class="fg"><label class="fl">الرقم القومي</label><input class="fc" id="emp-nid" placeholder="14 رقم" maxlength="14"></div>
+      </div>
+      <div class="frow c2">
+        <div class="fg"><label class="fl">الحالة</label><select class="fc" id="emp-status"><option value="active">شغال</option><option value="resigned">مستقيل</option></select></div>
+        <div class="fg" style="display:flex;align-items:flex-end;padding-bottom:9px">
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--navy-900);cursor:pointer">
+            <input type="checkbox" id="emp-ismanager" style="width:16px;height:16px;cursor:pointer">
+            مدير القسم ده؟
+          </label>
+        </div>
+      </div>
+    </div>
+    <div class="mf">
+      <button class="btn btn-ghost" onclick="closeM('mo-emp')">إلغاء</button>
+      <button class="btn btn-ac" onclick="saveEmployee()"><i class="fas fa-save"></i>حفظ</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="mo-dept">
+  <div class="modal" style="max-width:400px">
+    <div class="mh"><span class="mh-title" id="dept-modal-title">قسم جديد</span><button class="mclose" onclick="closeM('mo-dept')">×</button></div>
+    <div class="mb">
+      <div class="fg"><label class="fl">اسم القسم</label><input class="fc" id="dept-name" placeholder="مثال: الإنتاج"></div>
+    </div>
+    <div class="mf">
+      <button class="btn btn-ghost" onclick="closeM('mo-dept')">إلغاء</button>
+      <button class="btn btn-ac" onclick="saveDept()"><i class="fas fa-save"></i>حفظ</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-wrap"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, collection, doc, getDoc, getDocs, setDoc, addDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDEK9oIQQYWy2btXVQWIB64cQGUsjMf6j8",
+  authDomain: "elsaqia-hr.firebaseapp.com",
+  projectId: "elsaqia-hr",
+  storageBucket: "elsaqia-hr.firebasestorage.app",
+  messagingSenderId: "456385817910",
+  appId: "1:456385817910:web:c890a984bc41f200949797"
+};
+const fbApp = initializeApp(firebaseConfig);
+const auth  = getAuth(fbApp);
+const db    = getFirestore(fbApp);
+
+let CU = null;          // current user {id,email,displayName,role}
+let _page = 'dashboard';
+let _departments = [];
+let _employees = [];
+let _unsubs = [];
+const DEFAULT_DEPTS = ['المعمل','المخزن','الإنتاج','الإدارة'];
+
+// ══════════════════════════════════════════════
+// AUTH
+// ══════════════════════════════════════════════
+window.doLogin = async () => {
+  const email = document.getElementById('a-email').value.trim();
+  const pass  = document.getElementById('a-pass').value;
+  const err   = document.getElementById('auth-err');
+  const btn   = document.getElementById('login-btn');
+  err.textContent = '';
+  if (!email || !pass) { err.textContent = 'يرجى إدخال البريد وكلمة المرور'; return; }
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الدخول...';
+  try {
+    await signInWithEmailAndPassword(auth, email, pass);
+  } catch (e) {
+    const code = e.code || '';
+    if (['auth/invalid-credential','auth/wrong-password','auth/user-not-found'].includes(code)) {
+      err.textContent = 'بريد إلكتروني أو كلمة مرور خاطئة';
+    } else if (code === 'auth/network-request-failed') {
+      err.textContent = 'لا يوجد اتصال بالإنترنت';
+    } else {
+      err.textContent = 'خطأ: ' + (e.message || code);
+    }
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-sign-in-alt"></i>دخول';
+  }
+};
+
+window.doLogout = async () => { await signOut(auth); };
+
+onAuthStateChanged(auth, async user => {
+  if (user) {
+    const uref = doc(db,'users',user.uid);
+    const udoc = await getDoc(uref);
+    if (udoc.exists()) {
+      CU = { id:user.uid, ...udoc.data() };
+    } else {
+      // أول شخص يسجل دخول على حساب مالوش ملف Firestore بيتحط أدمن تلقائياً (نفس نظام الساقية الأساسي)
+      CU = { id:user.uid, email:user.email, displayName:user.email.split('@')[0], role:'admin', createdAt:Date.now() };
+      await setDoc(uref, CU);
+    }
+    document.getElementById('auth-screen').classList.add('hidden');
+    document.getElementById('app').classList.remove('hidden');
+    setupUI();
+    await ensureDefaultDepartments();
+    startListeners();
+    goPage('dashboard');
+  } else {
+    CU = null;
+    _unsubs.forEach(u=>u()); _unsubs = [];
+    document.getElementById('auth-screen').classList.remove('hidden');
+    document.getElementById('app').classList.add('hidden');
+    document.getElementById('a-email').value = '';
+    document.getElementById('a-pass').value = '';
+    document.getElementById('login-btn').disabled = false;
+    document.getElementById('login-btn').innerHTML = '<i class="fas fa-sign-in-alt"></i>دخول';
+  }
+});
+
+const ROLE_LABELS = { admin:'أدمن', manager:'مدير قسم', employee:'موظف' };
+function setupUI() {
+  document.getElementById('sb-user-name').textContent = CU.displayName || CU.email;
+  document.getElementById('sb-user-role').textContent = ROLE_LABELS[CU.role] || CU.role;
+  document.getElementById('sb-avatar-txt').textContent = (CU.displayName||CU.email||'?').charAt(0).toUpperCase();
+}
+
+// أول مرة النظام يشتغل، يتأكد إن الأقسام الأربعة الأساسية موجودة
+async function ensureDefaultDepartments() {
+  const snap = await getDocs(collection(db,'departments'));
+  if (!snap.empty) return;
+  for (const name of DEFAULT_DEPTS) {
+    await addDoc(collection(db,'departments'), { name, managerEmployeeId:null, createdAt:Date.now() });
+  }
+}
+
+// ══════════════════════════════════════════════
+// REALTIME LISTENERS
+// ══════════════════════════════════════════════
+function startListeners() {
+  _unsubs.push(
+    onSnapshot(query(collection(db,'departments'), orderBy('createdAt','asc')), s=>{
+      _departments = s.docs.map(d=>({id:d.id,...d.data()}));
+      refreshDeptSelects();
+      if (_page==='departments') renderDepartments();
+      if (_page==='dashboard') renderDashboard();
+      if (_page==='employees') renderEmployees();
+    }),
+    onSnapshot(query(collection(db,'employees'), orderBy('createdAt','desc')), s=>{
+      _employees = s.docs.map(d=>({id:d.id,...d.data()}));
+      if (_page==='employees') renderEmployees();
+      if (_page==='dashboard') renderDashboard();
+      if (_page==='departments') renderDepartments();
+    })
+  );
+}
+
+// ══════════════════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════════════════
+window.goPage = (name) => {
+  _page = name;
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+name)?.classList.add('active');
+  document.querySelectorAll('.nav-link').forEach(n=>n.classList.toggle('active', n.dataset.page===name));
+  toggleSidebar(false);
+  const renders = { dashboard:renderDashboard, employees:renderEmployees, departments:renderDepartments };
+  renders[name]?.();
+};
+
+window.toggleSidebar = (open) => {
+  document.getElementById('sidebar').classList.toggle('open', open);
+  document.getElementById('sb-backdrop').classList.toggle('open', open);
+};
+
+// ══════════════════════════════════════════════
+// DASHBOARD
+// ══════════════════════════════════════════════
+function renderDashboard() {
+  document.getElementById('dash-date').textContent = new Date().toLocaleDateString('ar-EG', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+  const active = _employees.filter(e=>e.status!=='resigned');
+  document.getElementById('dash-stats').innerHTML = `
+    <div class="stat-card"><div class="stat-ic bg-ac"><i class="fas fa-id-card"></i></div><div class="stat-val">${active.length}</div><div class="stat-lbl">موظف شغال</div></div>
+    <div class="stat-card"><div class="stat-ic bg-slate"><i class="fas fa-sitemap"></i></div><div class="stat-val">${_departments.length}</div><div class="stat-lbl">قسم</div></div>
+    <div class="stat-card"><div class="stat-ic bg-danger"><i class="fas fa-user-slash"></i></div><div class="stat-val">${_employees.filter(e=>e.status==='resigned').length}</div><div class="stat-lbl">مستقيل</div></div>
+  `;
+  const rows = _departments.map(d=>{
+    const cnt = _employees.filter(e=>e.departmentId===d.id && e.status!=='resigned').length;
+    const mgr = _employees.find(e=>e.id===d.managerEmployeeId);
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="width:34px;height:34px;border-radius:9px;background:var(--slate-100);display:flex;align-items:center;justify-content:center"><i class="fas fa-sitemap" style="color:var(--slate-500);font-size:13px"></i></div>
+        <div><div style="font-weight:700;font-size:13.5px">${d.name}</div><div style="font-size:11px;color:var(--slate-500)">${mgr?'مديرها: '+mgr.name:'مفيش مدير معيّن'}</div></div>
+      </div>
+      <div class="badge bg-ac">${cnt} موظف</div>
+    </div>`;
+  }).join('');
+  document.getElementById('dash-depts').innerHTML = `<div style="font-weight:800;font-size:14px;margin-bottom:6px">الأقسام</div>${rows || '<div class="empty"><i class="fas fa-sitemap"></i><p>لسه مفيش أقسام</p></div>'}`;
+}
+
+// ══════════════════════════════════════════════
+// DEPARTMENTS
+// ══════════════════════════════════════════════
+function refreshDeptSelects() {
+  const opts = '<option value="">— اختر —</option>' + _departments.map(d=>`<option value="${d.id}">${d.name}</option>`).join('');
+  const s1 = document.getElementById('emp-dept'); if (s1) s1.innerHTML = opts;
+  const s2 = document.getElementById('emp-filter-dept');
+  if (s2) s2.innerHTML = '<option value="">كل الأقسام</option>' + _departments.map(d=>`<option value="${d.id}">${d.name}</option>`).join('');
+}
+
+function renderDepartments() {
+  const el = document.getElementById('dept-cards');
+  if (!_departments.length) { el.innerHTML = '<div class="empty"><i class="fas fa-sitemap"></i><p>لسه مفيش أقسام مضافة</p></div>'; return; }
+  el.innerHTML = _departments.map(d=>{
+    const cnt = _employees.filter(e=>e.departmentId===d.id && e.status!=='resigned').length;
+    const mgr = _employees.find(e=>e.id===d.managerEmployeeId);
+    return `<div class="stat-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div class="stat-ic bg-ac" style="margin-bottom:0"><i class="fas fa-sitemap"></i></div>
+        <div style="display:flex;gap:4px">
+          <button class="btn btn-ghost btn-ic btn-xs" onclick="openDeptModal('${d.id}')"><i class="fas fa-edit"></i></button>
+          <button class="btn btn-red btn-ic btn-xs" onclick="deleteDept('${d.id}')"><i class="fas fa-trash"></i></button>
+        </div>
+      </div>
+      <div style="font-weight:800;font-size:15px;color:var(--navy-900)">${d.name}</div>
+      <div style="font-size:12px;color:var(--slate-500);margin-top:4px">${cnt} موظف${mgr?' — مديرها '+mgr.name:''}</div>
+    </div>`;
+  }).join('');
+}
+
+window.openDeptModal = (id=null) => {
+  window._editDeptId = id;
+  const d = id ? _departments.find(x=>x.id===id) : null;
+  document.getElementById('dept-modal-title').textContent = id ? 'تعديل قسم' : 'قسم جديد';
+  document.getElementById('dept-name').value = d ? d.name : '';
+  openM('mo-dept');
+};
+
+window.saveDept = async () => {
+  const name = document.getElementById('dept-name').value.trim();
+  if (!name) { toast('اكتب اسم القسم', 'error'); return; }
+  try {
+    if (window._editDeptId) {
+      await updateDoc(doc(db,'departments',window._editDeptId), { name });
+      toast('تم تعديل القسم', 'success');
+    } else {
+      await addDoc(collection(db,'departments'), { name, managerEmployeeId:null, createdAt:Date.now() });
+      toast('تم إضافة القسم', 'success');
+    }
+    closeM('mo-dept');
+  } catch(e) { toast('خطأ: '+e.message, 'error'); }
+};
+
+window.deleteDept = async (id) => {
+  const usedBy = _employees.filter(e=>e.departmentId===id && e.status!=='resigned').length;
+  if (usedBy>0) { toast(`القسم ده فيه ${usedBy} موظف — انقلهم لقسم تاني الأول`, 'error'); return; }
+  if (!confirm('متأكد من حذف القسم ده؟')) return;
+  try { await deleteDoc(doc(db,'departments',id)); toast('تم الحذف', 'success'); }
+  catch(e) { toast('خطأ: '+e.message, 'error'); }
+};
+
+// ══════════════════════════════════════════════
+// EMPLOYEES
+// ══════════════════════════════════════════════
+function renderEmployees() {
+  const filterDept = document.getElementById('emp-filter-dept')?.value || '';
+  const list = filterDept ? _employees.filter(e=>e.departmentId===filterDept) : _employees;
+  document.getElementById('emp-count-sub').textContent = `${list.length} موظف`;
+  if (!list.length) {
+    document.getElementById('emp-body').innerHTML = `<tr><td colspan="6"><div class="empty"><i class="fas fa-id-card"></i><p>لسه مفيش موظفين مضافين</p></div></td></tr>`;
+    return;
+  }
+  document.getElementById('emp-body').innerHTML = list.map(e=>{
+    const dept = _departments.find(d=>d.id===e.departmentId);
+    const statusBadge = e.status==='resigned' ? '<span class="badge bg-danger">مستقيل</span>' : '<span class="badge bg-ok">شغال</span>';
+    return `<tr>
+      <td style="font-weight:700">${e.name}${e.isManager?' <span class="badge bg-ac" style="margin-right:4px"><i class="fas fa-star"></i> مدير</span>':''}</td>
+      <td>${e.jobTitle||'—'}</td>
+      <td>${dept?dept.name:'—'}</td>
+      <td style="font-size:12px;color:var(--slate-500)">${e.hireDate||'—'}</td>
+      <td>${statusBadge}</td>
+      <td style="display:flex;gap:4px">
+        <button class="btn btn-ghost btn-ic btn-xs" onclick="openEmpModal('${e.id}')"><i class="fas fa-edit"></i></button>
+        <button class="btn btn-red btn-ic btn-xs" onclick="deleteEmployee('${e.id}')"><i class="fas fa-trash"></i></button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+window.renderEmployees = renderEmployees;
+
+window.openEmpModal = (id=null) => {
+  window._editEmpId = id;
+  const e = id ? _employees.find(x=>x.id===id) : null;
+  document.getElementById('emp-modal-title').textContent = id ? 'تعديل موظف' : 'إضافة موظف';
+  document.getElementById('emp-name').value = e?.name || '';
+  document.getElementById('emp-job').value = e?.jobTitle || '';
+  document.getElementById('emp-dept').value = e?.departmentId || '';
+  document.getElementById('emp-hire').value = e?.hireDate || '';
+  document.getElementById('emp-salary').value = e?.salary || '';
+  document.getElementById('emp-phone').value = e?.phone || '';
+  document.getElementById('emp-nid').value = e?.nationalId || '';
+  document.getElementById('emp-status').value = e?.status || 'active';
+  document.getElementById('emp-ismanager').checked = !!e?.isManager;
+  openM('mo-emp');
+};
+
+window.saveEmployee = async () => {
+  const name = document.getElementById('emp-name').value.trim();
+  const departmentId = document.getElementById('emp-dept').value;
+  if (!name) { toast('اكتب اسم الموظف', 'error'); return; }
+  if (!departmentId) { toast('اختر القسم', 'error'); return; }
+  const isManager = document.getElementById('emp-ismanager').checked;
+  const data = {
+    name, departmentId,
+    jobTitle: document.getElementById('emp-job').value.trim(),
+    hireDate: document.getElementById('emp-hire').value || null,
+    salary: parseFloat(document.getElementById('emp-salary').value) || 0,
+    phone: document.getElementById('emp-phone').value.trim(),
+    nationalId: document.getElementById('emp-nid').value.trim(),
+    status: document.getElementById('emp-status').value,
+    isManager
+  };
+  try {
+    let empId = window._editEmpId;
+    if (empId) {
+      await updateDoc(doc(db,'employees',empId), data);
+    } else {
+      const ref = await addDoc(collection(db,'employees'), { ...data, createdAt:Date.now() });
+      empId = ref.id;
+    }
+    // لو اتحدد كمدير للقسم ده، شيل صفة المدير من أي حد تاني في نفس القسم وحدّث القسم
+    if (isManager) {
+      const others = _employees.filter(x=>x.departmentId===departmentId && x.id!==empId && x.isManager);
+      for (const o of others) await updateDoc(doc(db,'employees',o.id), { isManager:false });
+      await updateDoc(doc(db,'departments',departmentId), { managerEmployeeId: empId });
+    } else {
+      const dept = _departments.find(d=>d.id===departmentId);
+      if (dept && dept.managerEmployeeId === empId) {
+        await updateDoc(doc(db,'departments',departmentId), { managerEmployeeId: null });
+      }
+    }
+    toast(window._editEmpId ? 'تم تعديل بيانات الموظف' : 'تم إضافة الموظف', 'success');
+    closeM('mo-emp');
+    window._editEmpId = null;
+  } catch(e) { toast('خطأ: '+e.message, 'error'); }
+};
+
+window.deleteEmployee = async (id) => {
+  if (!confirm('متأكد من حذف الموظف ده؟')) return;
+  try {
+    const e = _employees.find(x=>x.id===id);
+    if (e && e.isManager) {
+      const dept = _departments.find(d=>d.managerEmployeeId===id);
+      if (dept) await updateDoc(doc(db,'departments',dept.id), { managerEmployeeId:null });
+    }
+    await deleteDoc(doc(db,'employees',id));
+    toast('تم الحذف', 'success');
+  } catch(e) { toast('خطأ: '+e.message, 'error'); }
+};
+
+// ══════════════════════════════════════════════
+// UTILITIES: modal + toast
+// ══════════════════════════════════════════════
+window.openM = (id) => document.getElementById(id).classList.add('open');
+window.closeM = (id) => document.getElementById(id).classList.remove('open');
+window.toast = (msg, type='info') => {
+  const wrap = document.getElementById('toast-wrap');
+  const el = document.createElement('div');
+  el.className = 'toast ' + type;
+  const icon = type==='success' ? 'fa-check-circle' : type==='error' ? 'fa-exclamation-circle' : 'fa-info-circle';
+  el.innerHTML = `<i class="fas ${icon}"></i>${msg}`;
+  wrap.appendChild(el);
+  setTimeout(()=>{ el.style.opacity='0'; setTimeout(()=>el.remove(), 200); }, 3000);
+};
+</script>
+</body>
+</html>
