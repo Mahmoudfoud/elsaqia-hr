@@ -1455,8 +1455,8 @@ window.kioskShowProfile = async () => {
   body.innerHTML = '<div class="empty"><i class="fas fa-spinner fa-spin"></i><p>جاري التحميل...</p></div>';
   try {
     const [sheetsSnap, evalsSnap] = await Promise.all([
-      getDocs(query(collection(db,'monthlySheets'), where('employeeId','==',emp.id))),
-      getDocs(query(collection(db,'evaluations'), where('employeeId','==',emp.id)))
+      getDocs(query(collection(secDb,'monthlySheets'), where('employeeId','==',emp.id))),
+      getDocs(query(collection(secDb,'evaluations'), where('employeeId','==',emp.id)))
     ]);
     const sheets = {}; sheetsSnap.docs.forEach(d=>{ const v=d.data(); if (v.period && v.period.startsWith(year+'-')) sheets[v.period]=v; });
     const evals = {}; evalsSnap.docs.forEach(d=>{ const v=d.data(); if (v.period && v.period.startsWith(year+'-')) evals[v.period]=v; });
@@ -1531,7 +1531,7 @@ window.kioskDoAction = async (type) => {
         extra.overtimeApproved = false;
       }
     }
-    await addDoc(collection(db,'attendance'), {
+    await addDoc(collection(secDb,'attendance'), {
       employeeId: emp.id, employeeName: emp.name, departmentId: emp.departmentId||null,
       shiftId: shift.id, type, date: todayStr(), time: nowHM(),
       location: { lat: pos.coords.latitude, lng: pos.coords.longitude }, distanceMeters: Math.round(dist),
