@@ -1,0 +1,2504 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#111827">
+<title>الساقية | الشؤون الإدارية</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+:root{
+  --navy-950:#0b1220; --navy-900:#111827; --navy-800:#1a2436; --navy-700:#1f2937;
+  --slate-500:#64748b; --slate-300:#cbd5e1; --slate-100:#f1f5f9;
+  --paper:#f7f6f3; --surface:#ffffff; --border:#e6e2d9;
+  --ac-700:#9a4a0a; --ac-600:#b45309; --ac-500:#d97706; --ac-100:#fef3e2; --ac-pale:#fdf8f0;
+  --ok-700:#166534; --ok-600:#16a34a; --ok-100:#dcfce7;
+  --danger-600:#dc2626; --danger-100:#fee2e2;
+  --warn-600:#ca8a04; --warn-100:#fef9c3;
+  --r:14px; --rs:9px; --shadow:0 1px 3px rgba(15,23,32,.06),0 1px 2px rgba(15,23,32,.04);
+  --shadow-lg:0 10px 30px rgba(15,23,32,.12);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'Cairo',sans-serif;color:var(--navy-900);background:var(--paper)}
+#app,#auth-screen{height:100%}
+.hidden{display:none!important}
+button,input,select,textarea{font-family:'Cairo',sans-serif}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-thumb{background:var(--slate-300);border-radius:8px}
+
+/* ── AUTH ── */
+#auth-screen{display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 30% 20%,#1a2436 0%,var(--navy-950) 60%);padding:20px}
+.auth-card{width:100%;max-width:380px;background:var(--surface);border-radius:var(--r);box-shadow:var(--shadow-lg);padding:36px 30px;text-align:center}
+.auth-logo{width:62px;height:62px;border-radius:16px;background:linear-gradient(135deg,var(--ac-600),var(--ac-500));display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:26px;color:#fff}
+.auth-title{font-size:19px;font-weight:800;color:var(--navy-900)}
+.auth-sub{font-size:12.5px;color:var(--slate-500);margin-top:4px;margin-bottom:24px}
+.fg{margin-bottom:14px;text-align:right}
+.fl{display:block;font-size:12px;font-weight:700;color:var(--slate-500);margin-bottom:5px}
+.fc{width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:var(--rs);font-size:14px;color:var(--navy-900);background:#fafaf8;outline:none;transition:.15s}
+.fc:focus{border-color:var(--ac-500);background:#fff;box-shadow:0 0 0 3px var(--ac-100)}
+.auth-btn{width:100%;padding:13px;margin-top:6px;background:linear-gradient(135deg,var(--ac-600),var(--ac-500));color:#fff;border:none;border-radius:var(--rs);font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:.15s}
+.auth-btn:hover{filter:brightness(1.06)}
+.auth-btn:disabled{opacity:.6;cursor:default}
+.auth-err{color:var(--danger-600);font-size:12.5px;margin-top:12px;min-height:16px;font-weight:600}
+
+/* ── LAYOUT ── */
+#app{display:flex}
+.sidebar{width:250px;flex-shrink:0;background:var(--navy-950);color:#fff;display:flex;flex-direction:column;height:100vh;position:sticky;top:0}
+.sb-brand{padding:22px 20px 18px;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(255,255,255,.08)}
+.sb-brand-ic{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--ac-600),var(--ac-500));display:flex;align-items:center;justify-content:center;font-size:15px}
+.sb-brand-txt{font-size:14.5px;font-weight:800}
+.sb-brand-sub{font-size:10.5px;color:rgba(255,255,255,.45)}
+.sb-nav{flex:1;overflow-y:auto;padding:14px 12px}
+.nav-group-lbl{font-size:10.5px;color:rgba(255,255,255,.35);font-weight:700;padding:14px 10px 6px;text-transform:uppercase;letter-spacing:.5px}
+.nav-link{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:9px;color:rgba(255,255,255,.7);font-size:13.5px;font-weight:600;cursor:pointer;transition:.15s;margin-bottom:2px}
+.nav-link i{width:18px;text-align:center;font-size:14px}
+.nav-link:hover{background:rgba(255,255,255,.06);color:#fff}
+.nav-link.active{background:linear-gradient(135deg,var(--ac-700),var(--ac-600));color:#fff}
+.nav-link.soon{opacity:.4;cursor:default}
+.nav-link.soon:hover{background:none;color:rgba(255,255,255,.7)}
+.soon-tag{margin-inline-start:auto;font-size:9px;background:rgba(255,255,255,.1);padding:2px 6px;border-radius:5px}
+.sb-user{padding:14px;border-top:1px solid rgba(255,255,255,.08)}
+.sb-user-row{display:flex;align-items:center;gap:9px;margin-bottom:10px}
+.sb-avatar{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,var(--ac-600),var(--ac-500));display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0}
+.sb-user-name{font-size:12.5px;font-weight:700}
+.sb-user-role{font-size:10.5px;color:rgba(255,255,255,.4)}
+.logout-btn{width:100%;padding:9px;border-radius:9px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.6);cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;gap:6px}
+.logout-btn:hover{background:rgba(255,255,255,.1);color:#fff}
+
+.main{flex:1;min-width:0;padding:26px 30px;max-width:1400px}
+.page{display:none}
+.page.active{display:block}
+.ph{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:22px}
+.ph-title{font-size:21px;font-weight:800;color:var(--navy-900)}
+.ph-sub{font-size:12.5px;color:var(--slate-500);margin-top:3px}
+.ph-acts{display:flex;gap:8px;flex-wrap:wrap}
+
+/* ── COMPONENTS ── */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden;margin-bottom:16px}
+.card-body{padding:20px}
+.btn{padding:9px 16px;border-radius:var(--rs);font-size:13px;font-weight:700;cursor:pointer;border:none;display:inline-flex;align-items:center;gap:7px;transition:.15s;white-space:nowrap}
+.btn-ac{background:linear-gradient(135deg,var(--ac-600),var(--ac-500));color:#fff}
+.btn-ac:hover{filter:brightness(1.06)}
+.btn-navy{background:var(--navy-900);color:#fff}
+.btn-ghost{background:#fff;border:1.5px solid var(--border);color:var(--navy-900)}
+.btn-ghost:hover{background:var(--slate-100)}
+.btn-red{background:var(--danger-100);color:var(--danger-600)}
+.btn-red:hover{background:#fecaca}
+.btn-sm{padding:6px 11px;font-size:12px}
+.btn-xs{padding:4px 8px;font-size:11px}
+.btn-ic{padding:6px 9px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-bottom:22px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:18px;box-shadow:var(--shadow)}
+.stat-ic{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;margin-bottom:10px}
+.stat-val{font-size:24px;font-weight:900;color:var(--navy-900)}
+.stat-lbl{font-size:12px;color:var(--slate-500);margin-top:2px}
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{background:var(--slate-100);color:var(--slate-500);font-size:11.5px;font-weight:700;text-align:right;padding:11px 14px}
+.tbl td{padding:11px 14px;font-size:13px;border-top:1px solid var(--border);color:var(--navy-900)}
+.tbl tr:hover td{background:#fafaf8}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.bg-ok{background:var(--ok-100);color:var(--ok-700)}
+.bg-danger{background:var(--danger-100);color:var(--danger-600)}
+.bg-ac{background:var(--ac-100);color:var(--ac-700)}
+.bg-slate{background:var(--slate-100);color:var(--slate-500)}
+.bg-warn{background:var(--warn-100);color:var(--warn-600)}
+.empty{text-align:center;padding:50px 20px;color:var(--slate-500)}
+.empty i{font-size:34px;margin-bottom:12px;opacity:.4}
+.empty p{font-size:13px;max-width:340px;margin:0 auto}
+.frow{display:grid;gap:12px}
+.frow.c2{grid-template-columns:1fr 1fr}
+.frow.c3{grid-template-columns:1fr 1fr 1fr}
+@media(max-width:640px){.frow.c2,.frow.c3{grid-template-columns:1fr}}
+
+/* ── MODAL ── */
+.overlay{position:fixed;inset:0;background:rgba(11,18,32,.55);display:flex;align-items:center;justify-content:center;z-index:200;padding:16px;opacity:0;pointer-events:none;transition:opacity .15s}
+.overlay.open{opacity:1;pointer-events:auto}
+.modal{background:#fff;border-radius:var(--r);width:100%;max-width:520px;max-height:90vh;display:flex;flex-direction:column;box-shadow:var(--shadow-lg)}
+.mh{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border)}
+.mh-title{font-size:15.5px;font-weight:800}
+.mclose{background:none;border:none;font-size:20px;color:var(--slate-500);cursor:pointer;line-height:1}
+.mb{padding:20px;overflow-y:auto}
+.mf{display:flex;justify-content:flex-end;gap:8px;padding:14px 20px;border-top:1px solid var(--border)}
+
+/* ── TOAST ── */
+#toast-wrap{position:fixed;bottom:20px;left:20px;z-index:400;display:flex;flex-direction:column;gap:8px}
+.toast{background:var(--navy-900);color:#fff;padding:12px 18px;border-radius:9px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:9px;box-shadow:var(--shadow-lg);animation:toastIn .2s}
+.toast.success{background:var(--ok-700)}
+.toast.error{background:var(--danger-600)}
+@keyframes toastIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── MOBILE ── */
+.mbtn{display:none}
+@media(max-width:900px){
+  .sidebar{position:fixed;right:0;top:0;z-index:150;transform:translateX(100%);transition:transform .2s}
+  .sidebar.open{transform:translateX(0)}
+  .main{padding:18px 16px;width:100%}
+  .mbtn{display:flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:9px;background:var(--navy-900);color:#fff;border:none;font-size:16px;cursor:pointer;margin-bottom:14px}
+  #sb-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:140}
+  #sb-backdrop.open{display:block}
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════ AUTH ══════════ -->
+<div id="auth-screen">
+  <div class="auth-card">
+    <div class="auth-logo"><i class="fas fa-users"></i></div>
+    <div class="auth-title">الشؤون الإدارية</div>
+    <div class="auth-sub">شركة الساقية</div>
+    <div class="fg">
+      <label class="fl">البريد الإلكتروني</label>
+      <input class="fc" id="a-email" type="email" placeholder="example@elsaqia.com" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <div class="fg">
+      <label class="fl">كلمة المرور</label>
+      <input class="fc" id="a-pass" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="auth-btn" id="login-btn" onclick="doLogin()"><i class="fas fa-sign-in-alt"></i>دخول</button>
+    <div class="auth-err" id="auth-err"></div>
+    <div style="margin-top:18px;padding-top:16px;border-top:1px solid var(--border)">
+      <a href="javascript:void(0)" onclick="showKiosk()" style="font-size:12.5px;color:var(--ac-600);font-weight:700"><i class="fas fa-fingerprint"></i>&nbsp; تسجيل حضور / انصراف الموظفين</a>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ KIOSK (شاشة الموظف) ══════════ -->
+<div id="kiosk-screen" class="hidden" style="height:100%;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 30% 20%,#1a2436 0%,var(--navy-950) 60%);padding:20px">
+  <div class="auth-card" style="max-width:400px">
+    <div class="auth-logo"><i class="fas fa-fingerprint"></i></div>
+    <div class="auth-title">تسجيل حضور / انصراف</div>
+    <div class="auth-sub">شركة الساقية</div>
+    <div id="kiosk-body"></div>
+    <div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border)">
+      <a href="javascript:void(0)" onclick="backToLogin()" style="font-size:12px;color:var(--slate-500)">→ رجوع لتسجيل دخول الأدمن</a>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ APP ══════════ -->
+<div id="app" class="hidden">
+  <div id="sb-backdrop" onclick="toggleSidebar(false)"></div>
+  <div class="sidebar" id="sidebar">
+    <div class="sb-brand">
+      <div class="sb-brand-ic"><i class="fas fa-users"></i></div>
+      <div>
+        <div class="sb-brand-txt">الشؤون الإدارية</div>
+        <div class="sb-brand-sub">شركة الساقية</div>
+      </div>
+    </div>
+    <div class="sb-nav">
+      <div class="nav-group-lbl">الرئيسية</div>
+      <div class="nav-link" data-page="dashboard" onclick="goPage('dashboard')"><i class="fas fa-th-large"></i>لوحة التحكم</div>
+
+      <div class="nav-group-lbl">الموظفين</div>
+      <div class="nav-link" data-page="employees" data-perm="employees_manage" onclick="goPage('employees')"><i class="fas fa-id-card"></i>الموظفين</div>
+      <div class="nav-link" data-page="departments" data-perm="departments_manage" onclick="goPage('departments')"><i class="fas fa-sitemap"></i>الأقسام</div>
+      <div class="nav-link" data-page="shifts" data-perm="shifts_manage" onclick="goPage('shifts')"><i class="fas fa-clock"></i>الورديات</div>
+
+      <div class="nav-group-lbl">الحضور</div>
+      <div class="nav-link" data-page="daily" data-perm="daily_view" onclick="goPage('daily')"><i class="fas fa-calendar-check"></i>الدخول اليومي</div>
+      <div class="nav-link" data-page="overtime" data-perm="overtime_approve" onclick="goPage('overtime')"><i class="fas fa-business-time"></i>موافقات الوقت الإضافي</div>
+      <div class="nav-link" data-page="monthly" data-perm="monthly_manage" onclick="goPage('monthly')"><i class="fas fa-file-invoice"></i>الكشف الشهري</div>
+      <div class="nav-link" data-page="evaluation" data-perm="eval_manager" onclick="goPage('evaluation')"><i class="fas fa-star-half-alt"></i>التقييم الشهري</div>
+      <div class="nav-link" data-page="leaves" data-perm="leaves_manage" onclick="goPage('leaves')"><i class="fas fa-calendar-minus"></i>الإجازات</div>
+      <div class="nav-link" data-page="holidays" data-perm="holidays_manage" onclick="goPage('holidays')"><i class="fas fa-flag"></i>الإجازات الرسمية</div>
+
+      <div class="nav-group-lbl">التقارير</div>
+      <div class="nav-link" data-page="profile" data-perm="profiles_view" onclick="goPage('profile')"><i class="fas fa-address-card"></i>ملفات الموظفين</div>
+
+      <div class="nav-group-lbl">المصاريف</div>
+      <div class="nav-link" data-page="expenses" data-perm="expenses_manage" onclick="goPage('expenses')"><i class="fas fa-file-invoice-dollar"></i>مصاريف الكهرباء</div>
+
+      <div class="nav-group-lbl">النظام</div>
+      <div class="nav-link" data-page="settings" data-perm="settings_manage" onclick="goPage('settings')"><i class="fas fa-cog"></i>الإعدادات</div>
+      <div class="nav-link" data-page="users" data-adminonly onclick="goPage('users')"><i class="fas fa-user-shield"></i>المستخدمون والصلاحيات</div>
+    </div>
+    <div class="sb-user">
+      <div class="sb-user-row">
+        <div class="sb-avatar" id="sb-avatar-txt">?</div>
+        <div>
+          <div class="sb-user-name" id="sb-user-name">—</div>
+          <div class="sb-user-role" id="sb-user-role">—</div>
+        </div>
+      </div>
+      <button class="logout-btn" onclick="doLogout()"><i class="fas fa-sign-out-alt"></i>تسجيل الخروج</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <button class="mbtn" onclick="toggleSidebar(true)"><i class="fas fa-bars"></i></button>
+
+    <!-- DASHBOARD -->
+    <div class="page" id="page-dashboard">
+      <div class="ph"><div><div class="ph-title">لوحة التحكم</div><div class="ph-sub" id="dash-date"></div></div></div>
+      <div class="stats" id="dash-stats"></div>
+      <div class="card"><div class="card-body" id="dash-depts"></div></div>
+    </div>
+
+    <!-- EMPLOYEES -->
+    <div class="page" id="page-employees">
+      <div class="ph">
+        <div><div class="ph-title">الموظفين</div><div class="ph-sub" id="emp-count-sub">—</div></div>
+        <div class="ph-acts">
+          <select class="fc" id="emp-filter-dept" style="max-width:170px" onchange="renderEmployees()"><option value="">كل الأقسام</option></select>
+          <button class="btn btn-ac btn-sm" onclick="openEmpModal()"><i class="fas fa-plus"></i>إضافة موظف</button>
+        </div>
+      </div>
+      <div class="card"><table class="tbl">
+        <thead><tr><th>الاسم</th><th>الوظيفة</th><th>القسم</th><th>الوردية</th><th>تاريخ التعيين</th><th>الحالة</th><th></th></tr></thead>
+        <tbody id="emp-body"></tbody>
+      </table></div>
+    </div>
+
+    <!-- DEPARTMENTS -->
+    <div class="page" id="page-departments">
+      <div class="ph">
+        <div><div class="ph-title">الأقسام</div><div class="ph-sub">أقسام الشركة ومدير كل قسم</div></div>
+        <div class="ph-acts"><button class="btn btn-ac btn-sm" onclick="openDeptModal()"><i class="fas fa-plus"></i>قسم جديد</button></div>
+      </div>
+      <div class="stats" id="dept-cards"></div>
+    </div>
+
+    <!-- SHIFTS -->
+    <div class="page" id="page-shifts">
+      <div class="ph">
+        <div><div class="ph-title">الورديات</div><div class="ph-sub">ورديات العمل وتوقيتات الحضور والانصراف</div></div>
+        <div class="ph-acts">
+          <button class="btn btn-ghost btn-sm" onclick="openShiftOverrideModal()"><i class="fas fa-calendar-day"></i>تعديل وردية ليوم محدد</button>
+          <button class="btn btn-ac btn-sm" onclick="openShiftModal()"><i class="fas fa-plus"></i>وردية جديدة</button>
+        </div>
+      </div>
+      <div class="stats" id="shift-cards"></div>
+      <div style="font-weight:800;font-size:14px;margin:20px 0 10px">تعديلات الورديات ليوم محدد</div>
+      <div class="card"><table class="tbl">
+        <thead><tr><th>التاريخ</th><th>الوردية</th><th>حضور</th><th>انصراف</th><th></th></tr></thead>
+        <tbody id="shift-override-body"></tbody>
+      </table></div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div class="page" id="page-settings">
+      <div class="ph"><div><div class="ph-title">الإعدادات</div><div class="ph-sub">إعدادات موقع الشركة لتسجيل الحضور والانصراف</div></div></div>
+      <div class="card"><div class="card-body">
+        <div style="font-weight:800;font-size:14px;margin-bottom:4px">إحداثيات مقر الشركة</div>
+        <div style="font-size:12px;color:var(--slate-500);margin-bottom:16px">الموظف لازم يكون جوه النطاق ده وقت تسجيل الحضور/الانصراف. اضغط "استخدام موقعي الحالي" وانت واقف في مقر الشركة عشان تحدد الإحداثيات بسهولة.</div>
+        <div class="frow c3">
+          <div class="fg"><label class="fl">خط العرض (Latitude)</label><input class="fc" type="number" step="any" id="set-lat" placeholder="30.xxxxx"></div>
+          <div class="fg"><label class="fl">خط الطول (Longitude)</label><input class="fc" type="number" step="any" id="set-lng" placeholder="31.xxxxx"></div>
+          <div class="fg"><label class="fl">النطاق المسموح (متر)</label><input class="fc" type="number" id="set-radius" placeholder="200"></div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap">
+          <button class="btn btn-ghost btn-sm" onclick="useMyLocation()"><i class="fas fa-map-marker-alt"></i>استخدام موقعي الحالي</button>
+          <button class="btn btn-ac btn-sm" onclick="saveSettings()"><i class="fas fa-save"></i>حفظ الإعدادات</button>
+        </div>
+        <div id="set-status" style="font-size:12px;margin-top:10px;color:var(--slate-500)"></div>
+      </div></div>
+    </div>
+
+    <!-- DAILY CHECK-IN -->
+    <div class="page" id="page-daily">
+      <div class="ph">
+        <div><div class="ph-title">الدخول اليومي</div><div class="ph-sub">متابعة حضور الموظفين حسب الوردية</div></div>
+        <div class="ph-acts"><input class="fc" type="date" id="daily-date" style="width:160px" onchange="renderDaily()"></div>
+      </div>
+      <div id="daily-body"></div>
+    </div>
+
+    <!-- OVERTIME APPROVALS -->
+    <div class="page" id="page-overtime">
+      <div class="ph"><div><div class="ph-title">موافقات الوقت الإضافي</div><div class="ph-sub">مراجعة والموافقة على طلبات الوقت الإضافي المعلّقة بعد الانصراف المتأخر</div></div></div>
+      <div id="overtime-body"></div>
+    </div>
+
+    <!-- MONTHLY SHEET -->
+    <div class="page" id="page-monthly">
+      <div class="ph">
+        <div><div class="ph-title">الكشف الشهري</div><div class="ph-sub">دورة من 26 الشهر السابق لحد 25 الشهر المحدد — تقدر تدخل بيانات أي شهر فات كمان</div></div>
+        <div class="ph-acts">
+          <input class="fc" type="month" id="monthly-period" style="width:160px" onchange="renderMonthly()">
+          <button class="btn btn-ghost btn-sm" onclick="autoFillMonthly()"><i class="fas fa-magic"></i>تحميل تلقائي من السجلات</button>
+        </div>
+      </div>
+      <div class="card"><table class="tbl">
+        <thead><tr><th>الاسم</th><th>الوظيفة</th><th>إجازة من الرصيد</th><th>إجازة بالخصم</th><th>جزاءات (أيام)</th><th>ساعات إضافية</th><th>أيام إضافية</th><th>التقييم</th><th>ملاحظات</th><th></th></tr></thead>
+        <tbody id="monthly-body"></tbody>
+      </table></div>
+    </div>
+
+    <!-- MONTHLY EVALUATION -->
+    <div class="page" id="page-evaluation">
+      <div class="ph">
+        <div><div class="ph-title">التقييم الشهري</div><div class="ph-sub">المدير 30% + الشؤون الإدارية 30% + مدير المصنع 40%</div></div>
+        <div class="ph-acts"><input class="fc" type="month" id="eval-period" style="width:160px" onchange="renderEvaluation()"></div>
+      </div>
+      <div class="card"><table class="tbl">
+        <thead><tr><th>الاسم</th><th>تقييم المدير %</th><th>تقييم الشؤون %</th><th>تقييم مدير المصنع %</th><th>النسبة النهائية</th><th></th></tr></thead>
+        <tbody id="eval-body"></tbody>
+      </table></div>
+    </div>
+
+    <!-- EMPLOYEE PROFILE -->
+    <div class="page" id="page-profile">
+      <div class="ph">
+        <div><div class="ph-title">ملفات الموظفين</div><div class="ph-sub">سجل أي موظف كامل على مدار السنة</div></div>
+        <div class="ph-acts">
+          <select class="fc" id="profile-emp" style="width:220px" onchange="renderProfile()"></select>
+          <input class="fc" type="number" id="profile-year" style="width:110px" onchange="renderProfile()">
+        </div>
+      </div>
+      <div id="profile-body"></div>
+    </div>
+
+    <!-- LEAVES -->
+    <div class="page" id="page-leaves">
+      <div class="ph">
+        <div><div class="ph-title">الإجازات</div><div class="ph-sub">الرصيد السنوي 21 يوم لكل موظف — استئذان قبل الغياب بيوم على الأقل</div></div>
+        <div class="ph-acts">
+          <button class="btn btn-ghost btn-sm" onclick="renewAllBalances()"><i class="fas fa-redo"></i>تجديد كل الأرصدة (بداية سنة)</button>
+          <button class="btn btn-ac btn-sm" onclick="openLeaveModal()"><i class="fas fa-plus"></i>طلب إجازة جديد</button>
+        </div>
+      </div>
+      <div id="leaves-body"></div>
+    </div>
+
+    <!-- OFFICIAL HOLIDAYS -->
+    <div class="page" id="page-holidays">
+      <div class="ph">
+        <div><div class="ph-title">الإجازات الرسمية</div><div class="ph-sub">تحديد يوم كإجازة رسمية للكل — مع إمكانية استثناء موظفين بعينهم للشغل</div></div>
+        <div class="ph-acts"><button class="btn btn-ac btn-sm" onclick="openHolidayModal()"><i class="fas fa-plus"></i>إجازة رسمية جديدة</button></div>
+      </div>
+      <div class="card"><table class="tbl">
+        <thead><tr><th>التاريخ</th><th>المناسبة</th><th>الموظفين المستثنين (هيشتغلوا)</th><th></th></tr></thead>
+        <tbody id="holidays-body"></tbody>
+      </table></div>
+    </div>
+
+    <!-- EXPENSES: ELECTRICITY -->
+    <div class="page" id="page-expenses">
+      <div class="ph">
+        <div><div class="ph-title">مصاريف الكهرباء</div><div class="ph-sub">قراءة العداد والفاتورة الشهرية</div></div>
+        <div class="ph-acts">
+          <button class="btn btn-ghost btn-sm" onclick="printElectricityReport()"><i class="fas fa-print"></i>تقرير مطبوع</button>
+          <button class="btn btn-ac btn-sm" onclick="openExpenseModal()"><i class="fas fa-plus"></i>سجل جديد</button>
+        </div>
+      </div>
+      <div class="card"><table class="tbl">
+        <thead><tr><th>التاريخ</th><th>القراءة السابقة</th><th>القراءة الحالية</th><th>الاستهلاك (ك.و)</th><th>قيمة الفاتورة</th><th>سعر ك.و</th><th>البيان</th><th></th></tr></thead>
+        <tbody id="expenses-body"></tbody>
+      </table></div>
+    </div>
+
+    <!-- USERS & PERMISSIONS -->
+    <div class="page" id="page-users">
+      <div class="ph">
+        <div><div class="ph-title">المستخدمون والصلاحيات</div><div class="ph-sub">حسابات دخول الأدمن/المديرين وتحديد صلاحية كل واحد</div></div>
+        <div class="ph-acts"><button class="btn btn-ac btn-sm" onclick="openUserModal()"><i class="fas fa-plus"></i>مستخدم جديد</button></div>
+      </div>
+      <div class="card"><table class="tbl">
+        <thead><tr><th>الاسم</th><th>الإيميل</th><th>الدور</th><th>القسم (لو مدير)</th><th></th></tr></thead>
+        <tbody id="users-body"></tbody>
+      </table></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ MODALS ══════════ -->
+<div class="overlay" id="mo-emp">
+  <div class="modal">
+    <div class="mh"><span class="mh-title" id="emp-modal-title">إضافة موظف</span><button class="mclose" onclick="closeM('mo-emp')">×</button></div>
+    <div class="mb">
+      <div class="fg"><label class="fl">الاسم الكامل</label><input class="fc" id="emp-name" placeholder="اسم الموظف"></div>
+      <div class="frow c2">
+        <div class="fg"><label class="fl">الوظيفة</label><input class="fc" id="emp-job" placeholder="مثال: عامل إنتاج"></div>
+        <div class="fg"><label class="fl">القسم</label><select class="fc" id="emp-dept"></select></div>
+      </div>
+      <div class="frow c2">
+        <div class="fg"><label class="fl">كود الموظف <span style="color:var(--slate-500);font-weight:400">(لتسجيل الحضور)</span></label><input class="fc" id="emp-code" inputmode="numeric" placeholder="مثال: 1001"></div>
+        <div class="fg"><label class="fl">الوردية</label><select class="fc" id="emp-shift"><option value="">— بدون وردية —</option></select></div>
+      </div>
+      <div class="frow c2">
+        <div class="fg"><label class="fl">تاريخ التعيين</label><input class="fc" type="date" id="emp-hire"></div>
+        <div class="fg"><label class="fl">الراتب الأساسي (ج.م)</label><input class="fc" type="number" id="emp-salary" placeholder="0" oninput="updateSalaryPreview()"></div>
+      </div>
+      <div class="frow c2">
+        <div class="fg"><label class="fl">رقم الهاتف</label><input class="fc" id="emp-phone" placeholder="01xxxxxxxxx"></div>
+        <div class="fg"><label class="fl">الرقم القومي</label><input class="fc" id="emp-nid" placeholder="14 رقم" maxlength="14"></div>
+      </div>
+      <div class="frow c2">
+        <div class="fg"><label class="fl">رصيد الإجازات (يوم/سنة)</label><input class="fc" type="number" id="emp-leavebalance" placeholder="21"></div>
+      </div>
+      <div style="font-weight:800;font-size:13px;margin:6px 0 2px;color:var(--navy-900)">تفاصيل الراتب</div>
+      <div class="frow c2">
+        <div class="fg"><label class="fl">التأمين الاجتماعي (ج.م)</label><input class="fc" type="number" id="emp-socins" placeholder="0" oninput="updateSalaryPreview()"></div>
+        <div class="fg"><label class="fl">التأمين الطبي (ج.م)</label><input class="fc" type="number" id="emp-medins" placeholder="0" oninput="updateSalaryPreview()"></div>
+      </div>
+      <div class="frow c2">
+        <div class="fg"><label class="fl">ضريبة كسب العمل (ج.م)</label><input class="fc" type="number" id="emp-tax" placeholder="0" oninput="updateSalaryPreview()"></div>
+        <div class="fg"><label class="fl">الحافز الأساسي (ج.م) <span style="color:var(--slate-500);font-weight:400">— بيتاخد يوم 15، منفصل عن المرتب</span></label><input class="fc" type="number" id="emp-incentive" placeholder="0" oninput="updateSalaryPreview()"></div>
+      </div>
+      <div id="emp-salary-preview" style="font-size:12.5px;color:var(--ac-700);font-weight:700;margin:-4px 0 10px"></div>
+      <div class="frow c2">
+        <div class="fg"><label class="fl">الحالة</label><select class="fc" id="emp-status"><option value="active">شغال</option><option value="resigned">مستقيل</option></select></div>
+        <div class="fg" style="display:flex;align-items:flex-end;padding-bottom:9px">
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--navy-900);cursor:pointer">
+            <input type="checkbox" id="emp-ismanager" style="width:16px;height:16px;cursor:pointer">
+            مدير القسم ده؟
+          </label>
+        </div>
+      </div>
+      <div class="fg" id="emp-passkeys-wrap" style="display:none">
+        <label class="fl">بصمات الدخول المسجّلة (WebAuthn)</label>
+        <div id="emp-passkeys-list" style="font-size:12.5px;color:var(--slate-500);display:flex;flex-direction:column;gap:6px"></div>
+        <div style="font-size:11px;color:var(--slate-500);margin-top:6px">لو حذفت بصمة، الموظف هيسجّل بصمة جديدة أول مرة يدخل بكوده بعد كده.</div>
+      </div>
+    </div>
+    <div class="mf">
+      <button class="btn btn-ghost" onclick="closeM('mo-emp')">إلغاء</button>
+      <button class="btn btn-ac" onclick="saveEmployee()"><i class="fas fa-save"></i>حفظ</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="mo-dept">
+  <div class="modal" style="max-width:400px">
+    <div class="mh"><span class="mh-title" id="dept-modal-title">قسم جديد</span><button class="mclose" onclick="closeM('mo-dept')">×</button></div>
+    <div class="mb">
+      <div class="fg"><label class="fl">اسم القسم</label><input class="fc" id="dept-name" placeholder="مثال: الإنتاج"></div>
+    </div>
+    <div class="mf">
+      <button class="btn btn-ghost" onclick="closeM('mo-dept')">إلغاء</button>
+      <button class="btn btn-ac" onclick="saveDept()"><i class="fas fa-save"></i>حفظ</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="mo-shift">
+  <div class="modal" style="max-width:420px">
+    <div class="mh"><span class="mh-title" id="shift-modal-title">وردية جديدة</span><button class="mclose" onclick="closeM('mo-shift')">×</button></div>
+    <div class="mb">
+      <div class="fg"><label class="fl">اسم الوردية</label><input class="fc" id="shift-name" placeholder="مثال: وردية أولى"></div>
+      <div class="frow c2">
+        <div class="fg"><label class="fl">من الساعة</label><input class="fc" type="time" id="shift-start"></div>
+        <div class="fg"><label class="fl">لحد الساعة</label><input class="fc" type="time" id="shift-end"></div>
+      </div>
+      <div class="frow c2">
+        <div class="fg"><label class="fl">حضور مسموح من</label><input class="fc" type="time" id="shift-checkin-from"></div>
+        <div class="fg"><label class="fl">حضور مسموح لحد</label><input class="fc" type="time" id="shift-checkin-to"></div>
+      </div>
+      <div class="frow c2">
+        <div class="fg"><label class="fl">انصراف مسموح من</label><input class="fc" type="time" id="shift-checkout-from"></div>
+        <div class="fg"><label class="fl">انصراف مسموح لحد</label><input class="fc" type="time" id="shift-checkout-to"></div>
+      </div>
+    </div>
+    <div class="mf">
+      <button class="btn btn-ghost" onclick="closeM('mo-shift')">إلغاء</button>
+      <button class="btn btn-ac" onclick="saveShift()"><i class="fas fa-save"></i>حفظ</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="mo-shift-override">
+  <div class="modal" style="max-width:440px">
+    <div class="mh"><span class="mh-title">تعديل وردية ليوم محدد</span><button class="mclose" onclick="closeM('mo-shift-override')">×</button></div>
+    <div class="mb">
+      <div style="font-size:12px;color:var(--slate-500);margin-bottom:12px">المواعيد دي هتطبّق على اليوم ده بس، وبعد ما اليوم يخلص المواعيد الأساسية للوردية بترجع تاني تلقائي.</div>
+      <div class="frow c2">
+        <div class="fg"><label class="fl">الوردية</label><select class="fc" id="so-shift" onchange="onOverrideShiftChange()"></select></div>
+        <div class="fg"><label class="fl">التاريخ</label><input class="fc" type="date" id="so-date"></div>
+      </div>
+      <div class="frow c2">
+        <div class="fg"><label class="fl">حضور مسموح من</label><input class="fc" type="time" id="so-checkin-from"></div>
+        <div class="fg"><label class="fl">حضور مسموح لحد</label><input class="fc" type="time" id="so-checkin-to"></div>
+      </div>
+      <div class="frow c2">
+        <div class="fg"><label class="fl">بداية الوردية الفعلية</label><input class="fc" type="time" id="so-start"></div>
+        <div class="fg"><label class="fl">نهاية الوردية الفعلية</label><input class="fc" type="time" id="so-end"></div>
+      </div>
+      <div class="frow c2">
+        <div class="fg"><label class="fl">انصراف مسموح من</label><input class="fc" type="time" id="so-checkout-from"></div>
+        <div class="fg"><label class="fl">انصراف مسموح لحد</label><input class="fc" type="time" id="so-checkout-to"></div>
+      </div>
+    </div>
+    <div class="mf">
+      <button class="btn btn-ghost" onclick="closeM('mo-shift-override')">إلغاء</button>
+      <button class="btn btn-ac" onclick="saveShiftOverride()"><i class="fas fa-save"></i>حفظ لليوم ده بس</button>
+    </div>
+  </div>
+</div>
+  <div class="modal" style="max-width:380px">
+    <div class="mh"><span class="mh-title">تسجيل حالة اليوم</span><button class="mclose" onclick="closeM('mo-dailymark')">×</button></div>
+    <div class="mb">
+      <div id="dm-emp-name" style="font-weight:800;margin-bottom:10px"></div>
+      <div class="fg"><label class="fl">الحالة</label>
+        <select class="fc" id="dm-status">
+          <option value="absent">غياب بدون إذن</option>
+          <option value="leave">إجازة من الرصيد</option>
+        </select>
+      </div>
+      <div class="fg"><label class="fl">ملاحظات</label><textarea class="fc" id="dm-note" rows="2"></textarea></div>
+    </div>
+    <div class="mf">
+      <button class="btn btn-ghost" onclick="closeM('mo-dailymark')">إلغاء</button>
+      <button class="btn btn-ac" onclick="saveDailyMark()"><i class="fas fa-save"></i>حفظ</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="mo-leave">
+  <div class="modal" style="max-width:460px">
+    <div class="mh"><span class="mh-title">طلب إجازة</span><button class="mclose" onclick="closeM('mo-leave')">×</button></div>
+    <div class="mb">
+      <div class="fg"><label class="fl">الموظف</label><select class="fc" id="lv-emp" onchange="onLeaveEmpChange()"></select></div>
+      <div id="lv-balance-note" style="font-size:12px;color:var(--slate-500);margin:-6px 0 12px"></div>
+      <div class="frow c2">
+        <div class="fg"><label class="fl">من تاريخ</label><input class="fc" type="date" id="lv-from"></div>
+        <div class="fg"><label class="fl">لحد تاريخ</label><input class="fc" type="date" id="lv-to"></div>
+      </div>
+      <div class="fg"><label class="fl">ملاحظات</label><textarea class="fc" id="lv-note" rows="2"></textarea></div>
+    </div>
+    <div class="mf">
+      <button class="btn btn-ghost" onclick="closeM('mo-leave')">إلغاء</button>
+      <button class="btn btn-ac" onclick="saveLeaveRequest()"><i class="fas fa-save"></i>حفظ الطلب</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="mo-holiday">
+  <div class="modal" style="max-width:460px">
+    <div class="mh"><span class="mh-title" id="holiday-modal-title">إجازة رسمية جديدة</span><button class="mclose" onclick="closeM('mo-holiday')">×</button></div>
+    <div class="mb">
+      <div class="frow c2">
+        <div class="fg"><label class="fl">التاريخ</label><input class="fc" type="date" id="hol-date"></div>
+        <div class="fg"><label class="fl">المناسبة</label><input class="fc" id="hol-title" placeholder="مثال: ثورة 25 يناير"></div>
+      </div>
+      <div class="fg">
+        <label class="fl">موظفين مستثنين (هيقدروا يشتغلوا اليوم ده رغم الإجازة)</label>
+        <div id="hol-emp-list" style="display:flex;flex-direction:column;gap:6px;max-height:220px;overflow-y:auto;font-size:13px;border:1.5px solid var(--border);border-radius:var(--rs);padding:10px"></div>
+      </div>
+    </div>
+    <div class="mf">
+      <button class="btn btn-ghost" onclick="closeM('mo-holiday')">إلغاء</button>
+      <button class="btn btn-ac" onclick="saveHoliday()"><i class="fas fa-save"></i>حفظ</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="mo-expense">
+  <div class="modal" style="max-width:460px">
+    <div class="mh"><span class="mh-title" id="exp-modal-title">سجل كهرباء جديد</span><button class="mclose" onclick="closeM('mo-expense')">×</button></div>
+    <div class="mb">
+      <div class="fg"><label class="fl">التاريخ</label><input class="fc" type="date" id="exp-date"></div>
+      <div class="frow c2">
+        <div class="fg"><label class="fl">القراءة السابقة</label><input class="fc" type="number" id="exp-prev" oninput="updateExpenseCalc()"></div>
+        <div class="fg"><label class="fl">القراءة الحالية</label><input class="fc" type="number" id="exp-curr" oninput="updateExpenseCalc()"></div>
+      </div>
+      <div class="fg"><label class="fl">قيمة الفاتورة (ج.م)</label><input class="fc" type="number" id="exp-bill" oninput="updateExpenseCalc()"></div>
+      <div id="exp-calc-note" style="font-size:13px;font-weight:700;color:var(--ac-700);margin-bottom:10px"></div>
+      <div class="fg"><label class="fl">البيان/الوصف</label><textarea class="fc" id="exp-desc" rows="2"></textarea></div>
+      <div class="fg"><label class="fl">صورة الفاتورة (اختياري)</label><input class="fc" type="file" id="exp-img" accept="image/*"></div>
+    </div>
+    <div class="mf">
+      <button class="btn btn-ghost" onclick="closeM('mo-expense')">إلغاء</button>
+      <button class="btn btn-ac" id="exp-save-btn" onclick="saveExpense()"><i class="fas fa-save"></i>حفظ</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="mo-user">
+  <div class="modal" style="max-width:520px">
+    <div class="mh"><span class="mh-title" id="user-modal-title">مستخدم جديد</span><button class="mclose" onclick="closeM('mo-user')">×</button></div>
+    <div class="mb">
+      <div class="fg"><label class="fl">الاسم</label><input class="fc" id="usr-name"></div>
+      <div class="frow c2">
+        <div class="fg"><label class="fl">الإيميل</label><input class="fc" type="email" id="usr-email"></div>
+        <div class="fg"><label class="fl">كلمة المرور <span id="usr-pass-hint" style="color:var(--slate-500);font-weight:400"></span></label><input class="fc" type="text" id="usr-pass" placeholder="6 أحرف على الأقل"></div>
+      </div>
+      <div class="frow c2">
+        <div class="fg"><label class="fl">الدور</label><select class="fc" id="usr-role"><option value="admin">أدمن (تحكم كامل)</option><option value="manager" selected>مدير قسم / صلاحيات مخصصة</option></select></div>
+        <div class="fg"><label class="fl">القسم (لو مدير قسم)</label><select class="fc" id="usr-dept"><option value="">— بدون —</option></select></div>
+      </div>
+      <div class="fg" id="usr-perms-wrap">
+        <label class="fl">الصلاحيات</label>
+        <div id="usr-perms-list" style="display:flex;flex-direction:column;gap:6px;font-size:13px"></div>
+      </div>
+    </div>
+    <div class="mf">
+      <button class="btn btn-ghost" onclick="closeM('mo-user')">إلغاء</button>
+      <button class="btn btn-ac" onclick="saveUser()"><i class="fas fa-save"></i>حفظ</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-wrap"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, signInAnonymously, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, collection, doc, getDoc, getDocs, setDoc, addDoc, updateDoc, deleteDoc, onSnapshot, query, where, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDEK9oIQQYWy2btXVQWIB64cQGUsjMf6j8",
+  authDomain: "elsaqia-hr.firebaseapp.com",
+  projectId: "elsaqia-hr",
+  storageBucket: "elsaqia-hr.firebasestorage.app",
+  messagingSenderId: "456385817910",
+  appId: "1:456385817910:web:c890a984bc41f200949797"
+};
+const fbApp = initializeApp(firebaseConfig);
+const auth  = getAuth(fbApp);
+const db    = getFirestore(fbApp);
+
+// تطبيق Firebase ثانوي منفصل تماماً — يستخدمه الكيوسك (Anonymous Auth) وعملية إنشاء مستخدمين جدد،
+// عشان ميأثرش على جلسة دخول الأدمن الحالية في نفس المتصفح
+const secApp  = initializeApp(firebaseConfig, 'secondary');
+const secAuth = getAuth(secApp);
+const secDb   = getFirestore(secApp);
+
+let CU = null;          // current user {id,email,displayName,role}
+let _page = 'dashboard';
+let _departments = [];
+let _employees = [];
+let _shifts = [];
+let _companySettings = null;
+let _expensesCache = [];
+let _usersCache = [];
+let _unsubs = [];
+const DEFAULT_DEPTS = ['المعمل','المخزن','الإنتاج','الإدارة'];
+const DEFAULT_SHIFTS = [
+  { name:'وردية أولى', start:'08:00', end:'15:00', checkinFrom:'07:45', checkinTo:'08:30', checkoutFrom:'14:50', checkoutTo:'15:30' },
+  { name:'وردية تانية', start:'15:00', end:'22:00', checkinFrom:'14:45', checkinTo:'15:30', checkoutFrom:'21:50', checkoutTo:'22:30' }
+];
+
+// ══════════════════════════════════════════════
+// AUTH
+// ══════════════════════════════════════════════
+window.doLogin = async () => {
+  const email = document.getElementById('a-email').value.trim();
+  const pass  = document.getElementById('a-pass').value;
+  const err   = document.getElementById('auth-err');
+  const btn   = document.getElementById('login-btn');
+  err.textContent = '';
+  if (!email || !pass) { err.textContent = 'يرجى إدخال البريد وكلمة المرور'; return; }
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الدخول...';
+  try {
+    await signInWithEmailAndPassword(auth, email, pass);
+  } catch (e) {
+    const code = e.code || '';
+    if (['auth/invalid-credential','auth/wrong-password','auth/user-not-found'].includes(code)) {
+      err.textContent = 'بريد إلكتروني أو كلمة مرور خاطئة';
+    } else if (code === 'auth/network-request-failed') {
+      err.textContent = 'لا يوجد اتصال بالإنترنت';
+    } else {
+      err.textContent = 'خطأ: ' + (e.message || code);
+    }
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-sign-in-alt"></i>دخول';
+  }
+};
+
+window.doLogout = async () => { await signOut(auth); };
+
+onAuthStateChanged(auth, async user => {
+  if (user) {
+    try {
+      const uref = doc(db,'users',user.uid);
+      const udoc = await getDoc(uref);
+      if (udoc.exists()) {
+        CU = { id:user.uid, ...udoc.data() };
+      } else {
+        // أول شخص يسجل دخول على حساب مالوش ملف Firestore بيتحط أدمن تلقائياً (نفس نظام الساقية الأساسي)
+        CU = { id:user.uid, email:user.email, displayName:user.email.split('@')[0], role:'admin', createdAt:Date.now() };
+        await setDoc(uref, CU);
+      }
+      document.getElementById('auth-screen').classList.add('hidden');
+      document.getElementById('app').classList.remove('hidden');
+      setupUI();
+      await ensureDefaultDepartments();
+      await ensureDefaultShifts();
+      await loadCompanySettings();
+      startListeners();
+      goPage('dashboard');
+    } catch(e) {
+      const err = document.getElementById('auth-err');
+      const btn = document.getElementById('login-btn');
+      if (e.code === 'permission-denied') {
+        err.textContent = 'قاعدة بيانات Firestore لسه مقفولة — لازم تضيف قواعد الأمان (Security Rules) الأول';
+      } else {
+        err.textContent = 'خطأ: ' + (e.message || e.code || 'غير معروف');
+      }
+      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-sign-in-alt"></i>دخول'; }
+      await signOut(auth).catch(()=>{});
+    }
+  } else {
+    CU = null;
+    _unsubs.forEach(u=>u()); _unsubs = [];
+    document.getElementById('auth-screen').classList.remove('hidden');
+    document.getElementById('app').classList.add('hidden');
+    document.getElementById('a-email').value = '';
+    document.getElementById('a-pass').value = '';
+    document.getElementById('login-btn').disabled = false;
+    document.getElementById('login-btn').innerHTML = '<i class="fas fa-sign-in-alt"></i>دخول';
+  }
+});
+
+const ROLE_LABELS = { admin:'أدمن', manager:'مدير قسم', employee:'موظف' };
+
+// ══════════════════════════════════════════════
+// نظام الصلاحيات (زي نظام الساقية الأساسي بالظبط)
+// ══════════════════════════════════════════════
+const PERMS_DEF = [
+  { key:'employees_manage', label:'إضافة/تعديل/حذف الموظفين' },
+  { key:'departments_manage', label:'إدارة الأقسام' },
+  { key:'shifts_manage', label:'إدارة الورديات' },
+  { key:'settings_manage', label:'إعدادات موقع الشركة' },
+  { key:'daily_view', label:'الدخول اليومي (متابعة + تسجيل غياب/إجازة)' },
+  { key:'overtime_approve', label:'الموافقة على الوقت الإضافي' },
+  { key:'monthly_manage', label:'الكشف الشهري' },
+  { key:'eval_manager', label:'تقييم كمدير قسم (30%)' },
+  { key:'eval_hr', label:'تقييم كشؤون إدارية (30%)' },
+  { key:'eval_factory', label:'تقييم كمدير مصنع (40%)' },
+  { key:'profiles_view', label:'ملفات الموظفين' },
+  { key:'leaves_manage', label:'الإجازات (تسجيل وموافقة)' },
+  { key:'holidays_manage', label:'الإجازات الرسمية' },
+  { key:'expenses_manage', label:'المصاريف الإدارية' },
+];
+function hasPerm(key) {
+  if (!CU) return false;
+  if (CU.role === 'admin') return true;
+  return !!(CU.permissions && CU.permissions[key]);
+}
+
+function setupUI() {
+  document.getElementById('sb-user-name').textContent = CU.displayName || CU.email;
+  document.getElementById('sb-user-role').textContent = ROLE_LABELS[CU.role] || CU.role;
+  document.getElementById('sb-avatar-txt').textContent = (CU.displayName||CU.email||'?').charAt(0).toUpperCase();
+  applyPermsToNav();
+}
+
+function applyPermsToNav() {
+  document.querySelectorAll('.nav-link[data-perm]').forEach(el=>{
+    const perm = el.getAttribute('data-perm');
+    el.style.display = hasPerm(perm) ? '' : 'none';
+  });
+  document.querySelectorAll('.nav-link[data-adminonly]').forEach(el=>{
+    el.style.display = (CU.role==='admin') ? '' : 'none';
+  });
+}
+
+// أول مرة النظام يشتغل، يتأكد إن الأقسام الأربعة الأساسية موجودة
+async function ensureDefaultDepartments() {
+  const snap = await getDocs(collection(db,'departments'));
+  if (!snap.empty) return;
+  for (const name of DEFAULT_DEPTS) {
+    await addDoc(collection(db,'departments'), { name, managerEmployeeId:null, createdAt:Date.now() });
+  }
+}
+
+// أول مرة النظام يشتغل، يتأكد إن الورديتين الأساسيتين موجودين
+async function ensureDefaultShifts() {
+  const snap = await getDocs(collection(db,'shifts'));
+  if (!snap.empty) return;
+  for (const s of DEFAULT_SHIFTS) {
+    await addDoc(collection(db,'shifts'), { ...s, createdAt:Date.now() });
+  }
+}
+
+async function loadCompanySettings() {
+  try {
+    const sref = doc(db,'settings','company');
+    const sdoc = await getDoc(sref);
+    _companySettings = sdoc.exists() ? sdoc.data() : null;
+  } catch(e) { _companySettings = null; }
+}
+
+// ══════════════════════════════════════════════
+// REALTIME LISTENERS
+// ══════════════════════════════════════════════
+function startListeners() {
+  _unsubs.push(
+    onSnapshot(query(collection(db,'departments'), orderBy('createdAt','asc')), s=>{
+      _departments = s.docs.map(d=>({id:d.id,...d.data()}));
+      refreshDeptSelects();
+      if (_page==='departments') renderDepartments();
+      if (_page==='dashboard') renderDashboard();
+      if (_page==='employees') renderEmployees();
+    }),
+    onSnapshot(query(collection(db,'employees'), orderBy('createdAt','desc')), s=>{
+      _employees = s.docs.map(d=>({id:d.id,...d.data()}));
+      if (_page==='employees') renderEmployees();
+      if (_page==='dashboard') renderDashboard();
+      if (_page==='departments') renderDepartments();
+    }),
+    onSnapshot(query(collection(db,'shifts'), orderBy('createdAt','asc')), s=>{
+      _shifts = s.docs.map(d=>({id:d.id,...d.data()}));
+      refreshShiftSelects();
+      if (_page==='shifts') renderShifts();
+      if (_page==='employees') renderEmployees();
+    })
+  );
+}
+
+// ══════════════════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════════════════
+const PAGE_PERM = { employees:'employees_manage', departments:'departments_manage', shifts:'shifts_manage', settings:'settings_manage', daily:'daily_view', overtime:'overtime_approve', monthly:'monthly_manage', evaluation:'eval_manager', profile:'profiles_view', leaves:'leaves_manage', holidays:'holidays_manage', expenses:'expenses_manage' };
+window.goPage = (name) => {
+  const perm = PAGE_PERM[name];
+  const evalAlt = name==='evaluation' && (hasPerm('eval_hr')||hasPerm('eval_factory'));
+  if (name==='users' && CU.role!=='admin') { toast('الصفحة دي للأدمن بس', 'error'); return; }
+  if (perm && !hasPerm(perm) && !evalAlt) { toast('مالكش صلاحية الدخول للصفحة دي', 'error'); return; }
+  _page = name;
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+name)?.classList.add('active');
+  document.querySelectorAll('.nav-link').forEach(n=>n.classList.toggle('active', n.dataset.page===name));
+  toggleSidebar(false);
+  const renders = { dashboard:renderDashboard, employees:renderEmployees, departments:renderDepartments, shifts:renderShifts, settings:renderSettings, daily:renderDaily, overtime:renderOvertime, monthly:renderMonthly, evaluation:renderEvaluation, profile:renderProfile, leaves:renderLeaves, holidays:renderHolidays, expenses:renderExpenses, users:renderUsers };
+  renders[name]?.();
+};
+
+window.toggleSidebar = (open) => {
+  document.getElementById('sidebar').classList.toggle('open', open);
+  document.getElementById('sb-backdrop').classList.toggle('open', open);
+};
+
+// ══════════════════════════════════════════════
+// DASHBOARD
+// ══════════════════════════════════════════════
+function renderDashboard() {
+  document.getElementById('dash-date').textContent = new Date().toLocaleDateString('ar-EG', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+  const active = _employees.filter(e=>e.status!=='resigned');
+  document.getElementById('dash-stats').innerHTML = `
+    <div class="stat-card"><div class="stat-ic bg-ac"><i class="fas fa-id-card"></i></div><div class="stat-val">${active.length}</div><div class="stat-lbl">موظف شغال</div></div>
+    <div class="stat-card"><div class="stat-ic bg-slate"><i class="fas fa-sitemap"></i></div><div class="stat-val">${_departments.length}</div><div class="stat-lbl">قسم</div></div>
+    <div class="stat-card"><div class="stat-ic bg-danger"><i class="fas fa-user-slash"></i></div><div class="stat-val">${_employees.filter(e=>e.status==='resigned').length}</div><div class="stat-lbl">مستقيل</div></div>
+  `;
+  const rows = _departments.map(d=>{
+    const cnt = _employees.filter(e=>e.departmentId===d.id && e.status!=='resigned').length;
+    const mgr = _employees.find(e=>e.id===d.managerEmployeeId);
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="width:34px;height:34px;border-radius:9px;background:var(--slate-100);display:flex;align-items:center;justify-content:center"><i class="fas fa-sitemap" style="color:var(--slate-500);font-size:13px"></i></div>
+        <div><div style="font-weight:700;font-size:13.5px">${d.name}</div><div style="font-size:11px;color:var(--slate-500)">${mgr?'مديرها: '+mgr.name:'مفيش مدير معيّن'}</div></div>
+      </div>
+      <div class="badge bg-ac">${cnt} موظف</div>
+    </div>`;
+  }).join('');
+  document.getElementById('dash-depts').innerHTML = `<div style="font-weight:800;font-size:14px;margin-bottom:6px">الأقسام</div>${rows || '<div class="empty"><i class="fas fa-sitemap"></i><p>لسه مفيش أقسام</p></div>'}`;
+}
+
+// ══════════════════════════════════════════════
+// DEPARTMENTS
+// ══════════════════════════════════════════════
+function refreshDeptSelects() {
+  const opts = '<option value="">— اختر —</option>' + _departments.map(d=>`<option value="${d.id}">${d.name}</option>`).join('');
+  const s1 = document.getElementById('emp-dept'); if (s1) s1.innerHTML = opts;
+  const s2 = document.getElementById('emp-filter-dept');
+  if (s2) s2.innerHTML = '<option value="">كل الأقسام</option>' + _departments.map(d=>`<option value="${d.id}">${d.name}</option>`).join('');
+}
+
+function refreshShiftSelects() {
+  const s = document.getElementById('emp-shift');
+  if (s) s.innerHTML = '<option value="">— بدون وردية —</option>' + _shifts.map(x=>`<option value="${x.id}">${x.name} (${x.start}-${x.end})</option>`).join('');
+}
+
+// ══════════════════════════════════════════════
+// SHIFTS
+// ══════════════════════════════════════════════
+function renderShifts() {
+  const el = document.getElementById('shift-cards');
+  if (!_shifts.length) { el.innerHTML = '<div class="empty"><i class="fas fa-clock"></i><p>لسه مفيش ورديات مضافة</p></div>'; return; }
+  el.innerHTML = _shifts.map(s=>{
+    const cnt = _employees.filter(e=>e.shiftId===s.id && e.status!=='resigned').length;
+    return `<div class="stat-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div class="stat-ic bg-ac" style="margin-bottom:0"><i class="fas fa-clock"></i></div>
+        <div style="display:flex;gap:4px">
+          <button class="btn btn-ghost btn-ic btn-xs" onclick="openShiftModal('${s.id}')"><i class="fas fa-edit"></i></button>
+          <button class="btn btn-red btn-ic btn-xs" onclick="deleteShift('${s.id}')"><i class="fas fa-trash"></i></button>
+        </div>
+      </div>
+      <div style="font-weight:800;font-size:15px;color:var(--navy-900)">${s.name}</div>
+      <div style="font-size:12px;color:var(--slate-500);margin-top:4px">${s.start} — ${s.end}</div>
+      <div style="font-size:11px;color:var(--slate-500);margin-top:8px;line-height:1.7">
+        حضور: ${s.checkinFrom} - ${s.checkinTo}<br>
+        انصراف: ${s.checkoutFrom} - ${s.checkoutTo}
+      </div>
+      <div class="badge bg-ac" style="margin-top:10px">${cnt} موظف</div>
+    </div>`;
+  }).join('');
+  renderShiftOverrides();
+}
+
+window.openShiftModal = (id=null) => {
+  window._editShiftId = id;
+  const s = id ? _shifts.find(x=>x.id===id) : null;
+  document.getElementById('shift-modal-title').textContent = id ? 'تعديل وردية' : 'وردية جديدة';
+  document.getElementById('shift-name').value = s?.name || '';
+  document.getElementById('shift-start').value = s?.start || '';
+  document.getElementById('shift-end').value = s?.end || '';
+  document.getElementById('shift-checkin-from').value = s?.checkinFrom || '';
+  document.getElementById('shift-checkin-to').value = s?.checkinTo || '';
+  document.getElementById('shift-checkout-from').value = s?.checkoutFrom || '';
+  document.getElementById('shift-checkout-to').value = s?.checkoutTo || '';
+  openM('mo-shift');
+};
+
+window.saveShift = async () => {
+  const name = document.getElementById('shift-name').value.trim();
+  const start = document.getElementById('shift-start').value;
+  const end = document.getElementById('shift-end').value;
+  const checkinFrom = document.getElementById('shift-checkin-from').value;
+  const checkinTo = document.getElementById('shift-checkin-to').value;
+  const checkoutFrom = document.getElementById('shift-checkout-from').value;
+  const checkoutTo = document.getElementById('shift-checkout-to').value;
+  if (!name) { toast('اكتب اسم الوردية', 'error'); return; }
+  if (!start || !end || !checkinFrom || !checkinTo || !checkoutFrom || !checkoutTo) { toast('املأ كل التوقيتات', 'error'); return; }
+  const data = { name, start, end, checkinFrom, checkinTo, checkoutFrom, checkoutTo };
+  try {
+    if (window._editShiftId) {
+      await updateDoc(doc(db,'shifts',window._editShiftId), data);
+      toast('تم تعديل الوردية', 'success');
+    } else {
+      await addDoc(collection(db,'shifts'), { ...data, createdAt:Date.now() });
+      toast('تم إضافة الوردية', 'success');
+    }
+    closeM('mo-shift');
+  } catch(e) { toast('خطأ: '+e.message, 'error'); }
+};
+
+window.deleteShift = async (id) => {
+  const usedBy = _employees.filter(e=>e.shiftId===id && e.status!=='resigned').length;
+  if (usedBy>0) { toast(`الوردية دي فيها ${usedBy} موظف — غيّر ورديتهم الأول`, 'error'); return; }
+  if (!confirm('متأكد من حذف الوردية دي؟')) return;
+  try { await deleteDoc(doc(db,'shifts',id)); toast('تم الحذف', 'success'); }
+  catch(e) { toast('خطأ: '+e.message, 'error'); }
+};
+
+// ══════════════════════════════════════════════
+// SHIFT OVERRIDES — تعديل مواعيد وردية ليوم محدد بس
+// ══════════════════════════════════════════════
+async function renderShiftOverrides() {
+  const body = document.getElementById('shift-override-body');
+  if (!body) return;
+  body.innerHTML = `<tr><td colspan="5"><div class="empty"><i class="fas fa-spinner fa-spin"></i><p>جاري التحميل...</p></div></td></tr>`;
+  let snap;
+  try { snap = await getDocs(query(collection(db,'shiftOverrides'), orderBy('date','desc'))); }
+  catch(e) { body.innerHTML = `<tr><td colspan="5"><div class="empty"><p>خطأ: ${e.message}</p></div></td></tr>`; return; }
+  const overrides = snap.docs.map(d=>({id:d.id,...d.data()}));
+  if (!overrides.length) { body.innerHTML = `<tr><td colspan="5"><div class="empty"><p>مفيش تعديلات مؤقتة مسجّلة</p></div></td></tr>`; return; }
+  body.innerHTML = overrides.map(o=>{
+    const shift = _shifts.find(s=>s.id===o.shiftId);
+    return `<tr>
+      <td style="font-weight:700">${o.date}</td>
+      <td>${shift?shift.name:'—'} <span style="font-size:11px;color:var(--slate-500)">(${o.start}-${o.end})</span></td>
+      <td style="font-size:12px">${o.checkinFrom} - ${o.checkinTo}</td>
+      <td style="font-size:12px">${o.checkoutFrom} - ${o.checkoutTo}</td>
+      <td><button class="btn btn-red btn-ic btn-xs" onclick="deleteShiftOverride('${o.id}')"><i class="fas fa-trash"></i></button></td>
+    </tr>`;
+  }).join('');
+}
+
+window.openShiftOverrideModal = () => {
+  const sel = document.getElementById('so-shift');
+  sel.innerHTML = _shifts.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
+  document.getElementById('so-date').value = todayStr();
+  onOverrideShiftChange();
+  openM('mo-shift-override');
+};
+
+window.onOverrideShiftChange = () => {
+  const shift = _shifts.find(s=>s.id===document.getElementById('so-shift').value);
+  if (!shift) return;
+  document.getElementById('so-checkin-from').value = shift.checkinFrom;
+  document.getElementById('so-checkin-to').value = shift.checkinTo;
+  document.getElementById('so-start').value = shift.start;
+  document.getElementById('so-end').value = shift.end;
+  document.getElementById('so-checkout-from').value = shift.checkoutFrom;
+  document.getElementById('so-checkout-to').value = shift.checkoutTo;
+};
+
+window.saveShiftOverride = async () => {
+  const shiftId = document.getElementById('so-shift').value;
+  const date = document.getElementById('so-date').value;
+  const data = {
+    shiftId, date,
+    checkinFrom: document.getElementById('so-checkin-from').value,
+    checkinTo: document.getElementById('so-checkin-to').value,
+    start: document.getElementById('so-start').value,
+    end: document.getElementById('so-end').value,
+    checkoutFrom: document.getElementById('so-checkout-from').value,
+    checkoutTo: document.getElementById('so-checkout-to').value,
+  };
+  if (!shiftId || !date || Object.values(data).some(v=>!v)) { toast('املأ كل الحقول', 'error'); return; }
+  try {
+    await setDoc(doc(db,'shiftOverrides', `${shiftId}_${date}`), { ...data, createdAt:Date.now(), createdBy: CU.email });
+    toast('تم حفظ التعديل — هيتطبق يوم ' + date + ' بس', 'success');
+    closeM('mo-shift-override');
+    renderShiftOverrides();
+  } catch(e) { toast('خطأ: '+e.message, 'error'); }
+};
+
+window.deleteShiftOverride = async (id) => {
+  if (!confirm('متأكد من حذف التعديل ده؟ الوردية هترجع لمواعيدها الأساسية في اليوم ده')) return;
+  try { await deleteDoc(doc(db,'shiftOverrides',id)); toast('تم الحذف', 'success'); renderShiftOverrides(); }
+  catch(e) { toast('خطأ: '+e.message, 'error'); }
+};
+
+// أي جزء (كيوسك) محتاج المواعيد الفعلية ليوم النهاردة لوردية معينة — بيرجع تعديل اليوم لو موجود، وإلا المواعيد الأساسية
+async function getEffectiveShift(shiftId, date, dbInst) {
+  const baseDoc = await getDoc(doc(dbInst,'shifts',shiftId));
+  if (!baseDoc.exists()) return null;
+  const base = { id: baseDoc.id, ...baseDoc.data() };
+  try {
+    const ovDoc = await getDoc(doc(dbInst,'shiftOverrides', `${shiftId}_${date}`));
+    if (ovDoc.exists()) {
+      const ov = ovDoc.data();
+      return { ...base, start:ov.start, end:ov.end, checkinFrom:ov.checkinFrom, checkinTo:ov.checkinTo, checkoutFrom:ov.checkoutFrom, checkoutTo:ov.checkoutTo, isOverridden:true };
+    }
+  } catch(e) { /* لو مفيش صلاحية أو خطأ، نكمل بالمواعيد الأساسية */ }
+  return base;
+}
+
+// ══════════════════════════════════════════════
+// SETTINGS
+// ══════════════════════════════════════════════
+function renderSettings() {
+  document.getElementById('set-lat').value = _companySettings?.lat ?? '';
+  document.getElementById('set-lng').value = _companySettings?.lng ?? '';
+  document.getElementById('set-radius').value = _companySettings?.radius ?? 200;
+  document.getElementById('set-status').textContent = _companySettings
+    ? 'آخر حفظ: تم تحديد موقع الشركة.'
+    : 'لسه مفيش إحداثيات محفوظة — النظام مش هيقدر يتحقق من موقع الموظفين لحد ما تحفظ الإعدادات دي.';
+}
+
+window.useMyLocation = () => {
+  const status = document.getElementById('set-status');
+  if (!navigator.geolocation) { status.textContent = 'المتصفح ده مش بيدعم تحديد الموقع'; return; }
+  status.textContent = 'جاري تحديد موقعك...';
+  navigator.geolocation.getCurrentPosition(pos=>{
+    document.getElementById('set-lat').value = pos.coords.latitude.toFixed(6);
+    document.getElementById('set-lng').value = pos.coords.longitude.toFixed(6);
+    status.textContent = 'تم تحديد موقعك الحالي — اضغط "حفظ الإعدادات" عشان يتثبت.';
+  }, err=>{
+    status.textContent = 'مقدرناش نحدد موقعك: ' + err.message;
+  }, { enableHighAccuracy:true, timeout:10000 });
+};
+
+window.saveSettings = async () => {
+  const lat = parseFloat(document.getElementById('set-lat').value);
+  const lng = parseFloat(document.getElementById('set-lng').value);
+  const radius = parseInt(document.getElementById('set-radius').value) || 200;
+  if (isNaN(lat) || isNaN(lng)) { toast('حدد الإحداثيات الأول (يدوي أو بزرار موقعي الحالي)', 'error'); return; }
+  try {
+    await setDoc(doc(db,'settings','company'), { lat, lng, radius, updatedAt:Date.now() });
+    _companySettings = { lat, lng, radius };
+    toast('تم حفظ إعدادات الموقع', 'success');
+    document.getElementById('set-status').textContent = 'آخر حفظ: تم تحديد موقع الشركة.';
+  } catch(e) { toast('خطأ: '+e.message, 'error'); }
+};
+
+function renderDepartments() {
+  const el = document.getElementById('dept-cards');
+  if (!_departments.length) { el.innerHTML = '<div class="empty"><i class="fas fa-sitemap"></i><p>لسه مفيش أقسام مضافة</p></div>'; return; }
+  el.innerHTML = _departments.map(d=>{
+    const cnt = _employees.filter(e=>e.departmentId===d.id && e.status!=='resigned').length;
+    const mgr = _employees.find(e=>e.id===d.managerEmployeeId);
+    return `<div class="stat-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div class="stat-ic bg-ac" style="margin-bottom:0"><i class="fas fa-sitemap"></i></div>
+        <div style="display:flex;gap:4px">
+          <button class="btn btn-ghost btn-ic btn-xs" onclick="openDeptModal('${d.id}')"><i class="fas fa-edit"></i></button>
+          <button class="btn btn-red btn-ic btn-xs" onclick="deleteDept('${d.id}')"><i class="fas fa-trash"></i></button>
+        </div>
+      </div>
+      <div style="font-weight:800;font-size:15px;color:var(--navy-900)">${d.name}</div>
+      <div style="font-size:12px;color:var(--slate-500);margin-top:4px">${cnt} موظف${mgr?' — مديرها '+mgr.name:''}</div>
+    </div>`;
+  }).join('');
+}
+
+window.openDeptModal = (id=null) => {
+  window._editDeptId = id;
+  const d = id ? _departments.find(x=>x.id===id) : null;
+  document.getElementById('dept-modal-title').textContent = id ? 'تعديل قسم' : 'قسم جديد';
+  document.getElementById('dept-name').value = d ? d.name : '';
+  openM('mo-dept');
+};
+
+window.saveDept = async () => {
+  const name = document.getElementById('dept-name').value.trim();
+  if (!name) { toast('اكتب اسم القسم', 'error'); return; }
+  try {
+    if (window._editDeptId) {
+      await updateDoc(doc(db,'departments',window._editDeptId), { name });
+      toast('تم تعديل القسم', 'success');
+    } else {
+      await addDoc(collection(db,'departments'), { name, managerEmployeeId:null, createdAt:Date.now() });
+      toast('تم إضافة القسم', 'success');
+    }
+    closeM('mo-dept');
+  } catch(e) { toast('خطأ: '+e.message, 'error'); }
+};
+
+window.deleteDept = async (id) => {
+  const usedBy = _employees.filter(e=>e.departmentId===id && e.status!=='resigned').length;
+  if (usedBy>0) { toast(`القسم ده فيه ${usedBy} موظف — انقلهم لقسم تاني الأول`, 'error'); return; }
+  if (!confirm('متأكد من حذف القسم ده؟')) return;
+  try { await deleteDoc(doc(db,'departments',id)); toast('تم الحذف', 'success'); }
+  catch(e) { toast('خطأ: '+e.message, 'error'); }
+};
+
+// ══════════════════════════════════════════════
+// EMPLOYEES
+// ══════════════════════════════════════════════
+function renderEmployees() {
+  const filterDept = document.getElementById('emp-filter-dept')?.value || '';
+  const list = filterDept ? _employees.filter(e=>e.departmentId===filterDept) : _employees;
+  document.getElementById('emp-count-sub').textContent = `${list.length} موظف`;
+  if (!list.length) {
+    document.getElementById('emp-body').innerHTML = `<tr><td colspan="7"><div class="empty"><i class="fas fa-id-card"></i><p>لسه مفيش موظفين مضافين</p></div></td></tr>`;
+    return;
+  }
+  document.getElementById('emp-body').innerHTML = list.map(e=>{
+    const dept = _departments.find(d=>d.id===e.departmentId);
+    const shift = _shifts.find(s=>s.id===e.shiftId);
+    const statusBadge = e.status==='resigned' ? '<span class="badge bg-danger">مستقيل</span>' : '<span class="badge bg-ok">شغال</span>';
+    return `<tr>
+      <td style="font-weight:700">${e.name}${e.isManager?' <span class="badge bg-ac" style="margin-right:4px"><i class="fas fa-star"></i> مدير</span>':''}</td>
+      <td>${e.jobTitle||'—'}</td>
+      <td>${dept?dept.name:'—'}</td>
+      <td style="font-size:12px;color:var(--slate-500)">${shift?shift.name:'—'}</td>
+      <td style="font-size:12px;color:var(--slate-500)">${e.hireDate||'—'}</td>
+      <td>${statusBadge}</td>
+      <td style="display:flex;gap:4px">
+        <button class="btn btn-ghost btn-ic btn-xs" onclick="openProfile('${e.id}')" title="الملف الشخصي"><i class="fas fa-address-card"></i></button>
+        <button class="btn btn-ghost btn-ic btn-xs" onclick="openEmpModal('${e.id}')"><i class="fas fa-edit"></i></button>
+        <button class="btn btn-red btn-ic btn-xs" onclick="deleteEmployee('${e.id}')"><i class="fas fa-trash"></i></button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+window.renderEmployees = renderEmployees;
+
+window.openEmpModal = (id=null) => {
+  window._editEmpId = id;
+  const e = id ? _employees.find(x=>x.id===id) : null;
+  document.getElementById('emp-modal-title').textContent = id ? 'تعديل موظف' : 'إضافة موظف';
+  document.getElementById('emp-name').value = e?.name || '';
+  document.getElementById('emp-job').value = e?.jobTitle || '';
+  document.getElementById('emp-dept').value = e?.departmentId || '';
+  document.getElementById('emp-code').value = e?.code || '';
+  document.getElementById('emp-shift').value = e?.shiftId || '';
+  document.getElementById('emp-hire').value = e?.hireDate || '';
+  document.getElementById('emp-salary').value = e?.salary || '';
+  document.getElementById('emp-leavebalance').value = (e?.leaveBalance ?? 21);
+  document.getElementById('emp-socins').value = e?.socialInsurance ?? '';
+  document.getElementById('emp-medins').value = e?.medicalInsurance ?? '';
+  document.getElementById('emp-tax').value = e?.incomeTax ?? '';
+  document.getElementById('emp-incentive').value = e?.incentiveBase ?? '';
+  updateSalaryPreview();
+  document.getElementById('emp-phone').value = e?.phone || '';
+  document.getElementById('emp-nid').value = e?.nationalId || '';
+  document.getElementById('emp-status').value = e?.status || 'active';
+  document.getElementById('emp-ismanager').checked = !!e?.isManager;
+  const pkWrap = document.getElementById('emp-passkeys-wrap');
+  if (id) {
+    pkWrap.style.display = '';
+    renderEmpPasskeys(id);
+  } else {
+    pkWrap.style.display = 'none';
+  }
+  openM('mo-emp');
+};
+
+function renderEmpPasskeys(empId) {
+  const emp = _employees.find(x=>x.id===empId);
+  const list = emp?.passkeys || [];
+  const el = document.getElementById('emp-passkeys-list');
+  if (!list.length) { el.innerHTML = '<div>لسه ما سجّلش أي بصمة — هيتسجّل تلقائي أول مرة يدخل بكوده.</div>'; return; }
+  el.innerHTML = list.map(p=>`
+    <div style="display:flex;align-items:center;justify-content:space-between;background:var(--slate-100);padding:7px 10px;border-radius:8px">
+      <span><i class="fas fa-fingerprint"></i>&nbsp; ${p.label||'جهاز'} — ${new Date(p.createdAt).toLocaleDateString('ar-EG')}</span>
+      <button class="btn btn-red btn-xs btn-ic" onclick="removePasskey('${empId}','${p.id}')"><i class="fas fa-trash"></i></button>
+    </div>`).join('');
+}
+
+window.removePasskey = async (empId, credId) => {
+  if (!confirm('متأكد من حذف البصمة دي؟ الموظف هيسجل بصمة جديدة أول ما يدخل تاني.')) return;
+  try {
+    const emp = _employees.find(x=>x.id===empId);
+    const newList = (emp?.passkeys||[]).filter(p=>p.id!==credId);
+    await updateDoc(doc(db,'employees',empId), { passkeys:newList });
+    toast('تم حذف البصمة', 'success');
+    renderEmpPasskeys(empId);
+  } catch(e) { toast('خطأ: '+e.message, 'error'); }
+};
+
+// الراتب الصافي (يوم 1) — منفصل تماماً عن الحافز
+function computeNetSalary(emp) {
+  return (emp.salary||0) - (emp.socialInsurance||0) - (emp.medicalInsurance||0) - (emp.incomeTax||0);
+}
+// الحافز المستحق (يوم 15) — حسب نسبة تقييم الشهر
+function computeIncentive(emp, evalScorePercent) {
+  if (evalScorePercent == null) return null;
+  return Math.round((emp.incentiveBase||0) * (evalScorePercent/100) * 100)/100;
+}
+// خصم الشهر من الراتب (جزاءات + إجازة بالخصم) — بيتحسب على أساس يوم = الراتب الأساسي/30
+function computeMonthlyDeduction(emp, sheet) {
+  if (!sheet) return 0;
+  const days = (sheet.absence||0) + (sheet.leaveUnpaid||0);
+  if (!days) return 0;
+  const dailyRate = (emp.salary||0)/30;
+  return Math.round(days*dailyRate*100)/100;
+}
+window.updateSalaryPreview = () => {
+  const emp = {
+    salary: parseFloat(document.getElementById('emp-salary').value)||0,
+    socialInsurance: parseFloat(document.getElementById('emp-socins').value)||0,
+    medicalInsurance: parseFloat(document.getElementById('emp-medins').value)||0,
+    incomeTax: parseFloat(document.getElementById('emp-tax').value)||0,
+    incentiveBase: parseFloat(document.getElementById('emp-incentive').value)||0,
+  };
+  const net = computeNetSalary(emp);
+  document.getElementById('emp-salary-preview').textContent =
+    `الراتب الصافي (يوم 1): ${net} ج.م — الحافز الأساسي (يوم 15): ${emp.incentiveBase} ج.م لو التقييم 100%`;
+};
+
+window.saveEmployee = async () => {
+  const name = document.getElementById('emp-name').value.trim();
+  const departmentId = document.getElementById('emp-dept').value;
+  const code = normalizeDigits(document.getElementById('emp-code').value.trim());
+  if (!name) { toast('اكتب اسم الموظف', 'error'); return; }
+  if (!departmentId) { toast('اختر القسم', 'error'); return; }
+  if (code) {
+    const dup = _employees.find(x=>x.code===code && x.id!==window._editEmpId);
+    if (dup) { toast(`كود الموظف ده مستخدم بالفعل مع "${dup.name}"`, 'error'); return; }
+  }
+  const isManager = document.getElementById('emp-ismanager').checked;
+  const data = {
+    name, departmentId,
+    jobTitle: document.getElementById('emp-job').value.trim(),
+    code: code || null,
+    shiftId: document.getElementById('emp-shift').value || null,
+    hireDate: document.getElementById('emp-hire').value || null,
+    salary: parseFloat(document.getElementById('emp-salary').value) || 0,
+    leaveBalance: parseFloat(document.getElementById('emp-leavebalance').value ?? 21),
+    socialInsurance: parseFloat(document.getElementById('emp-socins').value) || 0,
+    medicalInsurance: parseFloat(document.getElementById('emp-medins').value) || 0,
+    incomeTax: parseFloat(document.getElementById('emp-tax').value) || 0,
+    incentiveBase: parseFloat(document.getElementById('emp-incentive').value) || 0,
+    phone: document.getElementById('emp-phone').value.trim(),
+    nationalId: document.getElementById('emp-nid').value.trim(),
+    status: document.getElementById('emp-status').value,
+    isManager
+  };
+  try {
+    let empId = window._editEmpId;
+    if (empId) {
+      await updateDoc(doc(db,'employees',empId), data);
+    } else {
+      const ref = await addDoc(collection(db,'employees'), { ...data, createdAt:Date.now() });
+      empId = ref.id;
+    }
+    // لو اتحدد كمدير للقسم ده، شيل صفة المدير من أي حد تاني في نفس القسم وحدّث القسم
+    if (isManager) {
+      const others = _employees.filter(x=>x.departmentId===departmentId && x.id!==empId && x.isManager);
+      for (const o of others) await updateDoc(doc(db,'employees',o.id), { isManager:false });
+      await updateDoc(doc(db,'departments',departmentId), { managerEmployeeId: empId });
+    } else {
+      const dept = _departments.find(d=>d.id===departmentId);
+      if (dept && dept.managerEmployeeId === empId) {
+        await updateDoc(doc(db,'departments',departmentId), { managerEmployeeId: null });
+      }
+    }
+    toast(window._editEmpId ? 'تم تعديل بيانات الموظف' : 'تم إضافة الموظف', 'success');
+    closeM('mo-emp');
+    window._editEmpId = null;
+  } catch(e) { toast('خطأ: '+e.message, 'error'); }
+};
+
+window.deleteEmployee = async (id) => {
+  if (!confirm('متأكد من حذف الموظف ده؟')) return;
+  try {
+    const e = _employees.find(x=>x.id===id);
+    if (e && e.isManager) {
+      const dept = _departments.find(d=>d.managerEmployeeId===id);
+      if (dept) await updateDoc(doc(db,'departments',dept.id), { managerEmployeeId:null });
+    }
+    await deleteDoc(doc(db,'employees',id));
+    toast('تم الحذف', 'success');
+  } catch(e) { toast('خطأ: '+e.message, 'error'); }
+};
+
+// ══════════════════════════════════════════════
+// KIOSK — شاشة الموظف (كود + بصمة + GPS)
+// ══════════════════════════════════════════════
+// بعض كيبوردات الموبايل بتكتب أرقام عربية/فارسية (١٢٣) بدل الإنجليزية (123) من غير ما المستخدم يحس،
+// فبنوحّد أي كود موظف لأرقام إنجليزية قبل الحفظ أو البحث عشان الكود يتطابق دايماً
+function normalizeDigits(str) {
+  if (!str) return str;
+  const eastern = '٠١٢٣٤٥٦٧٨٩', persian = '۰۱۲۳۴۵۶۷۸۹';
+  return String(str).replace(/[٠-٩]/g, d=>eastern.indexOf(d)).replace(/[۰-۹]/g, d=>persian.indexOf(d)).trim();
+}
+
+// أيام الشغل: الأحد–الخميس. الجمعة (5) والسبت (6) إجازة أسبوعية ثابتة (JS: الأحد=0 ... السبت=6)
+const WEEKLY_OFF_DAYS = [5,6];
+function isWeeklyOffDate(dateStr) {
+  const d = new Date(dateStr+'T00:00:00');
+  return WEEKLY_OFF_DAYS.includes(d.getDay());
+}
+// هل الموظف ده أصلاً كان متعين وقت التاريخ ده؟ (لو مفيش تاريخ تعيين مسجّل، نعتبره موجود دايماً — توافقاً مع بيانات قديمة)
+function employeeHiredBy(emp, dateStr) {
+  return !emp.hireDate || emp.hireDate <= dateStr;
+}
+function todayStr() { const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function hmToMin(hm) { const [h,m]=hm.split(':').map(Number); return h*60+m; }
+function nowMin() { const d=new Date(); return d.getHours()*60+d.getMinutes(); }
+function nowHM() { const d=new Date(); return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
+function minToHM(total) { total=((total%1440)+1440)%1440; const h=Math.floor(total/60), m=total%60; return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0'); }
+
+function haversineMeters(lat1,lng1,lat2,lng2) {
+  const R=6371000, toRad=x=>x*Math.PI/180;
+  const dLat=toRad(lat2-lat1), dLng=toRad(lng2-lng1);
+  const a=Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLng/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+function getPosition() {
+  return new Promise((res,rej)=>{
+    if (!navigator.geolocation) { rej(new Error('المتصفح ده مش بيدعم تحديد الموقع')); return; }
+    navigator.geolocation.getCurrentPosition(p=>res(p), e=>rej(new Error('مقدرناش نحدد موقعك — سمح للمتصفح بالوصول للموقع')), { enableHighAccuracy:true, timeout:12000 });
+  });
+}
+function bufToB64url(buf) {
+  return btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+function b64urlToBuf(str) {
+  str = str.replace(/-/g,'+').replace(/_/g,'/'); while (str.length%4) str+='=';
+  const bin = atob(str); const buf = new Uint8Array(bin.length);
+  for (let i=0;i<bin.length;i++) buf[i]=bin.charCodeAt(i);
+  return buf.buffer;
+}
+function randChallenge() { const b=new Uint8Array(32); crypto.getRandomValues(b); return b; }
+
+async function webauthnRegister(emp) {
+  if (!window.PublicKeyCredential) throw new Error('الجهاز/المتصفح ده مش بيدعم بصمة الدخول (WebAuthn)');
+  const cred = await navigator.credentials.create({ publicKey: {
+    challenge: randChallenge(),
+    rp: { name: 'الساقية - الشؤون الإدارية' },
+    user: { id: new TextEncoder().encode(emp.id), name: emp.code, displayName: emp.name },
+    pubKeyCredParams: [{type:'public-key',alg:-7},{type:'public-key',alg:-257}],
+    authenticatorSelection: { authenticatorAttachment:'platform', userVerification:'required' },
+    timeout: 60000, attestation: 'none'
+  }});
+  if (!cred) throw new Error('اتلغى تسجيل البصمة');
+  return { id: bufToB64url(cred.rawId), label: 'جهاز مسجّل بتاريخ ' + new Date().toLocaleDateString('ar-EG'), createdAt: Date.now() };
+}
+
+async function webauthnVerify(emp) {
+  if (!window.PublicKeyCredential) throw new Error('الجهاز/المتصفح ده مش بيدعم بصمة الدخول (WebAuthn)');
+  const allow = (emp.passkeys||[]).map(p=>({ id: b64urlToBuf(p.id), type:'public-key' }));
+  const cred = await navigator.credentials.get({ publicKey: {
+    challenge: randChallenge(), allowCredentials: allow, userVerification:'required', timeout:60000
+  }});
+  if (!cred) throw new Error('فشل التحقق من البصمة');
+  const gotId = bufToB64url(cred.rawId);
+  const match = (emp.passkeys||[]).find(p=>p.id===gotId);
+  if (!match) throw new Error('البصمة دي مش متسجّلة لحسابك — كلم الأدمن');
+  return true;
+}
+
+window.showKiosk = () => {
+  document.getElementById('auth-screen').classList.add('hidden');
+  document.getElementById('kiosk-screen').classList.remove('hidden');
+  window._kioskEmp = null;
+  kioskRenderCodeEntry();
+};
+window.backToLogin = () => {
+  document.getElementById('kiosk-screen').classList.add('hidden');
+  document.getElementById('auth-screen').classList.remove('hidden');
+};
+
+function kioskRenderCodeEntry(msg='') {
+  document.getElementById('kiosk-body').innerHTML = `
+    <div class="fg" style="text-align:right;margin-top:20px">
+      <label class="fl">كود الموظف</label>
+      <input class="fc" id="kiosk-code" inputmode="numeric" placeholder="اكتب كودك" style="text-align:center;font-size:20px;letter-spacing:2px" onkeydown="if(event.key==='Enter')kioskSubmitCode()">
+    </div>
+    <button class="auth-btn" id="kiosk-code-btn" onclick="kioskSubmitCode()"><i class="fas fa-arrow-left"></i>دخول</button>
+    ${msg?`<div class="auth-err">${msg}</div>`:''}
+  `;
+  document.getElementById('kiosk-code')?.focus();
+}
+window.kioskRenderCodeEntry = kioskRenderCodeEntry;
+
+window.kioskSubmitCode = async () => {
+  const code = normalizeDigits(document.getElementById('kiosk-code').value.trim());
+  if (!code) { kioskRenderCodeEntry('اكتب كودك الأول'); return; }
+  const btn = document.getElementById('kiosk-code-btn');
+  btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التحقق...';
+  try {
+    if (!secAuth.currentUser) await signInAnonymously(secAuth);
+    const snap = await getDocs(query(collection(secDb,'employees'), where('code','==',code)));
+    const empDoc = snap.docs.find(d => d.data().status !== 'resigned');
+    if (!empDoc) { kioskRenderCodeEntry('الكود ده غلط أو غير موجود'); return; }
+    window._kioskEmp = { id: empDoc.id, ...empDoc.data() };
+    await kioskLoadStatus();
+  } catch(e) {
+    kioskRenderCodeEntry('خطأ: ' + (e.message||e.code));
+  }
+};
+
+async function kioskLoadStatus() {
+  const emp = window._kioskEmp;
+  if (!emp.shiftId) { kioskRenderCodeEntry(`أهلاً ${emp.name} — لسه الأدمن ما حددلكش وردية، كلم الأدمن الأول.`); return; }
+  const today = todayStr();
+  if (isWeeklyOffDate(today)) { kioskRenderCodeEntry(`أهلاً ${emp.name} — النهاردة إجازة أسبوعية (الجمعة/السبت)، مفيش تسجيل حضور.`); return; }
+  const holiday = await getHolidayForDate(today, secDb);
+  if (holiday && !(holiday.exemptEmployeeIds||[]).includes(emp.id)) {
+    kioskRenderCodeEntry(`أهلاً ${emp.name} — اليوم إجازة رسمية (${holiday.title})، مفيش تسجيل حضور.`);
+    return;
+  }
+  const shift = await getEffectiveShift(emp.shiftId, today, secDb);
+  if (!shift) { kioskRenderCodeEntry('الوردية بتاعتك مش موجودة، كلم الأدمن.'); return; }
+  window._kioskShift = shift;
+
+  const attSnap = await getDocs(query(collection(secDb,'attendance'), where('employeeId','==',emp.id), where('date','==',today)));
+  const recs = attSnap.docs.map(d=>d.data());
+  const hasCheckin = recs.find(r=>r.type==='checkin');
+  const hasCheckout = recs.find(r=>r.type==='checkout');
+  window._kioskHasCheckin = !!hasCheckin;
+  window._kioskHasCheckout = !!hasCheckout;
+
+  const now = nowMin();
+  let bodyHtml = `
+    <div style="text-align:right;background:var(--slate-100);border-radius:10px;padding:14px 16px;margin:16px 0">
+      <div style="font-weight:800;font-size:15px">${emp.name}</div>
+      <div style="font-size:12px;color:var(--slate-500);margin-top:2px">${emp.jobTitle||'—'} · ${shift.name}${shift.isOverridden?' <span style="color:var(--ac-700);font-weight:700">(مواعيد معدّلة النهاردة)</span>':''}</div>
+
+    </div>`;
+
+  if (hasCheckin && hasCheckout) {
+    bodyHtml += `<div class="auth-err" style="color:var(--ok-700)"><i class="fas fa-check-circle"></i> تم تسجيل حضورك وانصرافك النهاردة بالفعل</div>`;
+  } else if (!hasCheckin) {
+    const from = hmToMin(shift.checkinFrom), to = hmToMin(shift.checkinTo);
+    if (now>=from && now<=to) {
+      bodyHtml += `<button class="auth-btn" id="kiosk-act-btn" onclick="kioskDoAction('checkin')"><i class="fas fa-fingerprint"></i>تسجيل حضور</button>`;
+    } else {
+      bodyHtml += `<div class="auth-err">مش وقت الحضور دلوقتي — مسموح بس من ${shift.checkinFrom} لحد ${shift.checkinTo}</div>`;
+    }
+  } else {
+    const from = hmToMin(shift.checkoutFrom);
+    if (now>=from) {
+      bodyHtml += `<button class="auth-btn" id="kiosk-act-btn" onclick="kioskDoAction('checkout')"><i class="fas fa-fingerprint"></i>تسجيل انصراف</button>`;
+    } else {
+      bodyHtml += `<div class="auth-err">لسه بدري على الانصراف — مسموح من ${shift.checkoutFrom}</div>`;
+    }
+  }
+  bodyHtml += `<div style="margin-top:12px;display:flex;flex-direction:column;gap:8px">
+    <a href="javascript:void(0)" onclick="kioskShowProfile()" style="font-size:12px;color:var(--ac-600);font-weight:700">عرض سجلي السنوي</a>
+    <a href="javascript:void(0)" onclick="kioskShowLeaveForm()" style="font-size:12px;color:var(--ac-600);font-weight:700">طلب إجازة</a>
+    <a href="javascript:void(0)" onclick="kioskRenderCodeEntry()" style="font-size:11.5px;color:var(--slate-500)">مش أنا؟ رجوع</a>
+  </div>`;
+  document.getElementById('kiosk-body').innerHTML = bodyHtml;
+}
+window.kioskLoadStatus = kioskLoadStatus;
+
+window.kioskShowProfile = async () => {
+  const emp = window._kioskEmp;
+  const year = new Date().getFullYear();
+  const body = document.getElementById('kiosk-body');
+  body.innerHTML = '<div class="empty"><i class="fas fa-spinner fa-spin"></i><p>جاري التحميل...</p></div>';
+  try {
+    const [sheetsSnap, evalsSnap] = await Promise.all([
+      getDocs(query(collection(secDb,'monthlySheets'), where('employeeId','==',emp.id))),
+      getDocs(query(collection(secDb,'evaluations'), where('employeeId','==',emp.id)))
+    ]);
+    const sheets = {}; sheetsSnap.docs.forEach(d=>{ const v=d.data(); if (v.period && v.period.startsWith(year+'-')) sheets[v.period]=v; });
+    const evals = {}; evalsSnap.docs.forEach(d=>{ const v=d.data(); if (v.period && v.period.startsWith(year+'-')) evals[v.period]=v; });
+
+    const curPeriod = currentPeriodStr();
+    const curEval = evals[curPeriod];
+
+    let rows = '';
+    for (let m=1;m<=12;m++) {
+      const period = `${year}-${String(m).padStart(2,'0')}`;
+      const s = sheets[period]; const ev = evals[period];
+      if (!s && !ev) continue;
+      rows += `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:12px;text-align:right;gap:8px">
+        <span style="font-weight:700;white-space:nowrap">${period}</span>
+        <span>إجازة مستخدمة: ${s?.leaveFromBalance??0} · غياب: ${s?.absence??0} · إضافي: ${s?.overtimeHours??0}س${ev?.finalScore!=null?' · تقييم: '+ev.finalScore+'%':''}</span>
+      </div>`;
+    }
+
+    body.innerHTML = `
+      <div style="text-align:right;background:var(--slate-100);border-radius:10px;padding:14px 16px;margin:16px 0;display:flex;flex-direction:column;gap:6px">
+        <div style="display:flex;justify-content:space-between;font-size:13px"><span>رصيد الإجازة المتبقي</span><span style="font-weight:800">${emp.leaveBalance ?? 21} يوم</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:13px"><span>الراتب الصافي (يوم 1)</span><span style="font-weight:800">${computeNetSalary(emp)} ج.م</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:13px"><span>الحافز المستحق (يوم 15)</span><span style="font-weight:800">${curEval?.finalScore!=null ? computeIncentive(emp,curEval.finalScore)+' ج.م' : 'محتاج تقييم الشهر الأول'}</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:13px"><span>تقييم الشهر الحالي</span><span style="font-weight:800">${curEval?.finalScore!=null ? curEval.finalScore+'%' : 'لسه ما اتحطش'}</span></div>
+      </div>
+      <div style="text-align:right;margin-top:6px;font-weight:700;font-size:13px">تفاصيل سنة ${year}</div>
+      <div style="text-align:right">${rows || '<div class="empty"><p>مفيش بيانات شهرية مسجّلة لسه</p></div>'}</div>
+      <div style="margin-top:14px"><a href="javascript:void(0)" onclick="kioskLoadStatus()" style="font-size:11.5px;color:var(--slate-500)">→ رجوع</a></div>`;
+  } catch(e) {
+    body.innerHTML = `<div class="auth-err">خطأ: ${e.message}</div><div style="margin-top:10px"><a href="javascript:void(0)" onclick="kioskLoadStatus()" style="font-size:11.5px">رجوع</a></div>`;
+  }
+};
+
+window.kioskShowLeaveForm = () => {
+  const emp = window._kioskEmp;
+  document.getElementById('kiosk-body').innerHTML = `
+    <div style="text-align:right;background:var(--slate-100);border-radius:10px;padding:14px 16px;margin:16px 0">
+      <div style="font-weight:800;font-size:14px">طلب إجازة</div>
+      <div style="font-size:12px;color:var(--slate-500);margin-top:2px">رصيدك الحالي: ${emp.leaveBalance ?? 21} يوم — لو الطلب أكتر من رصيدك، الفرق بيتخصم من راتبك بعد الموافقة</div>
+    </div>
+    <div class="fg" style="text-align:right"><label class="fl">من تاريخ</label><input class="fc" type="date" id="kv-from"></div>
+    <div class="fg" style="text-align:right"><label class="fl">لحد تاريخ</label><input class="fc" type="date" id="kv-to"></div>
+    <div class="fg" style="text-align:right"><label class="fl">ملاحظات (اختياري)</label><textarea class="fc" id="kv-note" rows="2"></textarea></div>
+    <div id="kv-err" class="auth-err"></div>
+    <button class="auth-btn" id="kiosk-leave-btn" onclick="kioskSubmitLeaveRequest()"><i class="fas fa-paper-plane"></i>إرسال الطلب</button>
+    <div style="margin-top:12px"><a href="javascript:void(0)" onclick="kioskLoadStatus()" style="font-size:11.5px;color:var(--slate-500)">→ رجوع</a></div>
+  `;
+};
+
+window.kioskSubmitLeaveRequest = async () => {
+  const emp = window._kioskEmp;
+  const dateFrom = document.getElementById('kv-from').value;
+  const dateTo = document.getElementById('kv-to').value;
+  const note = document.getElementById('kv-note').value.trim();
+  const err = document.getElementById('kv-err');
+  if (!dateFrom || !dateTo) { err.textContent = 'حدد تاريخ البداية والنهاية'; return; }
+  if (dateTo < dateFrom) { err.textContent = 'تاريخ النهاية لازم يكون بعد تاريخ البداية'; return; }
+  const daysCount = Math.round((new Date(dateTo)-new Date(dateFrom))/86400000)+1;
+  const btn = document.getElementById('kiosk-leave-btn');
+  btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الإرسال...';
+  try {
+    await addDoc(collection(secDb,'leaveRequests'), {
+      employeeId: emp.id, employeeName: emp.name, departmentId: emp.departmentId||null,
+      dateFrom, dateTo, daysCount, note, status:'pending', source:'kiosk',
+      requestedAt: Date.now(), requestedBy: 'kiosk:'+(emp.code||emp.id)
+    });
+    document.getElementById('kiosk-body').innerHTML = `
+      <div style="text-align:center;padding:20px 0">
+        <div style="font-size:40px;color:var(--ok-600);margin-bottom:10px"><i class="fas fa-check-circle"></i></div>
+        <div style="font-weight:800;font-size:15px">تم إرسال طلب الإجازة</div>
+        <div style="font-size:12px;color:var(--slate-500);margin-top:6px">هيتراجع من المسؤول ويوصلك رد قريب</div>
+      </div>`;
+    setTimeout(()=>kioskRenderCodeEntry(), 3000);
+  } catch(e) {
+    err.textContent = 'خطأ: ' + (e.message||e.code);
+    btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i>إرسال الطلب';
+  }
+};
+
+window.kioskDoAction = async (type) => {
+  const btn = document.getElementById('kiosk-act-btn');
+  const emp = window._kioskEmp;
+  const shift = window._kioskShift;
+  btn.disabled = true;
+  try {
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري تحديد الموقع...';
+    if (!window._kioskSettings) {
+      const sdoc = await getDoc(doc(secDb,'settings','company'));
+      window._kioskSettings = sdoc.exists() ? sdoc.data() : null;
+    }
+    if (!window._kioskSettings) throw new Error('النظام لسه مش متظبط (مفيش إحداثيات شركة) — كلم الأدمن');
+    const pos = await getPosition();
+    const dist = haversineMeters(pos.coords.latitude, pos.coords.longitude, window._kioskSettings.lat, window._kioskSettings.lng);
+    if (dist > (window._kioskSettings.radius||200)) {
+      throw new Error(`لازم تكون في مقر الشركة عشان تسجل (إنت على بعد ${Math.round(dist)} متر تقريباً)`);
+    }
+
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> حط بصمتك...';
+    let updatedPasskeys = emp.passkeys || [];
+    if (!updatedPasskeys.length) {
+      const newPk = await webauthnRegister(emp);
+      updatedPasskeys = [...updatedPasskeys, newPk];
+      await updateDoc(doc(secDb,'employees',emp.id), { passkeys: updatedPasskeys });
+    } else {
+      await webauthnVerify(emp);
+    }
+
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التسجيل...';
+    const nowM = nowMin();
+    let extra = {};
+    if (type==='checkin') {
+      extra.lateMinutes = Math.max(0, nowM - hmToMin(shift.checkinTo));
+    } else {
+      const shiftEndMin = hmToMin(shift.end);
+      const checkoutToMin = hmToMin(shift.checkoutTo);
+      if (nowM > checkoutToMin) {
+        extra.pendingOvertimeMinutes = Math.max(0, nowM - shiftEndMin);
+        extra.overtimeApproved = false;
+      }
+    }
+    await addDoc(collection(secDb,'attendance'), {
+      employeeId: emp.id, employeeName: emp.name, departmentId: emp.departmentId||null,
+      shiftId: shift.id, type, date: todayStr(), time: nowHM(),
+      location: { lat: pos.coords.latitude, lng: pos.coords.longitude }, distanceMeters: Math.round(dist),
+      createdAt: Date.now(), ...extra
+    });
+
+    document.getElementById('kiosk-body').innerHTML = `
+      <div style="text-align:center;padding:20px 0">
+        <div style="font-size:40px;color:var(--ok-600);margin-bottom:10px"><i class="fas fa-check-circle"></i></div>
+        <div style="font-weight:800;font-size:15px">تم تسجيل ${type==='checkin'?'حضورك':'انصرافك'} الساعة ${nowHM()}</div>
+        ${extra.pendingOvertimeMinutes ? `<div style="font-size:12px;color:var(--warn-600);margin-top:8px">وقت إضافي معلّق (${Math.round(extra.pendingOvertimeMinutes/60*10)/10} ساعة) — محتاج موافقة المدير</div>` : ''}
+      </div>`;
+    setTimeout(()=>kioskRenderCodeEntry(), 3500);
+  } catch(e) {
+    await kioskLoadStatus();
+    const wrap = document.getElementById('kiosk-body');
+    wrap.innerHTML += `<div class="auth-err">${e.message||e.code}</div>`;
+  }
+};
+
+// ══════════════════════════════════════════════
+// DAILY CHECK-IN DASHBOARD
+// ══════════════════════════════════════════════
+async function renderDaily() {
+  const dateInput = document.getElementById('daily-date');
+  if (!dateInput.value) dateInput.value = todayStr();
+  const date = dateInput.value;
+  const body = document.getElementById('daily-body');
+  body.innerHTML = '<div class="empty"><i class="fas fa-spinner fa-spin"></i><p>جاري التحميل...</p></div>';
+
+  // يوم إجازة أسبوعية (جمعة/سبت) — مفيش متابعة حضور خالص
+  if (isWeeklyOffDate(date)) {
+    body.innerHTML = `<div class="card"><div class="card-body" style="text-align:center;padding:40px 20px">
+      <div style="font-size:30px;color:var(--slate-500);margin-bottom:10px"><i class="fas fa-couch"></i></div>
+      <div style="font-weight:800;font-size:15px">النهاردة إجازة أسبوعية</div>
+      <div style="font-size:12.5px;color:var(--slate-500);margin-top:4px">الشركة شغالة من الأحد للخميس — الجمعة والسبت إجازة، فمفيش متابعة حضور لليوم ده</div>
+    </div></div>`;
+    return;
+  }
+
+  const holiday = await getHolidayForDate(date, db);
+  const exemptIds = holiday ? (holiday.exemptEmployeeIds||[]) : null;
+
+  let attSnap, markSnap;
+  try {
+    [attSnap, markSnap] = await Promise.all([
+      getDocs(query(collection(db,'attendance'), where('date','==',date), where('type','==','checkin'))),
+      getDocs(query(collection(db,'dailyMarks'), where('date','==',date)))
+    ]);
+  } catch(e) { body.innerHTML = `<div class="empty"><p>خطأ: ${e.message}</p></div>`; return; }
+
+  const checkins = {}; attSnap.docs.forEach(d=>{ const v=d.data(); checkins[v.employeeId]=v; });
+  const marks = {}; markSnap.docs.forEach(d=>{ const v=d.data(); marks[v.employeeId]={id:d.id,...v}; });
+
+  let activeEmps = _employees.filter(e=>e.status!=='resigned' && e.shiftId && employeeHiredBy(e,date));
+  // في يوم إجازة رسمية، غير الموظفين المستثنين (اللي هيشتغلوا) محدش مطلوب منه يبصم — بنشيلهم من المتابعة
+  if (holiday) activeEmps = activeEmps.filter(e=>exemptIds.includes(e.id));
+
+  if (!activeEmps.length) {
+    body.innerHTML = holiday
+      ? `<div class="card"><div class="card-body" style="text-align:center;padding:40px 20px">
+          <div style="font-size:30px;color:var(--ac-600);margin-bottom:10px"><i class="fas fa-flag"></i></div>
+          <div style="font-weight:800;font-size:15px">اليوم إجازة رسمية: ${holiday.title}</div>
+          <div style="font-size:12.5px;color:var(--slate-500);margin-top:4px">مفيش موظفين مستثنين للشغل النهاردة — مفيش متابعة حضور</div>
+        </div></div>`
+      : '<div class="empty"><i class="fas fa-users"></i><p>مفيش موظفين متحدد لهم وردية</p></div>';
+    return;
+  }
+
+  const isToday = date === todayStr();
+  const isFuture = date > todayStr();
+  const nowM = nowMin();
+
+  const byShift = {};
+  activeEmps.forEach(e=>{ (byShift[e.shiftId] = byShift[e.shiftId]||[]).push(e); });
+
+  const holidayBanner = holiday ? `<div class="card" style="margin-bottom:16px;border-color:var(--ac-500)"><div class="card-body" style="font-size:12.5px;color:var(--ac-700);font-weight:700"><i class="fas fa-flag"></i> اليوم إجازة رسمية (${holiday.title}) — الموظفين دول مستثنين ومطلوب يحضروا</div></div>` : '';
+
+  body.innerHTML = holidayBanner + _shifts.map(shift=>{
+    const emps = byShift[shift.id]||[];
+    if (!emps.length) return '';
+
+    const present = [], due = [], notYetDue = [];
+    emps.forEach(e=>{
+      const chk = checkins[e.id];
+      if (chk) { present.push({e,chk}); return; }
+      // الوردية لسه معادها ماجاش (بس لو النهاردة فعلاً وقبل معاد الحضور المسموح)
+      const isDue = !isToday && !isFuture ? true : (isToday ? nowM >= hmToMin(shift.checkinFrom) : false);
+      if (isDue) due.push(e); else notYetDue.push(e);
+    });
+
+    const presentRows = present.map(({e,chk})=>`
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border-bottom:1px solid var(--border)">
+        <span style="font-weight:700">${e.name}</span>
+        <span class="badge bg-ok"><i class="fas fa-check"></i> حضر الساعة ${chk.time}</span>
+      </div>`).join('');
+
+    const dueRows = due.map(e=>{
+      const mark = marks[e.id];
+      if (mark) {
+        const label = mark.status==='leave' ? 'إجازة من الرصيد' : 'غياب بدون إذن';
+        const cls = mark.status==='leave' ? 'bg-ac' : 'bg-danger';
+        return `<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border-bottom:1px solid var(--border)">
+          <span style="font-weight:700;color:var(--danger-600)">${e.name}</span>
+          <span class="badge ${cls}" style="cursor:pointer" onclick="openDailyMark('${e.id}','${date}')">${label} <i class="fas fa-edit"></i></span>
+        </div>`;
+      }
+      return `<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border-bottom:1px solid var(--border)">
+        <span style="font-weight:700;color:var(--danger-600)">${e.name}</span>
+        <button class="btn btn-red btn-xs" onclick="openDailyMark('${e.id}','${date}')"><i class="fas fa-exclamation-circle"></i> لسه ما بصمش</button>
+      </div>`;
+    }).join('');
+
+    const notYetDueRows = notYetDue.map(e=>`
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border-bottom:1px solid var(--border)">
+        <span style="font-weight:700;color:var(--slate-500)">${e.name}</span>
+        <span class="badge bg-slate"><i class="fas fa-hourglass-half"></i> لم يحن موعد العمل بعد</span>
+      </div>`).join('');
+
+    return `<div class="card" style="margin-bottom:16px"><div class="card-body">
+      <div style="font-weight:800;font-size:14px;margin-bottom:8px"><i class="fas fa-clock"></i> ${shift.name} <span style="font-weight:400;color:var(--slate-500);font-size:12px">(${shift.start}-${shift.end})</span></div>
+      ${presentRows}${dueRows}${notYetDueRows}
+    </div></div>`;
+  }).join('');
+}
+window.renderDaily = renderDaily;
+
+window.openDailyMark = (empId, date) => {
+  const emp = _employees.find(x=>x.id===empId);
+  document.getElementById('dm-emp-name').textContent = emp?.name || '';
+  window._dmEmpId = empId; window._dmDate = date;
+  document.getElementById('dm-status').value = 'absent';
+  document.getElementById('dm-note').value = '';
+  openM('mo-dailymark');
+};
+
+window.saveDailyMark = async () => {
+  const status = document.getElementById('dm-status').value;
+  const note = document.getElementById('dm-note').value.trim();
+  try {
+    const existing = await getDocs(query(collection(db,'dailyMarks'), where('employeeId','==',window._dmEmpId), where('date','==',window._dmDate)));
+    if (!existing.empty) {
+      await updateDoc(doc(db,'dailyMarks',existing.docs[0].id), { status, note, markedBy: CU?.email||'admin', markedAt: Date.now() });
+    } else {
+      await addDoc(collection(db,'dailyMarks'), { employeeId:window._dmEmpId, date:window._dmDate, status, note, markedBy: CU?.email||'admin', markedAt: Date.now() });
+    }
+    toast('تم الحفظ', 'success');
+    closeM('mo-dailymark');
+    renderDaily();
+  } catch(e) { toast('خطأ: '+e.message, 'error'); }
+};
+
+// ══════════════════════════════════════════════
+// OVERTIME APPROVALS
+// ══════════════════════════════════════════════
+async function renderOvertime() {
+  const body = document.getElementById('overtime-body');
+  body.innerHTML = '<div class="empty"><i class="fas fa-spinner fa-spin"></i><p>جاري التحميل...</p></div>';
+  let snap;
+  try { snap = await getDocs(query(collection(db,'attendance'), where('type','==','checkout'))); }
+  catch(e) { body.innerHTML = `<div class="empty"><p>خطأ: ${e.message}</p></div>`; return; }
+
+  const pending = snap.docs.map(d=>({id:d.id,...d.data()}))
+    .filter(r=>r.pendingOvertimeMinutes>0 && !r.overtimeApproved && !r.overtimeRejected)
+    .sort((a,b)=>b.createdAt-a.createdAt);
+
+  if (!pending.length) { body.innerHTML = '<div class="empty"><i class="fas fa-check-circle"></i><p>مفيش طلبات وقت إضافي معلّقة دلوقتي</p></div>'; return; }
+
+  body.innerHTML = pending.map(r=>{
+    const emp = _employees.find(e=>e.id===r.employeeId);
+    const hours = Math.round(r.pendingOvertimeMinutes/60*100)/100;
+    const rate = emp ? (emp.salary/30/8)*1.7 : 0;
+    const amount = Math.round(rate*hours*100)/100;
+    return `<div class="card" style="margin-bottom:12px"><div class="card-body" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+      <div>
+        <div style="font-weight:800">${r.employeeName}</div>
+        <div style="font-size:12px;color:var(--slate-500)">${r.date} — انصرف الساعة ${r.time} — ${hours} ساعة وقت إضافي (${amount} ج.م تقريباً)</div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-red btn-sm" onclick="rejectOvertime('${r.id}')"><i class="fas fa-times"></i> رفض</button>
+        <button class="btn btn-ac btn-sm" onclick="approveOvertime('${r.id}')"><i class="fas fa-check"></i> موافقة</button>
+      </div>
+    </div></div>`;
+  }).join('');
+}
+window.renderOvertime = renderOvertime;
+
+window.approveOvertime = async (id) => {
+  try {
+    await updateDoc(doc(db,'attendance',id), { overtimeApproved:true, approvedBy: CU?.email||'admin', approvedAt: Date.now() });
+    toast('تمت الموافقة', 'success');
+    renderOvertime();
+  } catch(e) { toast('خطأ: '+e.message, 'error'); }
+};
+window.rejectOvertime = async (id) => {
+  if (!confirm('متأكد من رفض طلب الوقت الإضافي ده؟')) return;
+  try {
+    await updateDoc(doc(db,'attendance',id), { overtimeRejected:true, rejectedBy: CU?.email||'admin', rejectedAt: Date.now() });
+    toast('تم الرفض', 'success');
+    renderOvertime();
+  } catch(e) { toast('خطأ: '+e.message, 'error'); }
+};
+
+// ══════════════════════════════════════════════
+// MONTHLY SHEET (دورة 26 → 25)
+// ══════════════════════════════════════════════
+function currentPeriodStr() { const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
+function cycleRangeForPeriod(periodStr) {
+  const [y,m] = periodStr.split('-').map(Number);
+  const endDate = `${y}-${String(m).padStart(2,'0')}-25`;
+  let py=y, pm=m-1; if (pm===0){pm=12;py=y-1;}
+  const startDate = `${py}-${String(pm).padStart(2,'0')}-26`;
+  return { startDate, endDate };
+}
+// الموظف يظهر في دورة الشهر دي لو كان متعين قبل أو أثناء الدورة (حتى لو اتعين قبل ما النظام يشتغل أصلاً)
+function employeeInPeriod(emp, periodStr) {
+  if (!emp.hireDate) return true;
+  const { endDate } = cycleRangeForPeriod(periodStr);
+  return emp.hireDate <= endDate;
+}
+
+async function renderMonthly() {
+  const periodInput = document.getElementById('monthly-period');
+  if (!periodInput.value) periodInput.value = currentPeriodStr();
+  const period = periodInput.value;
+  const body = document.getElementById('monthly-body');
+  body.innerHTML = `<tr><td colspan="10"><div class="empty"><i class="fas fa-spinner fa-spin"></i><p>جاري التحميل...</p></div></td></tr>`;
+
+  const activeEmps = _employees.filter(e=>e.status!=='resigned' && employeeInPeriod(e,period));
+  if (!activeEmps.length) { body.innerHTML = `<tr><td colspan="10"><div class="empty"><p>مفيش موظفين للشهر ده</p></div></td></tr>`; return; }
+
+  let sheets = {}, evals = {};
+  try {
+    const [sheetSnap, evalSnap] = await Promise.all([
+      getDocs(query(collection(db,'monthlySheets'), where('period','==',period))),
+      getDocs(query(collection(db,'evaluations'), where('period','==',period)))
+    ]);
+    sheetSnap.docs.forEach(d=>{ sheets[d.data().employeeId] = { id:d.id, ...d.data() }; });
+    evalSnap.docs.forEach(d=>{ evals[d.data().employeeId] = d.data(); });
+  } catch(e) { /* لو حصل خطأ نعرض صفوف فاضية بدل ما نوقف */ }
+
+  body.innerHTML = activeEmps.map(e=>{
+    const s = sheets[e.id] || {};
+    const ev = evals[e.id];
+    const notesEsc = (s.notes||'').replace(/"/g,'&quot;');
+    return `<tr>
+      <td style="font-weight:700">${e.name}</td>
+      <td>${e.jobTitle||'—'}</td>
+      <td><input class="fc" style="width:70px;padding:6px" type="number" min="0" id="ms-leave-${e.id}" value="${s.leaveFromBalance ?? 0}"></td>
+      <td><input class="fc" style="width:70px;padding:6px" type="number" min="0" step="0.5" id="ms-leaveunpaid-${e.id}" value="${s.leaveUnpaid ?? 0}"></td>
+      <td><input class="fc" style="width:70px;padding:6px" type="number" min="0" step="0.5" id="ms-absence-${e.id}" value="${s.absence ?? 0}"></td>
+      <td><input class="fc" style="width:80px;padding:6px" type="number" min="0" step="0.5" id="ms-ot-${e.id}" value="${s.overtimeHours ?? 0}"></td>
+      <td><input class="fc" style="width:70px;padding:6px" type="number" min="0" id="ms-extra-${e.id}" value="${s.extraDays ?? 0}"></td>
+      <td style="font-weight:800">${ev?.finalScore != null ? ev.finalScore+'%' : '—'}</td>
+      <td><input class="fc" style="width:150px;padding:6px" id="ms-notes-${e.id}" value="${notesEsc}"></td>
+      <td><button class="btn btn-ac btn-xs" onclick="saveMonthlyRow('${e.id}')"><i class="fas fa-save"></i></button></td>
+    </tr>`;
+  }).join('');
+}
+window.renderMonthly = renderMonthly;
+
+window.saveMonthlyRow = async (empId) => {
+  const period = document.getElementById('monthly-period').value;
+  const data = {
+    employeeId: empId, period,
+    leaveFromBalance: parseFloat(document.getElementById(`ms-leave-${empId}`).value)||0,
+    leaveUnpaid: parseFloat(document.getElementById(`ms-leaveunpaid-${empId}`).value)||0,
+    absence: parseFloat(document.getElementById(`ms-absence-${empId}`).value)||0,
+    overtimeHours: parseFloat(document.getElementById(`ms-ot-${empId}`).value)||0,
+    extraDays: parseFloat(document.getElementById(`ms-extra-${empId}`).value)||0,
+    notes: document.getElementById(`ms-notes-${empId}`).value.trim(),
+    updatedAt: Date.now()
+  };
+  try {
+    const existing = await getDocs(query(collection(db,'monthlySheets'), where('employeeId','==',empId), where('period','==',period)));
+    if (!existing.empty) await updateDoc(doc(db,'monthlySheets',existing.docs[0].id), data);
+    else await addDoc(collection(db,'monthlySheets'), { ...data, createdAt:Date.now() });
+    toast('تم الحفظ', 'success');
+  } catch(e) { toast('خطأ: '+e.message, 'error'); }
+};
+
+window.autoFillMonthly = async () => {
+  const period = document.getElementById('monthly-period').value || currentPeriodStr();
+  document.getElementById('monthly-period').value = period;
+  const { startDate, endDate } = cycleRangeForPeriod(period);
+  try {
+    const [markSnap, coSnap] = await Promise.all([
+      getDocs(query(collection(db,'dailyMarks'), where('date','>=',startDate), where('date','<=',endDate))),
+      getDocs(query(collection(db,'attendance'), where('type','==','checkout'), where('date','>=',startDate), where('date','<=',endDate)))
+    ]);
+    const absenceCount = {}, leaveCount = {}, otHours = {};
+    markSnap.docs.forEach(d=>{
+      const v = d.data();
+      if (v.status==='absent') absenceCount[v.employeeId] = (absenceCount[v.employeeId]||0)+1;
+      if (v.status==='leave') leaveCount[v.employeeId] = (leaveCount[v.employeeId]||0)+1;
+    });
+    coSnap.docs.forEach(d=>{
+      const v = d.data();
+      if (v.overtimeApproved && v.pendingOvertimeMinutes) otHours[v.employeeId] = (otHours[v.employeeId]||0) + v.pendingOvertimeMinutes/60;
+    });
+    _employees.filter(e=>e.status!=='resigned' && employeeInPeriod(e,period)).forEach(e=>{
+      const leaveEl = document.getElementById(`ms-leave-${e.id}`);
+      const absEl = document.getElementById(`ms-absence-${e.id}`);
+      const otEl = document.getElementById(`ms-ot-${e.id}`);
+      if (leaveEl) leaveEl.value = leaveCount[e.id]||0;
+      if (absEl) absEl.value = absenceCount[e.id]||0;
+      if (otEl) otEl.value = Math.round((otHours[e.id]||0)*100)/100;
+    });
+    toast('اتحمّلت البيانات من السجلات — راجعها واحفظ كل صف', 'success');
+  } catch(e) { toast('خطأ: '+e.message+' (ممكن Firestore يحتاج index، هيديك رابط في الـ console تعمله بضغطة)', 'error'); }
+};
+
+// ══════════════════════════════════════════════
+// MONTHLY EVALUATION (30% / 30% / 40%)
+// ══════════════════════════════════════════════
+async function renderEvaluation() {
+  const periodInput = document.getElementById('eval-period');
+  if (!periodInput.value) periodInput.value = currentPeriodStr();
+  const period = periodInput.value;
+  const body = document.getElementById('eval-body');
+  body.innerHTML = `<tr><td colspan="6"><div class="empty"><i class="fas fa-spinner fa-spin"></i><p>جاري التحميل...</p></div></td></tr>`;
+
+  const canMgr = hasPerm('eval_manager'), canHr = hasPerm('eval_hr'), canFactory = hasPerm('eval_factory');
+  let activeEmps = _employees.filter(e=>e.status!=='resigned' && employeeInPeriod(e,period));
+  // مدير قسم بصلاحية eval_manager بس (مش أدمن ومش عنده الصلاحيات التانية) يشوف موظفين قسمه فقط
+  if (CU.role!=='admin' && canMgr && !canHr && !canFactory && CU.departmentId) {
+    activeEmps = activeEmps.filter(e=>e.departmentId===CU.departmentId);
+  }
+  if (!activeEmps.length) { body.innerHTML = `<tr><td colspan="6"><div class="empty"><p>مفيش موظفين</p></div></td></tr>`; return; }
+
+  let evals = {};
+  try {
+    const snap = await getDocs(query(collection(db,'evaluations'), where('period','==',period)));
+    snap.docs.forEach(d=>{ evals[d.data().employeeId] = { id:d.id, ...d.data() }; });
+  } catch(e) {}
+
+  const dis = ' disabled style="background:var(--slate-100)"';
+  body.innerHTML = activeEmps.map(e=>{
+    const ev = evals[e.id] || {};
+    const final = ev.finalScore != null ? ev.finalScore+'%' : '—';
+    return `<tr>
+      <td style="font-weight:700">${e.name}</td>
+      <td><input class="fc" style="width:80px;padding:6px" type="number" min="0" max="100" id="ev-mgr-${e.id}" value="${ev.managerScore ?? ''}"${canMgr?'':dis}></td>
+      <td><input class="fc" style="width:80px;padding:6px" type="number" min="0" max="100" id="ev-hr-${e.id}" value="${ev.hrScore ?? ''}"${canHr?'':dis}></td>
+      <td><input class="fc" style="width:80px;padding:6px" type="number" min="0" max="100" id="ev-factory-${e.id}" value="${ev.factoryScore ?? ''}"${canFactory?'':dis}></td>
+      <td style="font-weight:800" id="ev-final-${e.id}">${final}</td>
+      <td><button class="btn btn-ac btn-xs" onclick="saveEvalRow('${e.id}')"><i class="fas fa-save"></i></button></td>
+    </tr>`;
+  }).join('');
+}
+window.renderEvaluation = renderEvaluation;
+
+window.saveEvalRow = async (empId) => {
+  const period = document.getElementById('eval-period').value;
+  const mgr = parseFloat(document.getElementById(`ev-mgr-${empId}`).value);
+  const hr = parseFloat(document.getElementById(`ev-hr-${empId}`).value);
+  const factory = parseFloat(document.getElementById(`ev-factory-${empId}`).value);
+  if ([mgr,hr,factory].some(v=>isNaN(v))) { toast('املأ الدرجات التلاتة الأول', 'error'); return; }
+  const finalScore = Math.round((mgr*0.3 + hr*0.3 + factory*0.4)*100)/100;
+  const data = { employeeId:empId, period, managerScore:mgr, hrScore:hr, factoryScore:factory, finalScore, updatedAt:Date.now() };
+  try {
+    const existing = await getDocs(query(collection(db,'evaluations'), where('employeeId','==',empId), where('period','==',period)));
+    if (!existing.empty) await updateDoc(doc(db,'evaluations',existing.docs[0].id), data);
+    else await addDoc(collection(db,'evaluations'), { ...data, createdAt:Date.now() });
+    document.getElementById(`ev-final-${empId}`).textContent = finalScore+'%';
+    toast('تم الحفظ', 'success');
+  } catch(e) { toast('خطأ: '+e.message, 'error'); }
+};
+
+// ══════════════════════════════════════════════
+// EMPLOYEE PROFILE (أدمن)
+// ══════════════════════════════════════════════
+window.openProfile = (empId) => {
+  goPage('profile');
+  setTimeout(()=>{ document.getElementById('profile-emp').value = empId; renderProfile(); }, 50);
+};
+
+async function renderProfile() {
+  const sel = document.getElementById('profile-emp');
+  if (!sel.options.length) {
+    sel.innerHTML = _employees.filter(e=>e.status!=='resigned').map(e=>`<option value="${e.id}">${e.name}</option>`).join('');
+  }
+  const yearInput = document.getElementById('profile-year');
+  if (!yearInput.value) yearInput.value = new Date().getFullYear();
+  const empId = sel.value || sel.options[0]?.value;
+  const body = document.getElementById('profile-body');
+  if (!empId) { body.innerHTML = '<div class="empty"><p>مفيش موظفين</p></div>'; return; }
+  sel.value = empId;
+  const year = yearInput.value;
+  const emp = _employees.find(e=>e.id===empId);
+  body.innerHTML = '<div class="empty"><i class="fas fa-spinner fa-spin"></i><p>جاري التحميل...</p></div>';
+
+  const [sheetsSnap, evalsSnap] = await Promise.all([
+    getDocs(query(collection(db,'monthlySheets'), where('employeeId','==',empId))),
+    getDocs(query(collection(db,'evaluations'), where('employeeId','==',empId)))
+  ]);
+  const sheets = {}; sheetsSnap.docs.forEach(d=>{ const v=d.data(); if (v.period && v.period.startsWith(year+'-')) sheets[v.period]=v; });
+  const evals = {}; evalsSnap.docs.forEach(d=>{ const v=d.data(); if (v.period && v.period.startsWith(year+'-')) evals[v.period]=v; });
+
+  const dept = _departments.find(d=>d.id===emp.departmentId);
+  const shift = _shifts.find(s=>s.id===emp.shiftId);
+
+  let rows = '';
+  for (let m=1;m<=12;m++) {
+    const period = `${year}-${String(m).padStart(2,'0')}`;
+    if (!employeeInPeriod(emp, period)) continue;
+    const s = sheets[period]; const ev = evals[period];
+    if (!s && !ev) continue;
+    rows += `<tr>
+      <td style="font-weight:700">${period}</td>
+      <td>${s?.leaveFromBalance ?? '—'}</td>
+      <td>${s?.leaveUnpaid ?? '—'}</td>
+      <td>${s?.absence ?? '—'}</td>
+      <td>${s?.overtimeHours ?? '—'}</td>
+      <td>${s?.extraDays ?? '—'}</td>
+      <td style="font-weight:800">${ev?.finalScore != null ? ev.finalScore+'%' : '—'}</td>
+      <td style="font-size:12px;color:var(--slate-500)">${s?.notes || '—'}</td>
+    </tr>`;
+  }
+  if (!rows) rows = `<tr><td colspan="8"><div class="empty"><p>مفيش بيانات مسجّلة للسنة دي لسه</p></div></td></tr>`;
+
+  const curPeriod = currentPeriodStr();
+  const curSheet = sheets[curPeriod];
+  const curEvalScore = evals[curPeriod]?.finalScore ?? null;
+  const netSalary = computeNetSalary(emp);
+  const deduction = computeMonthlyDeduction(emp, curSheet);
+  const incentive = computeIncentive(emp, curEvalScore);
+
+  body.innerHTML = `
+    <div class="card"><div class="card-body">
+      <div style="font-weight:800;font-size:16px">${emp.name}</div>
+      <div style="font-size:12.5px;color:var(--slate-500);margin-top:2px">${emp.jobTitle||'—'} · ${dept?dept.name:'—'} · ${shift?shift.name:'بدون وردية'} · كود: ${emp.code||'—'}${emp.hireDate?' · متعين من '+emp.hireDate:''}</div>
+      <div style="display:flex;gap:20px;margin-top:12px;flex-wrap:wrap;font-size:13px">
+        <div>الرصيد الحالي للإجازات: <b>${emp.leaveBalance ?? 21} يوم</b></div>
+        <div>الراتب الصافي (يوم 1): <b>${netSalary} ج.م</b></div>
+        <div>خصم الشهر الحالي (جزاءات + إجازة بالخصم): <b style="color:var(--danger-600)">${deduction} ج.م</b></div>
+        <div>الحافز المستحق هذا الشهر (يوم 15): <b>${incentive!=null ? incentive+' ج.م' : 'مفيش تقييم للشهر ده لسه'}</b></div>
+      </div>
+    </div></div>
+    <div class="card"><table class="tbl">
+      <thead><tr><th>الشهر</th><th>إجازة من الرصيد</th><th>إجازة بالخصم</th><th>جزاءات (أيام)</th><th>ساعات إضافية</th><th>أيام إضافية</th><th>التقييم</th><th>ملاحظات</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>`;
+}
+window.renderProfile = renderProfile;
+
+// ══════════════════════════════════════════════
+// LEAVES (الرصيد 21 يوم + طلب/موافقة + منطق خصم)
+// ══════════════════════════════════════════════
+function periodForDate(dateStr) {
+  const [y,m,d] = dateStr.split('-').map(Number);
+  if (d>=26) { let ny=y, nm=m+1; if (nm===13){nm=1;ny=y+1;} return `${ny}-${String(nm).padStart(2,'0')}`; }
+  return `${y}-${String(m).padStart(2,'0')}`;
+}
+
+async function bumpMonthlySheet(employeeId, period, deltas, noteAppend) {
+  const existing = await getDocs(query(collection(db,'monthlySheets'), where('employeeId','==',employeeId), where('period','==',period)));
+  if (!existing.empty) {
+    const ref = existing.docs[0].ref, cur = existing.docs[0].data();
+    const updates = { updatedAt: Date.now() };
+    for (const k in deltas) updates[k] = (cur[k]||0) + deltas[k];
+    if (noteAppend) updates.notes = (cur.notes ? cur.notes+' | ' : '') + noteAppend;
+    await updateDoc(ref, updates);
+  } else {
+    const data = { employeeId, period, leaveFromBalance:0, leaveUnpaid:0, absence:0, overtimeHours:0, extraDays:0, notes: noteAppend||'', createdAt:Date.now(), updatedAt:Date.now() };
+    for (const k in deltas) data[k] = deltas[k];
+    await addDoc(collection(db,'monthlySheets'), data);
+  }
+}
+
+async function renderLeaves() {
+  const body = document.getElementById('leaves-body');
+  body.innerHTML = '<div class="empty"><i class="fas fa-spinner fa-spin"></i><p>جاري التحميل...</p></div>';
+  let snap;
+  try { snap = await getDocs(query(collection(db,'leaveRequests'), orderBy('requestedAt','desc'))); }
+  catch(e) { body.innerHTML = `<div class="empty"><p>خطأ: ${e.message}</p></div>`; return; }
+  let reqs = snap.docs.map(d=>({id:d.id,...d.data()}));
+  if (CU.role!=='admin' && CU.departmentId) reqs = reqs.filter(r=>r.departmentId===CU.departmentId);
+  if (!reqs.length) { body.innerHTML = '<div class="empty"><i class="fas fa-calendar-minus"></i><p>مفيش طلبات إجازة لسه</p></div>'; return; }
+
+  body.innerHTML = reqs.map(r=>{
+    const emp = _employees.find(e=>e.id===r.employeeId);
+    const balance = emp ? (emp.leaveBalance ?? 21) : '—';
+    const statusBadge = r.status==='approved' ? '<span class="badge bg-ok">موافَق عليها</span>'
+      : r.status==='rejected' ? '<span class="badge bg-danger">مرفوضة</span>'
+      : '<span class="badge bg-warn">معلّقة</span>';
+    const extra = r.status==='approved'
+      ? `<div style="font-size:11.5px;color:var(--slate-500);margin-top:4px">من الرصيد: ${r.daysFromBalance} يوم${r.daysUnpaid>0?` — خصم من المرتب: ${r.daysUnpaid} يوم`:''}</div>` : '';
+    const actions = r.status==='pending' ? `
+      <button class="btn btn-red btn-sm" onclick="rejectLeaveRequest('${r.id}')"><i class="fas fa-times"></i> رفض</button>
+      <button class="btn btn-ac btn-sm" onclick="approveLeaveRequest('${r.id}')"><i class="fas fa-check"></i> موافقة</button>` : '';
+    return `<div class="card" style="margin-bottom:12px"><div class="card-body" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+      <div>
+        <div style="font-weight:800">${r.employeeName} ${statusBadge}${r.source==='kiosk'?' <span class="badge bg-slate"><i class="fas fa-fingerprint"></i> من الكيوسك</span>':''}</div>
+        <div style="font-size:12.5px;color:var(--slate-500);margin-top:3px">من ${r.dateFrom} لحد ${r.dateTo} — ${r.daysCount} يوم — رصيده الحالي: ${balance} يوم</div>
+        ${r.note?`<div style="font-size:12px;color:var(--slate-500);margin-top:3px">ملاحظة: ${r.note}</div>`:''}
+        ${extra}
+      </div>
+      <div style="display:flex;gap:8px">${actions}</div>
+    </div></div>`;
+  }).join('');
+}
+window.renderLeaves = renderLeaves;
+
+window.openLeaveModal = () => {
+  const sel = document.getElementById('lv-emp');
+  let emps = _employees.filter(e=>e.status!=='resigned');
+  if (CU.role!=='admin' && CU.departmentId) emps = emps.filter(e=>e.departmentId===CU.departmentId);
+  sel.innerHTML = emps.map(e=>`<option value="${e.id}">${e.name}</option>`).join('');
+  document.getElementById('lv-from').value = '';
+  document.getElementById('lv-to').value = '';
+  document.getElementById('lv-note').value = '';
+  onLeaveEmpChange();
+  openM('mo-leave');
+};
+
+window.onLeaveEmpChange = () => {
+  const emp = _employees.find(e=>e.id===document.getElementById('lv-emp').value);
+  document.getElementById('lv-balance-note').textContent = emp ? `رصيده الحالي: ${emp.leaveBalance ?? 21} يوم` : '';
+};
+
+window.saveLeaveRequest = async () => {
+  const employeeId = document.getElementById('lv-emp').value;
+  const dateFrom = document.getElementById('lv-from').value;
+  const dateTo = document.getElementById('lv-to').value;
+  const note = document.getElementById('lv-note').value.trim();
+  if (!employeeId || !dateFrom || !dateTo) { toast('املأ الموظف والتواريخ', 'error'); return; }
+  if (dateTo < dateFrom) { toast('تاريخ النهاية لازم يكون بعد تاريخ البداية', 'error'); return; }
+  const emp = _employees.find(e=>e.id===employeeId);
+  const daysCount = Math.round((new Date(dateTo)-new Date(dateFrom))/86400000)+1;
+  try {
+    await addDoc(collection(db,'leaveRequests'), {
+      employeeId, employeeName: emp.name, departmentId: emp.departmentId||null,
+      dateFrom, dateTo, daysCount, note, status:'pending',
+      requestedAt: Date.now(), requestedBy: CU.email
+    });
+    toast('تم تسجيل طلب الإجازة', 'success');
+    closeM('mo-leave');
+    renderLeaves();
+  } catch(e) { toast('خطأ: '+e.message, 'error'); }
+};
+
+window.approveLeaveRequest = async (id) => {
+  try {
+    const rdoc = await getDoc(doc(db,'leaveRequests',id));
+    const r = rdoc.data();
+    const emp = _employees.find(e=>e.id===r.employeeId);
+    const balance = emp?.leaveBalance ?? 21;
+    const daysFromBalance = Math.min(r.daysCount, Math.max(0,balance));
+    const daysUnpaid = r.daysCount - daysFromBalance;
+    await updateDoc(doc(db,'employees',r.employeeId), { leaveBalance: balance - daysFromBalance });
+    await updateDoc(doc(db,'leaveRequests',id), { status:'approved', daysFromBalance, daysUnpaid, approvedBy: CU.email, approvedAt: Date.now() });
+    const period = periodForDate(r.dateFrom);
+    await bumpMonthlySheet(r.employeeId, period, { leaveFromBalance: daysFromBalance, leaveUnpaid: daysUnpaid },
+      daysUnpaid>0 ? `إجازة بالخصم ${daysUnpaid} يوم (${r.dateFrom} لغاية ${r.dateTo} تجاوزت الرصيد)` : null);
+    toast('تمت الموافقة على الإجازة', 'success');
+    renderLeaves();
+  } catch(e) { toast('خطأ: '+e.message, 'error'); }
+};
+
+window.rejectLeaveRequest = async (id) => {
+  if (!confirm('متأكد من رفض طلب الإجازة ده؟')) return;
+  try {
+    await updateDoc(doc(db,'leaveRequests',id), { status:'rejected', rejectedBy: CU.email, rejectedAt: Date.now() });
+    toast('تم الرفض', 'success');
+    renderLeaves();
+  } catch(e) { toast('خطأ: '+e.message, 'error'); }
+};
+
+window.renewAllBalances = async () => {
+  if (!confirm('هيترجع رصيد كل الموظفين الشغالين لـ 21 يوم — اعملها بداية كل سنة بس. متأكد؟')) return;
+  try {
+    const actives = _employees.filter(e=>e.status!=='resigned');
+    for (const e of actives) { await updateDoc(doc(db,'employees',e.id), { leaveBalance: 21 }); }
+    toast(`تم تجديد رصيد ${actives.length} موظف`, 'success');
+  } catch(e) { toast('خطأ: '+e.message, 'error'); }
+};
+
+// ══════════════════════════════════════════════
+// OFFICIAL HOLIDAYS (إجازات رسمية بمناسبات) — الأدمن بيحددها بالمرة، وبيقدر يستثني موظفين بعينهم
+// ══════════════════════════════════════════════
+let _holidaysCache = [];
+async function renderHolidays() {
+  const body = document.getElementById('holidays-body');
+  body.innerHTML = `<tr><td colspan="4"><div class="empty"><i class="fas fa-spinner fa-spin"></i><p>جاري التحميل...</p></div></td></tr>`;
+  try {
+    const snap = await getDocs(query(collection(db,'officialHolidays'), orderBy('date','desc')));
+    _holidaysCache = snap.docs.map(d=>({id:d.id,...d.data()}));
+  } catch(e) { body.innerHTML = `<tr><td colspan="4"><div class="empty"><p>خطأ: ${e.message}</p></div></td></tr>`; return; }
+  if (!_holidaysCache.length) { body.innerHTML = `<tr><td colspan="4"><div class="empty"><p>لسه مفيش إجازات رسمية مسجّلة</p></div></td></tr>`; return; }
+  body.innerHTML = _holidaysCache.map(h=>{
+    const exemptNames = (h.exemptEmployeeIds||[]).map(id=>_employees.find(e=>e.id===id)?.name).filter(Boolean);
+    return `<tr>
+      <td style="font-weight:700">${h.date}</td>
+      <td>${h.title}</td>
+      <td style="font-size:12px;color:var(--slate-500)">${exemptNames.length?exemptNames.join('، '):'— محدش، إجازة للكل —'}</td>
+      <td>
+        <button class="btn btn-ghost btn-ic btn-xs" onclick="openHolidayModal('${h.id}')"><i class="fas fa-edit"></i></button>
+        <button class="btn btn-red btn-ic btn-xs" onclick="deleteHoliday('${h.id}')"><i class="fas fa-trash"></i></button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+window.renderHolidays = renderHolidays;
+
+window.openHolidayModal = (id=null) => {
+  window._editHolidayId = id;
+  const h = id ? _holidaysCache.find(x=>x.id===id) : null;
+  document.getElementById('holiday-modal-title').textContent = id ? 'تعديل إجازة رسمية' : 'إجازة رسمية جديدة';
+  document.getElementById('hol-date').value = h?.date || '';
+  document.getElementById('hol-title').value = h?.title || '';
+  const activeEmps = _employees.filter(e=>e.status!=='resigned');
+  document.getElementById('hol-emp-list').innerHTML = activeEmps.map(e=>`
+    <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+      <input type="checkbox" class="hol-emp-cb" value="${e.id}" ${(h?.exemptEmployeeIds||[]).includes(e.id)?'checked':''}>
+      ${e.name}
+    </label>`).join('') || '<div style="color:var(--slate-500)">مفيش موظفين</div>';
+  openM('mo-holiday');
+};
+
+window.saveHoliday = async () => {
+  const date = document.getElementById('hol-date').value;
+  const title = document.getElementById('hol-title').value.trim();
+  if (!date || !title) { toast('حدد التاريخ والمناسبة', 'error'); return; }
+  const exemptEmployeeIds = Array.from(document.querySelectorAll('.hol-emp-cb:checked')).map(cb=>cb.value);
+  try {
+    if (window._editHolidayId) {
+      await updateDoc(doc(db,'officialHolidays',window._editHolidayId), { date, title, exemptEmployeeIds });
+      toast('تم تعديل الإجازة الرسمية', 'success');
+    } else {
+      await addDoc(collection(db,'officialHolidays'), { date, title, exemptEmployeeIds, createdAt:Date.now(), createdBy: CU.email });
+      toast('تم إضافة الإجازة الرسمية', 'success');
+    }
+    closeM('mo-holiday');
+    renderHolidays();
+  } catch(e) { toast('خطأ: '+e.message, 'error'); }
+};
+
+window.deleteHoliday = async (id) => {
+  if (!confirm('متأكد من حذف الإجازة الرسمية دي؟')) return;
+  try { await deleteDoc(doc(db,'officialHolidays',id)); toast('تم الحذف', 'success'); renderHolidays(); }
+  catch(e) { toast('خطأ: '+e.message, 'error'); }
+};
+// بيرجع الإجازة الرسمية ليوم معين لو موجودة (تُستخدم في الدخول اليومي والكيوسك)
+async function getHolidayForDate(dateStr, dbInst) {
+  try {
+    const snap = await getDocs(query(collection(dbInst,'officialHolidays'), where('date','==',dateStr)));
+    if (snap.empty) return null;
+    return { id: snap.docs[0].id, ...snap.docs[0].data() };
+  } catch(e) { return null; }
+}
+
+// ══════════════════════════════════════════════
+// EXPENSES: الكهرباء
+// ══════════════════════════════════════════════
+async function uploadToImgBB(file) {
+  const fd = new FormData(); fd.append('image', file);
+  const res = await fetch('https://api.imgbb.com/1/upload?key=ebead1c8c951a2d3cfebfe8c9445bf9e', { method:'POST', body:fd });
+  const data = await res.json();
+  if (!data.success) throw new Error('فشل رفع صورة الفاتورة');
+  return data.data.url;
+}
+
+async function renderExpenses() {
+  const body = document.getElementById('expenses-body');
+  body.innerHTML = `<tr><td colspan="8"><div class="empty"><i class="fas fa-spinner fa-spin"></i><p>جاري التحميل...</p></div></td></tr>`;
+  try {
+    const snap = await getDocs(query(collection(db,'expenses_electricity'), orderBy('date','desc')));
+    _expensesCache = snap.docs.map(d=>({id:d.id,...d.data()}));
+  } catch(e) { body.innerHTML = `<tr><td colspan="8"><div class="empty"><p>خطأ: ${e.message}</p></div></td></tr>`; return; }
+  if (!_expensesCache.length) { body.innerHTML = `<tr><td colspan="8"><div class="empty"><p>لسه مفيش سجلات</p></div></td></tr>`; return; }
+  body.innerHTML = _expensesCache.map(r=>{
+    const consumption = r.currentReading - r.previousReading;
+    const price = consumption>0 ? (r.billAmount/consumption) : 0;
+    return `<tr>
+      <td>${r.date}</td><td>${r.previousReading}</td><td>${r.currentReading}</td><td>${consumption}</td>
+      <td>${r.billAmount} ج.م</td><td>${price.toFixed(2)} ج.م</td>
+      <td style="font-size:12px;color:var(--slate-500)">${r.description||'—'}${r.invoiceUrl?` <a href="${r.invoiceUrl}" target="_blank">(الفاتورة)</a>`:''}</td>
+      <td>
+        <button class="btn btn-ghost btn-ic btn-xs" onclick="openExpenseModal('${r.id}')"><i class="fas fa-edit"></i></button>
+        <button class="btn btn-red btn-ic btn-xs" onclick="deleteExpense('${r.id}')"><i class="fas fa-trash"></i></button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+window.renderExpenses = renderExpenses;
+
+window.openExpenseModal = (id=null) => {
+  window._editExpId = id;
+  const r = id ? _expensesCache.find(x=>x.id===id) : null;
+  document.getElementById('exp-modal-title').textContent = id ? 'تعديل السجل' : 'سجل كهرباء جديد';
+  document.getElementById('exp-date').value = r?.date || todayStr();
+  document.getElementById('exp-prev').value = r?.previousReading ?? '';
+  document.getElementById('exp-curr').value = r?.currentReading ?? '';
+  document.getElementById('exp-bill').value = r?.billAmount ?? '';
+  document.getElementById('exp-desc').value = r?.description || '';
+  document.getElementById('exp-img').value = '';
+  updateExpenseCalc();
+  openM('mo-expense');
+};
+
+window.updateExpenseCalc = () => {
+  const prev = parseFloat(document.getElementById('exp-prev').value)||0;
+  const curr = parseFloat(document.getElementById('exp-curr').value)||0;
+  const bill = parseFloat(document.getElementById('exp-bill').value)||0;
+  const consumption = curr-prev;
+  const note = document.getElementById('exp-calc-note');
+  note.textContent = (consumption>0 && bill>0) ? `الاستهلاك: ${consumption} ك.و — سعر الكيلو وات: ${(bill/consumption).toFixed(2)} ج.م` : '';
+};
+
+window.saveExpense = async () => {
+  const date = document.getElementById('exp-date').value;
+  const previousReading = parseFloat(document.getElementById('exp-prev').value);
+  const currentReading = parseFloat(document.getElementById('exp-curr').value);
+  const billAmount = parseFloat(document.getElementById('exp-bill').value);
+  const description = document.getElementById('exp-desc').value.trim();
+  const file = document.getElementById('exp-img').files[0];
+  if (!date || isNaN(previousReading) || isNaN(currentReading) || isNaN(billAmount)) { toast('املأ التاريخ والقراءتين وقيمة الفاتورة', 'error'); return; }
+  if (currentReading < previousReading) { toast('القراءة الحالية لازم تكون أكبر من أو تساوي السابقة', 'error'); return; }
+  const btn = document.getElementById('exp-save-btn');
+  btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الحفظ...';
+  try {
+    let invoiceUrl = null;
+    if (file) invoiceUrl = await uploadToImgBB(file);
+    const data = { date, previousReading, currentReading, billAmount, description, updatedAt:Date.now() };
+    if (invoiceUrl) data.invoiceUrl = invoiceUrl;
+    if (window._editExpId) await updateDoc(doc(db,'expenses_electricity',window._editExpId), data);
+    else await addDoc(collection(db,'expenses_electricity'), { ...data, createdAt:Date.now() });
+    toast('تم الحفظ', 'success');
+    closeM('mo-expense');
+    renderExpenses();
+  } catch(e) { toast('خطأ: '+e.message, 'error'); }
+  finally { btn.disabled=false; btn.innerHTML='<i class="fas fa-save"></i>حفظ'; }
+};
+
+window.deleteExpense = async (id) => {
+  if (!confirm('متأكد من حذف السجل ده؟')) return;
+  try { await deleteDoc(doc(db,'expenses_electricity',id)); toast('تم الحذف', 'success'); renderExpenses(); }
+  catch(e) { toast('خطأ: '+e.message, 'error'); }
+};
+
+window.printElectricityReport = () => {
+  if (!_expensesCache.length) { toast('مفيش بيانات تتطبع', 'error'); return; }
+  const byMonth = {};
+  _expensesCache.forEach(r=>{
+    const period = r.date.slice(0,7);
+    if (!byMonth[period]) byMonth[period] = { consumption:0, amount:0 };
+    byMonth[period].consumption += (r.currentReading - r.previousReading);
+    byMonth[period].amount += r.billAmount;
+  });
+  const periods = Object.keys(byMonth).sort();
+  let totalC=0, totalA=0;
+  const rows = periods.map(p=>{ totalC+=byMonth[p].consumption; totalA+=byMonth[p].amount; return `<tr><td>${p}</td><td>${byMonth[p].consumption}</td><td>${byMonth[p].amount.toFixed(2)}</td></tr>`; }).join('');
+  const w = window.open('', '_blank');
+  w.document.write(`<html dir="rtl"><head><title>تقرير مصاريف الكهرباء</title>
+    <style>body{font-family:Arial;padding:30px}table{width:100%;border-collapse:collapse;margin-top:20px}th,td{border:1px solid #ccc;padding:8px;text-align:center}th{background:#f0f0f0}</style>
+    </head><body><h2>تقرير مصاريف الكهرباء — شركة الساقية</h2>
+    <table><thead><tr><th>الشهر</th><th>الاستهلاك (ك.و)</th><th>المبلغ (ج.م)</th></tr></thead>
+    <tbody>${rows}<tr style="font-weight:bold"><td>الإجمالي</td><td>${totalC}</td><td>${totalA.toFixed(2)}</td></tr></tbody></table>
+    </body></html>`);
+  w.document.close();
+  setTimeout(()=>w.print(), 400);
+};
+
+// ══════════════════════════════════════════════
+// USERS & PERMISSIONS
+// ══════════════════════════════════════════════
+async function renderUsers() {
+  const body = document.getElementById('users-body');
+  body.innerHTML = `<tr><td colspan="5"><div class="empty"><i class="fas fa-spinner fa-spin"></i><p>جاري التحميل...</p></div></td></tr>`;
+  try {
+    const snap = await getDocs(collection(db,'users'));
+    _usersCache = snap.docs.map(d=>({id:d.id,...d.data()}));
+  } catch(e) { body.innerHTML = `<tr><td colspan="5"><div class="empty"><p>خطأ: ${e.message}</p></div></td></tr>`; return; }
+  if (!_usersCache.length) { body.innerHTML = `<tr><td colspan="5"><div class="empty"><p>لسه مفيش مستخدمين</p></div></td></tr>`; return; }
+  body.innerHTML = _usersCache.map(u=>{
+    const dept = _departments.find(d=>d.id===u.departmentId);
+    return `<tr>
+      <td style="font-weight:700">${u.displayName||u.email}</td>
+      <td>${u.email}</td>
+      <td>${ROLE_LABELS[u.role]||u.role}</td>
+      <td>${dept?dept.name:'—'}</td>
+      <td>
+        <button class="btn btn-ghost btn-ic btn-xs" onclick="openUserModal('${u.id}')"><i class="fas fa-edit"></i></button>
+        ${u.id!==CU.id?`<button class="btn btn-red btn-ic btn-xs" onclick="revokeUser('${u.id}')"><i class="fas fa-user-slash"></i></button>`:''}
+      </td>
+    </tr>`;
+  }).join('');
+}
+window.renderUsers = renderUsers;
+
+window.openUserModal = (id=null) => {
+  window._editUserId = id;
+  const u = id ? _usersCache.find(x=>x.id===id) : null;
+  document.getElementById('user-modal-title').textContent = id ? 'تعديل مستخدم' : 'مستخدم جديد';
+  document.getElementById('usr-name').value = u?.displayName || '';
+  document.getElementById('usr-email').value = u?.email || '';
+  document.getElementById('usr-email').disabled = !!id;
+  document.getElementById('usr-pass').value = '';
+  document.getElementById('usr-pass-hint').textContent = id ? '(سيبها فاضية لو مش عايز تغيّرها من هنا)' : '';
+  document.getElementById('usr-role').value = u?.role || 'manager';
+  const deptSel = document.getElementById('usr-dept');
+  deptSel.innerHTML = '<option value="">— بدون —</option>' + _departments.map(d=>`<option value="${d.id}">${d.name}</option>`).join('');
+  deptSel.value = u?.departmentId || '';
+  document.getElementById('usr-perms-list').innerHTML = PERMS_DEF.map(p=>`
+    <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+      <input type="checkbox" class="usr-perm-cb" data-key="${p.key}" ${u?.permissions?.[p.key] ? 'checked':''}>
+      ${p.label}
+    </label>`).join('');
+  openM('mo-user');
+};
+
+window.saveUser = async () => {
+  const name = document.getElementById('usr-name').value.trim();
+  const email = document.getElementById('usr-email').value.trim();
+  const pass = document.getElementById('usr-pass').value;
+  const role = document.getElementById('usr-role').value;
+  const departmentId = document.getElementById('usr-dept').value || null;
+  if (!name || !email) { toast('اكتب الاسم والإيميل', 'error'); return; }
+  const permissions = {};
+  document.querySelectorAll('.usr-perm-cb').forEach(cb=>{ permissions[cb.dataset.key] = cb.checked; });
+  try {
+    if (window._editUserId) {
+      await updateDoc(doc(db,'users',window._editUserId), { displayName:name, role, departmentId, permissions });
+      toast('تم تحديث بيانات المستخدم' + (pass?' (كلمة المرور مش بتتغير من هنا، غيّرها من Firebase Console)':''), 'success');
+    } else {
+      if (!pass || pass.length<6) { toast('حط كلمة مرور 6 أحرف على الأقل للمستخدم الجديد', 'error'); return; }
+      await signOut(secAuth).catch(()=>{});
+      const cred = await createUserWithEmailAndPassword(secAuth, email, pass);
+      const uid = cred.user.uid;
+      await signOut(secAuth).catch(()=>{});
+      await setDoc(doc(db,'users',uid), { email, displayName:name, role, departmentId, permissions, createdAt:Date.now(), createdBy: CU.email });
+      toast('تم إنشاء المستخدم', 'success');
+    }
+    closeM('mo-user');
+    renderUsers();
+  } catch(e) {
+    const msg = e.code==='auth/email-already-in-use' ? 'الإيميل ده مستخدم بالفعل' : (e.message||e.code);
+    toast('خطأ: '+msg, 'error');
+  }
+};
+
+window.revokeUser = async (id) => {
+  if (!confirm('هيتلغى وصول المستخدم ده للنظام. حساب الدخول في Firebase Authentication هيفضل موجود ولازم تتحذف يدوي من الـ Console لو عايز تمسحه خالص. متأكد؟')) return;
+  try { await deleteDoc(doc(db,'users',id)); toast('تم إلغاء وصول المستخدم', 'success'); renderUsers(); }
+  catch(e) { toast('خطأ: '+e.message, 'error'); }
+};
+
+// ══════════════════════════════════════════════
+// UTILITIES: modal + toast
+// ══════════════════════════════════════════════
+window.openM = (id) => document.getElementById(id).classList.add('open');
+window.closeM = (id) => document.getElementById(id).classList.remove('open');
+window.toast = (msg, type='info') => {
+  const wrap = document.getElementById('toast-wrap');
+  const el = document.createElement('div');
+  el.className = 'toast ' + type;
+  const icon = type==='success' ? 'fa-check-circle' : type==='error' ? 'fa-exclamation-circle' : 'fa-info-circle';
+  el.innerHTML = `<i class="fas ${icon}"></i>${msg}`;
+  wrap.appendChild(el);
+  setTimeout(()=>{ el.style.opacity='0'; setTimeout(()=>el.remove(), 200); }, 3000);
+};
+</script>
+</body>
+</html>
