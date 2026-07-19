@@ -208,6 +208,7 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
 
       <div class="nav-group-lbl">التقارير</div>
       <div class="nav-link" data-page="profile" data-perm="profiles_view" onclick="goPage('profile')"><i class="fas fa-address-card"></i>ملفات الموظفين</div>
+      <div class="nav-link" data-page="reports" data-perm="reports_view" onclick="goPage('reports')"><i class="fas fa-chart-bar"></i>تقرير مخصص</div>
 
       <div class="nav-group-lbl">المصاريف</div>
       <div class="nav-link" data-page="expenses" data-perm="expenses_manage" onclick="goPage('expenses')"><i class="fas fa-file-invoice-dollar"></i>مصاريف الكهرباء</div>
@@ -350,6 +351,47 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
         </div>
       </div>
       <div id="profile-body"></div>
+    </div>
+
+    <!-- CUSTOM REPORTS -->
+    <div class="page" id="page-reports">
+      <div class="ph">
+        <div><div class="ph-title">تقرير مخصص</div><div class="ph-sub">اختار الموظف (أو كل الموظفين)، والفترة، والبيانات اللي عايزها، وهيتجمّعلك في تقرير واحد</div></div>
+      </div>
+      <div class="card"><div class="card-body">
+        <div class="frow c2">
+          <div class="fg">
+            <label class="fl">الموظف</label>
+            <select class="fc" id="rep-emp">
+              <option value="__all__">— كل الموظفين (تقرير مجمّع) —</option>
+            </select>
+          </div>
+          <div class="fg"></div>
+        </div>
+        <div class="frow c2">
+          <div class="fg"><label class="fl">من تاريخ</label><input class="fc" type="date" id="rep-from"></div>
+          <div class="fg"><label class="fl">لحد تاريخ</label><input class="fc" type="date" id="rep-to"></div>
+        </div>
+        <div class="fg">
+          <label class="fl">البيانات المطلوبة في التقرير</label>
+          <div style="display:flex;flex-wrap:wrap;gap:14px;font-size:13px">
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="rep-eval" checked>التقييم / الحافز %</label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="rep-leave" checked>إجازة من الرصيد</label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="rep-sick" checked>إجازة مرضية</label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="rep-unpaid" checked>إجازة بالخصم</label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="rep-absence" checked>غياب</label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="rep-permission" checked>إذن شخصي</label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="rep-penalty" checked>جزاءات</label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="rep-extra" checked>ساعات/أيام إضافية</label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="rep-attendance">تفاصيل الحضور يوم بيوم (هل حضر/غاب في تاريخ معيّن)</label>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:8px">
+          <button class="btn btn-ac" onclick="generateCustomReport()"><i class="fas fa-magic"></i>إنشاء التقرير</button>
+          <button class="btn btn-ghost" id="rep-print-btn" style="display:none" onclick="printCustomReport()"><i class="fas fa-print"></i>تقرير مطبوع</button>
+        </div>
+      </div></div>
+      <div id="reports-body" style="margin-top:16px"></div>
     </div>
 
     <!-- LEAVES -->
@@ -767,6 +809,8 @@ const PERMS_DEF = [
   { key:'profiles_view', label:'ملفات الموظفين' },
   { key:'leaves_manage', label:'الإجازات (تسجيل وموافقة)' },
   { key:'holidays_manage', label:'الإجازات الرسمية' },
+  { key:'data_delete', label:'حذف السجلات (تعديلات/تقييمات/إجازات/حضور) — خطر' },
+  { key:'reports_view', label:'التقارير المخصصة' },
   { key:'expenses_manage', label:'المصاريف الإدارية' },
 ];
 function hasPerm(key) {
@@ -871,7 +915,7 @@ function updateLeavesBadge(count) {
 // ══════════════════════════════════════════════
 // NAVIGATION
 // ══════════════════════════════════════════════
-const PAGE_PERM = { employees:'employees_manage', departments:'departments_manage', shifts:'shifts_manage', settings:'settings_manage', daily:'daily_view', overtime:'overtime_approve', monthly:'monthly_manage', evaluation:'eval_manager', profile:'profiles_view', leaves:'leaves_manage', holidays:'holidays_manage', expenses:'expenses_manage' };
+const PAGE_PERM = { employees:'employees_manage', departments:'departments_manage', shifts:'shifts_manage', settings:'settings_manage', daily:'daily_view', overtime:'overtime_approve', monthly:'monthly_manage', evaluation:'eval_manager', profile:'profiles_view', reports:'reports_view', leaves:'leaves_manage', holidays:'holidays_manage', expenses:'expenses_manage' };
 window.goPage = (name) => {
   const perm = PAGE_PERM[name];
   const evalAlt = name==='evaluation' && (hasPerm('eval_hr')||hasPerm('eval_factory'));
@@ -882,7 +926,7 @@ window.goPage = (name) => {
   document.getElementById('page-'+name)?.classList.add('active');
   document.querySelectorAll('.nav-link').forEach(n=>n.classList.toggle('active', n.dataset.page===name));
   toggleSidebar(false);
-  const renders = { dashboard:renderDashboard, employees:renderEmployees, departments:renderDepartments, shifts:renderShifts, settings:renderSettings, daily:renderDaily, overtime:renderOvertime, monthly:renderMonthly, evaluation:renderEvaluation, profile:renderProfile, leaves:renderLeaves, holidays:renderHolidays, expenses:renderExpenses, users:renderUsers };
+  const renders = { dashboard:renderDashboard, employees:renderEmployees, departments:renderDepartments, shifts:renderShifts, settings:renderSettings, daily:renderDaily, overtime:renderOvertime, monthly:renderMonthly, evaluation:renderEvaluation, profile:renderProfile, reports:renderReports, leaves:renderLeaves, holidays:renderHolidays, expenses:renderExpenses, users:renderUsers };
   renders[name]?.();
 };
 
@@ -1771,7 +1815,7 @@ async function renderDaily() {
     ]);
   } catch(e) { body.innerHTML = `<div class="empty"><p>خطأ: ${e.message}</p></div>`; return; }
 
-  const checkins = {}; attSnap.docs.forEach(d=>{ const v=d.data(); checkins[v.employeeId]=v; });
+  const checkins = {}; attSnap.docs.forEach(d=>{ const v=d.data(); checkins[v.employeeId]={id:d.id,...v}; });
   const marks = {}; markSnap.docs.forEach(d=>{ const v=d.data(); marks[v.employeeId]={id:d.id,...v}; });
 
   let activeEmps = _employees.filter(e=>e.status!=='resigned' && e.shiftId && employeeHiredBy(e,date));
@@ -1811,10 +1855,14 @@ async function renderDaily() {
       if (isDue) due.push(e); else notYetDue.push(e);
     });
 
+    const canDel = hasPerm('data_delete');
     const presentRows = present.map(({e,chk})=>`
       <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border-bottom:1px solid var(--border)">
         <span style="font-weight:700">${e.name}</span>
-        <span class="badge bg-ok"><i class="fas fa-check"></i> حضر الساعة ${chk.time}</span>
+        <span style="display:flex;align-items:center;gap:6px">
+          <span class="badge bg-ok"><i class="fas fa-check"></i> حضر الساعة ${chk.time}</span>
+          ${canDel?`<button class="btn btn-red btn-ic btn-xs" onclick="deleteAttendanceRecord('${chk.id}','${date}')"><i class="fas fa-trash"></i></button>`:''}
+        </span>
       </div>`).join('');
 
     const dueRows = due.map(e=>{
@@ -1824,7 +1872,10 @@ async function renderDaily() {
         const cls = mark.status==='leave' ? 'bg-ac' : 'bg-danger';
         return `<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border-bottom:1px solid var(--border)">
           <span style="font-weight:700;color:var(--danger-600)">${e.name}</span>
-          <span class="badge ${cls}" style="cursor:pointer" onclick="openDailyMark('${e.id}','${date}')">${label} <i class="fas fa-edit"></i></span>
+          <span style="display:flex;align-items:center;gap:6px">
+            <span class="badge ${cls}" style="cursor:pointer" onclick="openDailyMark('${e.id}','${date}')">${label} <i class="fas fa-edit"></i></span>
+            ${canDel?`<button class="btn btn-red btn-ic btn-xs" onclick="deleteDailyMarkRecord('${mark.id}','${date}')"><i class="fas fa-trash"></i></button>`:''}
+          </span>
         </div>`;
       }
       return `<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border-bottom:1px solid var(--border)">
@@ -1846,6 +1897,17 @@ async function renderDaily() {
   }).join('');
 }
 window.renderDaily = renderDaily;
+
+window.deleteAttendanceRecord = async (id, date) => {
+  if (!confirm('متأكد من حذف سجل الحضور ده؟')) return;
+  try { await deleteDoc(doc(db,'attendance',id)); toast('تم الحذف', 'success'); renderDaily(); }
+  catch(e) { toast('خطأ: '+e.message, 'error'); }
+};
+window.deleteDailyMarkRecord = async (id, date) => {
+  if (!confirm('متأكد من حذف الحالة المسجّلة دي؟')) return;
+  try { await deleteDoc(doc(db,'dailyMarks',id)); toast('تم الحذف', 'success'); renderDaily(); }
+  catch(e) { toast('خطأ: '+e.message, 'error'); }
+};
 
 window.openDailyMark = (empId, date) => {
   const emp = _employees.find(x=>x.id===empId);
@@ -1978,11 +2040,20 @@ async function renderMonthly() {
       <td style="font-weight:800">${ev?.finalScore != null ? ev.finalScore+'%' : '—'}</td>
       <td><input class="fc" style="width:70px;padding:6px" type="number" min="0" step="0.5" id="ms-penalty-${e.id}" value="${s.penaltyDays ?? 0}"></td>
       <td><input class="fc" style="width:150px;padding:6px" id="ms-notes-${e.id}" value="${notesEsc}"></td>
-      <td><button class="btn btn-ac btn-xs" onclick="saveMonthlyRow('${e.id}')"><i class="fas fa-save"></i></button></td>
+      <td style="display:flex;gap:4px">
+        <button class="btn btn-ac btn-xs" onclick="saveMonthlyRow('${e.id}')"><i class="fas fa-save"></i></button>
+        ${hasPerm('data_delete') && s.id ? `<button class="btn btn-red btn-xs btn-ic" onclick="deleteMonthlyRow('${s.id}')"><i class="fas fa-trash"></i></button>` : ''}
+      </td>
     </tr>`;
   }).join('');
 }
 window.renderMonthly = renderMonthly;
+
+window.deleteMonthlyRow = async (docId) => {
+  if (!confirm('متأكد من حذف بيانات الكشف الشهري للموظف ده الشهر ده؟')) return;
+  try { await deleteDoc(doc(db,'monthlySheets',docId)); toast('تم الحذف', 'success'); renderMonthly(); }
+  catch(e) { toast('خطأ: '+e.message, 'error'); }
+};
 
 window.saveMonthlyRow = async (empId) => {
   const period = document.getElementById('monthly-period').value;
@@ -2072,11 +2143,20 @@ async function renderEvaluation() {
       <td><input class="fc" style="width:80px;padding:6px" type="number" min="0" max="100" id="ev-hr-${e.id}" value="${ev.hrScore ?? ''}"${canHr?'':dis}></td>
       <td><input class="fc" style="width:80px;padding:6px" type="number" min="0" max="100" id="ev-factory-${e.id}" value="${ev.factoryScore ?? ''}"${canFactory?'':dis}></td>
       <td style="font-weight:800" id="ev-final-${e.id}">${final}</td>
-      <td><button class="btn btn-ac btn-xs" onclick="saveEvalRow('${e.id}')"><i class="fas fa-save"></i></button></td>
+      <td style="display:flex;gap:4px">
+        <button class="btn btn-ac btn-xs" onclick="saveEvalRow('${e.id}')"><i class="fas fa-save"></i></button>
+        ${hasPerm('data_delete') && ev.id ? `<button class="btn btn-red btn-xs btn-ic" onclick="deleteEvalRow('${ev.id}')"><i class="fas fa-trash"></i></button>` : ''}
+      </td>
     </tr>`;
   }).join('');
 }
 window.renderEvaluation = renderEvaluation;
+
+window.deleteEvalRow = async (docId) => {
+  if (!confirm('متأكد من حذف تقييم الشهر ده؟')) return;
+  try { await deleteDoc(doc(db,'evaluations',docId)); toast('تم الحذف', 'success'); renderEvaluation(); }
+  catch(e) { toast('خطأ: '+e.message, 'error'); }
+};
 
 window.saveEvalRow = async (empId) => {
   const period = document.getElementById('eval-period').value;
@@ -2182,6 +2262,162 @@ async function renderProfile() {
 window.renderProfile = renderProfile;
 
 // ══════════════════════════════════════════════
+// CUSTOM REPORTS — تقرير مخصص لموظف أو لكل الموظفين، عن أي فترة وأي بيانات
+// ══════════════════════════════════════════════
+function renderReports() {
+  const sel = document.getElementById('rep-emp');
+  if (sel.options.length <= 1) {
+    const opts = _employees.filter(e=>e.status!=='resigned').map(e=>`<option value="${e.id}">${e.name}</option>`).join('');
+    sel.insertAdjacentHTML('beforeend', opts);
+  }
+  if (!document.getElementById('rep-from').value) {
+    document.getElementById('rep-from').value = cycleRangeForPeriod(currentPeriodStr()).startDate;
+    document.getElementById('rep-to').value = todayStr();
+  }
+  document.getElementById('reports-body').innerHTML = '';
+  document.getElementById('rep-print-btn').style.display = 'none';
+}
+window.renderReports = renderReports;
+
+window.generateCustomReport = async () => {
+  const empSel = document.getElementById('rep-emp').value;
+  const dateFrom = document.getElementById('rep-from').value;
+  const dateTo = document.getElementById('rep-to').value;
+  if (!dateFrom || !dateTo) { toast('حدد الفترة (من - لحد)', 'error'); return; }
+  if (dateTo < dateFrom) { toast('تاريخ النهاية لازم يكون بعد تاريخ البداية', 'error'); return; }
+  const body = document.getElementById('reports-body');
+  body.innerHTML = '<div class="empty"><i class="fas fa-spinner fa-spin"></i><p>جاري تجميع التقرير...</p></div>';
+  document.getElementById('rep-print-btn').style.display = 'none';
+
+  const flags = {
+    wantEval: document.getElementById('rep-eval').checked,
+    wantLeave: document.getElementById('rep-leave').checked,
+    wantSick: document.getElementById('rep-sick').checked,
+    wantUnpaid: document.getElementById('rep-unpaid').checked,
+    wantAbsence: document.getElementById('rep-absence').checked,
+    wantPermission: document.getElementById('rep-permission').checked,
+    wantPenalty: document.getElementById('rep-penalty').checked,
+    wantExtra: document.getElementById('rep-extra').checked,
+    wantAttendance: document.getElementById('rep-attendance').checked
+  };
+
+  const targets = empSel==='__all__' ? _employees.filter(e=>e.status!=='resigned') : [_employees.find(e=>e.id===empSel)].filter(Boolean);
+  if (!targets.length) { body.innerHTML = '<div class="empty"><p>مفيش موظفين</p></div>'; return; }
+
+  // بناء قائمة الدورات الشهرية المتقاطعة مع الفترة المطلوبة
+  const periods = [];
+  let curP = periodForDate(dateFrom);
+  const endP = periodForDate(dateTo);
+  for (let guard=0; guard<200; guard++) {
+    periods.push(curP);
+    if (curP === endP) break;
+    const [y,m] = curP.split('-').map(Number);
+    let ny=y, nm=m+1; if (nm===13){nm=1;ny=y+1;}
+    curP = `${ny}-${String(nm).padStart(2,'0')}`;
+  }
+  // تقسيم لمجموعات بحد أقصى 10 (قيد Firestore على where...in)
+  const periodChunks = [];
+  for (let i=0;i<periods.length;i+=10) periodChunks.push(periods.slice(i,i+10));
+
+  try {
+    const results = await Promise.all(targets.map(async emp=>{
+      let sheets = [], evals = [];
+      for (const chunk of periodChunks) {
+        const [sSnap, eSnap] = await Promise.all([
+          getDocs(query(collection(db,'monthlySheets'), where('employeeId','==',emp.id), where('period','in',chunk))),
+          flags.wantEval ? getDocs(query(collection(db,'evaluations'), where('employeeId','==',emp.id), where('period','in',chunk))) : Promise.resolve({docs:[]})
+        ]);
+        sheets.push(...sSnap.docs.map(d=>d.data()));
+        evals.push(...eSnap.docs.map(d=>d.data()));
+      }
+      let attendanceDays = [];
+      if (flags.wantAttendance) {
+        const [attSnap, markSnap] = await Promise.all([
+          getDocs(query(collection(db,'attendance'), where('employeeId','==',emp.id), where('type','==','checkin'), where('date','>=',dateFrom), where('date','<=',dateTo))),
+          getDocs(query(collection(db,'dailyMarks'), where('employeeId','==',emp.id), where('date','>=',dateFrom), where('date','<=',dateTo)))
+        ]);
+        const attByDate = {}; attSnap.docs.forEach(d=>{ const v=d.data(); attByDate[v.date]=v.time; });
+        const markByDate = {}; markSnap.docs.forEach(d=>{ const v=d.data(); markByDate[v.date]=v.status; });
+        const allDates = new Set([...Object.keys(attByDate), ...Object.keys(markByDate)]);
+        attendanceDays = Array.from(allDates).sort().map(dt=>({ date:dt, time: attByDate[dt]||null, status: markByDate[dt]||null }));
+      }
+      const sum = (arr,key)=>Math.round(arr.reduce((a,v)=>a+(v[key]||0),0)*100)/100;
+      const evalAvg = evals.length ? Math.round(evals.reduce((a,v)=>a+(v.finalScore||0),0)/evals.length*100)/100 : null;
+      return {
+        emp,
+        leaveFromBalance: sum(sheets,'leaveFromBalance'),
+        sickLeave: sum(sheets,'sickLeave'),
+        leaveUnpaid: sum(sheets,'leaveUnpaid'),
+        absence: sum(sheets,'absence'),
+        personalPermission: sum(sheets,'personalPermission'),
+        penaltyDays: sum(sheets,'penaltyDays'),
+        overtimeHours: sum(sheets,'overtimeHours'),
+        extraDays: sum(sheets,'extraDays'),
+        evalAvg,
+        attendanceDays
+      };
+    }));
+
+    window._lastReport = { results, dateFrom, dateTo, flags };
+    renderReportResults();
+    document.getElementById('rep-print-btn').style.display = '';
+  } catch(e) {
+    body.innerHTML = `<div class="empty"><p>خطأ: ${e.message} (ممكن Firestore محتاج index، هيديك رابط في الـ console تعمله بضغطة)</p></div>`;
+  }
+};
+
+function renderReportResults() {
+  const { results, dateFrom, dateTo, flags } = window._lastReport;
+  const body = document.getElementById('reports-body');
+  const cols = [];
+  if (flags.wantEval) cols.push(['evalAvg','متوسط التقييم %', v=>v==null?'—':v+'%']);
+  if (flags.wantLeave) cols.push(['leaveFromBalance','إجازة من الرصيد', v=>v]);
+  if (flags.wantSick) cols.push(['sickLeave','إجازة مرضية', v=>v]);
+  if (flags.wantUnpaid) cols.push(['leaveUnpaid','إجازة بالخصم', v=>v]);
+  if (flags.wantAbsence) cols.push(['absence','غياب', v=>v]);
+  if (flags.wantPermission) cols.push(['personalPermission','إذن شخصي', v=>v]);
+  if (flags.wantPenalty) cols.push(['penaltyDays','جزاءات', v=>v]);
+  if (flags.wantExtra) { cols.push(['overtimeHours','ساعات إضافية', v=>v]); cols.push(['extraDays','أيام إضافية', v=>v]); }
+
+  let html = `<div class="card"><div class="card-body" style="font-size:12.5px;color:var(--slate-500)">الفترة: من ${dateFrom} لحد ${dateTo}</div></div>`;
+
+  if (cols.length) {
+    html += `<div class="card" style="margin-top:12px;overflow-x:auto"><table class="tbl">
+      <thead><tr><th>الموظف</th>${cols.map(c=>`<th>${c[1]}</th>`).join('')}</tr></thead>
+      <tbody>${results.map(r=>`<tr><td style="font-weight:700">${r.emp.name}</td>${cols.map(c=>`<td>${c[2](r[c[0]])}</td>`).join('')}</tr>`).join('')}</tbody>
+    </table></div>`;
+  }
+
+  if (flags.wantAttendance) {
+    results.forEach(r=>{
+      if (!r.attendanceDays.length) return;
+      html += `<div class="card" style="margin-top:12px"><div class="card-body">
+        <div style="font-weight:800;margin-bottom:8px">تفاصيل الحضور يوم بيوم — ${r.emp.name}</div>
+        <table class="tbl"><thead><tr><th>التاريخ</th><th>الحالة</th></tr></thead><tbody>
+        ${r.attendanceDays.map(d=>{
+          const label = d.time ? `حضر الساعة ${d.time}` : (d.status==='leave' ? 'إجازة من الرصيد' : d.status==='absent' ? 'غياب بدون إذن' : 'مفيش سجل');
+          return `<tr><td>${d.date}</td><td>${label}</td></tr>`;
+        }).join('')}
+        </tbody></table>
+      </div></div>`;
+    });
+  }
+  body.innerHTML = html || '<div class="empty"><p>حدد بيانات المطلوبة في التقرير</p></div>';
+}
+window.renderReportResults = renderReportResults;
+
+window.printCustomReport = () => {
+  if (!window._lastReport) { toast('اعمل التقرير الأول', 'error'); return; }
+  const content = document.getElementById('reports-body').innerHTML;
+  const w = window.open('', '_blank');
+  w.document.write(`<html dir="rtl"><head><title>تقرير مخصص — شركة الساقية</title>
+    <style>body{font-family:Arial;padding:30px}table{width:100%;border-collapse:collapse;margin-top:12px}th,td{border:1px solid #ccc;padding:8px;text-align:center}th{background:#f0f0f0}.card{margin-bottom:10px;border:none}</style>
+    </head><body><h2>تقرير مخصص — شركة الساقية</h2>${content}</body></html>`);
+  w.document.close();
+  setTimeout(()=>w.print(), 400);
+};
+
+// ══════════════════════════════════════════════
 // LEAVES (الرصيد 21 يوم + طلب/موافقة + منطق خصم)
 // ══════════════════════════════════════════════
 function periodForDate(dateStr) {
@@ -2226,6 +2462,7 @@ async function renderLeaves() {
     const actions = r.status==='pending' ? `
       <button class="btn btn-red btn-sm" onclick="rejectLeaveRequest('${r.id}')"><i class="fas fa-times"></i> رفض</button>
       <button class="btn btn-ac btn-sm" onclick="approveLeaveRequest('${r.id}')"><i class="fas fa-check"></i> موافقة</button>` : '';
+    const delBtn = hasPerm('data_delete') ? `<button class="btn btn-red btn-ic btn-sm" onclick="deleteLeaveRequest('${r.id}')"><i class="fas fa-trash"></i></button>` : '';
     return `<div class="card" style="margin-bottom:12px"><div class="card-body" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
       <div>
         <div style="font-weight:800">${r.employeeName} ${statusBadge}${r.source==='kiosk'?' <span class="badge bg-slate"><i class="fas fa-fingerprint"></i> من الكيوسك</span>':''}</div>
@@ -2233,11 +2470,17 @@ async function renderLeaves() {
         ${r.note?`<div style="font-size:12px;color:var(--slate-500);margin-top:3px">ملاحظة: ${r.note}</div>`:''}
         ${extra}
       </div>
-      <div style="display:flex;gap:8px">${actions}</div>
+      <div style="display:flex;gap:8px">${actions}${delBtn}</div>
     </div></div>`;
   }).join('');
 }
 window.renderLeaves = renderLeaves;
+
+window.deleteLeaveRequest = async (id) => {
+  if (!confirm('متأكد من حذف طلب الإجازة ده نهائياً؟')) return;
+  try { await deleteDoc(doc(db,'leaveRequests',id)); toast('تم الحذف', 'success'); renderLeaves(); }
+  catch(e) { toast('خطأ: '+e.message, 'error'); }
+};
 
 window.openLeaveModal = () => {
   const sel = document.getElementById('lv-emp');
