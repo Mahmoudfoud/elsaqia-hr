@@ -1657,6 +1657,7 @@ async function kioskLoadStatus() {
   bodyHtml += `<div style="margin-top:12px;display:flex;flex-direction:column;gap:8px">
     <a href="javascript:void(0)" onclick="kioskShowProfile()" style="font-size:12px;color:var(--ac-600);font-weight:700">عرض سجلي السنوي</a>
     <a href="javascript:void(0)" onclick="kioskShowLeaveForm()" style="font-size:12px;color:var(--ac-600);font-weight:700">طلب إجازة</a>
+    <a href="javascript:void(0)" onclick="kioskShowMyLeaveRequests()" style="font-size:12px;color:var(--ac-600);font-weight:700">حالة طلبات إجازتي</a>
     <a href="javascript:void(0)" onclick="kioskRenderCodeEntry()" style="font-size:11.5px;color:var(--slate-500)">مش أنا؟ رجوع</a>
   </div>`;
   document.getElementById('kiosk-body').innerHTML = bodyHtml;
@@ -1746,13 +1747,17 @@ function kioskRenderLeaveFormBody() {
     <div style="text-align:right;background:var(--slate-100);border-radius:10px;padding:14px 16px;margin:16px 0">
       <div style="font-weight:800;font-size:14px">طلب إجازة</div>
       <div style="font-size:12px;color:var(--slate-500);margin-top:2px">رصيدك الحالي: ${emp.leaveBalance ?? 21} يوم — لو الطلب أكتر من رصيدك، الفرق بيتخصم من راتبك بعد الموافقة</div>
+      <div style="font-size:11.5px;color:var(--ac-700);margin-top:6px"><i class="fas fa-info-circle"></i> ملحوظة: مسموح بطلب واحد بس في اليوم، والحد الأقصى للإجازة عن طريق التطبيق يومين في الشهر — لو محتاج أكتر، ارجع لمدير الشؤون شخصياً</div>
     </div>
     <div class="fg" style="text-align:right"><label class="fl">من تاريخ</label><input class="fc" type="date" id="kv-from"></div>
     <div class="fg" style="text-align:right"><label class="fl">حتى تاريخ</label><input class="fc" type="date" id="kv-to"></div>
     <div class="fg" style="text-align:right"><label class="fl">ملاحظات (اختياري)</label><textarea class="fc" id="kv-note" rows="2"></textarea></div>
     <div id="kv-err" class="auth-err"></div>
     <button class="auth-btn" id="kiosk-leave-btn" onclick="kioskSubmitLeaveRequest()"><i class="fas fa-paper-plane"></i>إرسال الطلب</button>
-    <div style="margin-top:12px"><a href="javascript:void(0)" onclick="kioskLoadStatus()" style="font-size:11.5px;color:var(--slate-500)">→ رجوع</a></div>
+    <div style="margin-top:12px;display:flex;flex-direction:column;gap:6px">
+      <a href="javascript:void(0)" onclick="kioskShowMyLeaveRequests()" style="font-size:11.5px;color:var(--ac-600)">شوف حالة طلباتي السابقة</a>
+      <a href="javascript:void(0)" onclick="kioskLoadStatus()" style="font-size:11.5px;color:var(--slate-500)">→ رجوع</a>
+    </div>
   `;
 };
 
@@ -1766,8 +1771,33 @@ window.kioskSubmitLeaveRequest = async () => {
   if (dateTo < dateFrom) { err.textContent = 'تاريخ النهاية لازم يكون بعد تاريخ البداية'; return; }
   const daysCount = Math.round((new Date(dateTo)-new Date(dateFrom))/86400000)+1;
   const btn = document.getElementById('kiosk-leave-btn');
-  btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الإرسال...';
+  btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التحقق...';
   try {
+    // اجلب كل طلبات الموظف ده عشان نتحقق من حد "طلب واحد يوميًا" وحد "يومين إجازة بالشهر عن طريق التطبيق"
+    const mySnap = await getDocs(query(collection(secDb,'leaveRequests'), where('employeeId','==',emp.id)));
+    const myReqs = mySnap.docs.map(d=>d.data());
+
+    // 1) حد طلب واحد في اليوم — بنمنع أي طلب جديد لو قدّم طلب (أي حالة) النهاردة بالفعل
+    const todayStr = new Date().toISOString().slice(0,10);
+    const submittedToday = myReqs.some(r => r.requestedAt && new Date(r.requestedAt).toISOString().slice(0,10) === todayStr);
+    if (submittedToday) {
+      err.textContent = 'قدّمت طلب إجازة النهاردة بالفعل — مسموح بطلب واحد بس في اليوم. استنى رد المدير أو جرّب بكرة.';
+      btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i>إرسال الطلب';
+      return;
+    }
+
+    // 2) حد يومين إجازة بالشهر عن طريق التطبيق (حسب شهر تاريخ "من"، والمرفوض ما يتحسبش)
+    const targetMonth = dateFrom.slice(0,7);
+    const usedThisMonth = myReqs
+      .filter(r => r.status !== 'rejected' && r.dateFrom && r.dateFrom.slice(0,7) === targetMonth)
+      .reduce((sum,r)=> sum + (r.daysCount||0), 0);
+    if (usedThisMonth + daysCount > 2) {
+      err.textContent = `الحد الأقصى لطلب الإجازة عن طريق التطبيق يومين في الشهر (مستخدم منهم ${usedThisMonth} يوم بالفعل هذا الشهر). لو محتاج إجازة أكتر من كده، ارجع لمدير الشؤون شخصياً.`;
+      btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i>إرسال الطلب';
+      return;
+    }
+
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الإرسال...';
     await addDoc(collection(secDb,'leaveRequests'), {
       employeeId: emp.id, employeeName: emp.name, departmentId: emp.departmentId||null,
       dateFrom, dateTo, daysCount, note, status:'pending', source:'kiosk',
@@ -1783,6 +1813,40 @@ window.kioskSubmitLeaveRequest = async () => {
   } catch(e) {
     err.textContent = 'خطأ: ' + (e.message||e.code);
     btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i>إرسال الطلب';
+  }
+};
+
+window.kioskShowMyLeaveRequests = async () => {
+  const emp = window._kioskEmp;
+  const body = document.getElementById('kiosk-body');
+  if (!(emp.passkeys||[]).length) {
+    body.innerHTML = `<div class="auth-err">لازم تسجل بصمتك الأول — سجّل حضور أو انصراف عادي مرة، وبعدها هتقدر تشوف حالة طلباتك ببصمتك.</div><div style="margin-top:10px"><a href="javascript:void(0)" onclick="kioskLoadStatus()" style="font-size:11.5px">→ رجوع</a></div>`;
+    return;
+  }
+  body.innerHTML = '<div class="empty"><i class="fas fa-fingerprint fa-spin"></i><p>ضع بصمتك للتأكد من هويتك...</p></div>';
+  try { await webauthnVerify(emp); }
+  catch(e) { body.innerHTML = `<div class="auth-err">فشل التحقق من البصمة: ${e.message}</div><div style="margin-top:10px"><a href="javascript:void(0)" onclick="kioskLoadStatus()" style="font-size:11.5px">→ رجوع</a></div>`; return; }
+  body.innerHTML = '<div class="empty"><i class="fas fa-spinner fa-spin"></i><p>جاري التحميل...</p></div>';
+  try {
+    const snap = await getDocs(query(collection(secDb,'leaveRequests'), where('employeeId','==',emp.id)));
+    const reqs = snap.docs.map(d=>d.data()).sort((a,b)=>(b.requestedAt||0)-(a.requestedAt||0)).slice(0,10);
+    const statusBadge = s => s==='approved' ? '<span style="color:var(--ok-700);font-weight:800"><i class="fas fa-check-circle"></i> تمت الموافقة</span>'
+      : s==='rejected' ? '<span style="color:var(--danger-600);font-weight:800"><i class="fas fa-times-circle"></i> مرفوض</span>'
+      : '<span style="color:var(--slate-500);font-weight:800"><i class="fas fa-hourglass-half"></i> قيد المراجعة</span>';
+    const rows = reqs.map(r => `
+      <div style="text-align:right;background:var(--slate-100);border-radius:10px;padding:12px 14px;margin-bottom:8px">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+          <div style="font-weight:700;font-size:13px">${r.dateFrom} → ${r.dateTo} (${r.daysCount} يوم)</div>
+          <div style="font-size:12px">${statusBadge(r.status)}</div>
+        </div>
+        ${r.note ? `<div style="font-size:11.5px;color:var(--slate-500);margin-top:4px">${r.note}</div>` : ''}
+      </div>`).join('');
+    document.getElementById('kiosk-body').innerHTML = `
+      <div style="font-weight:800;font-size:14px;text-align:right;margin-bottom:10px">طلبات إجازتي</div>
+      ${rows || '<div class="empty"><p>لسه ما قدّمتش أي طلب إجازة</p></div>'}
+      <div style="margin-top:12px"><a href="javascript:void(0)" onclick="kioskLoadStatus()" style="font-size:11.5px;color:var(--slate-500)">→ رجوع</a></div>`;
+  } catch(e) {
+    body.innerHTML = `<div class="auth-err">خطأ: ${e.message}</div><div style="margin-top:10px"><a href="javascript:void(0)" onclick="kioskLoadStatus()" style="font-size:11.5px">رجوع</a></div>`;
   }
 };
 
