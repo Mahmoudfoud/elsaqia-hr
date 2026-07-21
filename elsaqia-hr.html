@@ -200,6 +200,7 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
 
       <div class="nav-group-lbl">الحضور</div>
       <div class="nav-link" data-page="daily" data-perm="daily_view" onclick="goPage('daily')"><i class="fas fa-calendar-check"></i>الدخول اليومي</div>
+      <div class="nav-link" data-page="dailymark" data-perm="daily_view" onclick="goPage('dailymark')"><i class="fas fa-user-edit"></i>تسجيل حالة اليوم</div>
       <div class="nav-link" data-page="overtime" data-perm="overtime_approve" onclick="goPage('overtime')"><i class="fas fa-business-time"></i>موافقات الوقت الإضافي</div>
       <div class="nav-link" data-page="monthly" data-perm="monthly_manage" onclick="goPage('monthly')"><i class="fas fa-file-invoice"></i>الكشف الشهري</div>
       <div class="nav-link" data-page="evaluation" data-perm="eval_manager" onclick="goPage('evaluation')"><i class="fas fa-star-half-alt"></i>التقييم الشهري</div>
@@ -302,6 +303,18 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
         <div class="ph-acts"><input class="fc" type="date" id="daily-date" style="width:160px" onchange="renderDaily()"></div>
       </div>
       <div id="daily-body"></div>
+    </div>
+
+    <!-- DAILY MARK (STANDALONE) -->
+    <div class="page" id="page-dailymark">
+      <div class="ph">
+        <div><div class="ph-title">تسجيل حالة اليوم</div><div class="ph-sub">تحديد حالة أي موظف يدويًا (غياب بدون إذن / إجازة من الرصيد) لأي تاريخ، مباشرة من غير المرور بصفحة الدخول اليومي</div></div>
+        <div class="ph-acts"><input class="fc" type="date" id="dm-page-date" style="width:160px" onchange="renderDailyMarkPage()"></div>
+      </div>
+      <div class="card"><table class="tbl">
+        <thead><tr><th>الاسم</th><th>القسم</th><th>حالة اليوم</th><th></th></tr></thead>
+        <tbody id="dailymark-page-body"></tbody>
+      </table></div>
     </div>
 
     <!-- OVERTIME APPROVALS -->
@@ -534,6 +547,10 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
         <div class="fg"><label class="fl">انصراف مسموح من</label><input class="fc" type="time" id="shift-checkout-from"></div>
         <div class="fg"><label class="fl">انصراف مسموح حتى</label><input class="fc" type="time" id="shift-checkout-to"></div>
       </div>
+      <div class="fg">
+        <label class="fl">أيام العمل بالنسبة لهذه الوردية</label>
+        <div id="shift-workdays" style="display:flex;flex-wrap:wrap;gap:10px;margin-top:4px"></div>
+      </div>
     </div>
     <div class="mf">
       <button class="btn btn-ghost" onclick="closeM('mo-shift')">إلغاء</button>
@@ -570,6 +587,8 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
     </div>
   </div>
 </div>
+
+<div class="overlay" id="mo-dailymark">
   <div class="modal" style="max-width:380px">
     <div class="mh"><span class="mh-title">تسجيل حالة اليوم</span><button class="mclose" onclick="closeM('mo-dailymark')">×</button></div>
     <div class="mb">
@@ -585,6 +604,28 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
     <div class="mf">
       <button class="btn btn-ghost" onclick="closeM('mo-dailymark')">إلغاء</button>
       <button class="btn btn-ac" onclick="saveDailyMark()"><i class="fas fa-save"></i>حفظ</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="mo-manualatt">
+  <div class="modal" style="max-width:380px">
+    <div class="mh"><span class="mh-title">تسجيل حضور/انصراف يدوي</span><button class="mclose" onclick="closeM('mo-manualatt')">×</button></div>
+    <div class="mb">
+      <div id="ma-emp-name" style="font-weight:800;margin-bottom:4px"></div>
+      <div style="font-size:12px;color:var(--slate-500);margin-bottom:12px">للحالات اللي الموظف معرفش يسجل حضوره أو انصرافه بنفسه لأي سبب (تليفونه ضاع، مشكلة في النت، إلخ)</div>
+      <div class="fg"><label class="fl">النوع</label>
+        <select class="fc" id="ma-type">
+          <option value="checkin">تسجيل حضور</option>
+          <option value="checkout">تسجيل انصراف</option>
+        </select>
+      </div>
+      <div class="fg"><label class="fl">الساعة</label><input class="fc" type="time" id="ma-time"></div>
+      <div class="fg"><label class="fl">ملاحظات (اختياري)</label><textarea class="fc" id="ma-note" rows="2" placeholder="مثال: تليفونه ضاع"></textarea></div>
+    </div>
+    <div class="mf">
+      <button class="btn btn-ghost" onclick="closeM('mo-manualatt')">إلغاء</button>
+      <button class="btn btn-ac" onclick="saveManualAttendance()"><i class="fas fa-save"></i>حفظ</button>
     </div>
   </div>
 </div>
@@ -940,7 +981,7 @@ function updateLeavesBadge(count) {
 // ══════════════════════════════════════════════
 // NAVIGATION
 // ══════════════════════════════════════════════
-const PAGE_PERM = { employees:'employees_manage', departments:'departments_manage', shifts:'shifts_manage', settings:'settings_manage', daily:'daily_view', overtime:'overtime_approve', monthly:'monthly_manage', evaluation:'eval_manager', profile:'profiles_view', reports:'reports_view', leaves:'leaves_manage', holidays:'holidays_manage', expenses:'expenses_manage' };
+const PAGE_PERM = { employees:'employees_manage', departments:'departments_manage', shifts:'shifts_manage', settings:'settings_manage', daily:'daily_view', dailymark:'daily_view', overtime:'overtime_approve', monthly:'monthly_manage', evaluation:'eval_manager', profile:'profiles_view', reports:'reports_view', leaves:'leaves_manage', holidays:'holidays_manage', expenses:'expenses_manage' };
 window.goPage = (name) => {
   const perm = PAGE_PERM[name];
   const evalAlt = name==='evaluation' && (hasPerm('eval_hr')||hasPerm('eval_factory'));
@@ -951,7 +992,7 @@ window.goPage = (name) => {
   document.getElementById('page-'+name)?.classList.add('active');
   document.querySelectorAll('.nav-link').forEach(n=>n.classList.toggle('active', n.dataset.page===name));
   toggleSidebar(false);
-  const renders = { dashboard:renderDashboard, employees:renderEmployees, departments:renderDepartments, shifts:renderShifts, settings:renderSettings, daily:renderDaily, overtime:renderOvertime, monthly:renderMonthly, evaluation:renderEvaluation, profile:renderProfile, reports:renderReports, leaves:renderLeaves, holidays:renderHolidays, expenses:renderExpenses, users:renderUsers };
+  const renders = { dashboard:renderDashboard, employees:renderEmployees, departments:renderDepartments, shifts:renderShifts, settings:renderSettings, daily:renderDaily, dailymark:renderDailyMarkPage, overtime:renderOvertime, monthly:renderMonthly, evaluation:renderEvaluation, profile:renderProfile, reports:renderReports, leaves:renderLeaves, holidays:renderHolidays, expenses:renderExpenses, users:renderUsers };
   renders[name]?.();
 };
 
@@ -1012,6 +1053,8 @@ function renderShifts() {
   if (!_shifts.length) { el.innerHTML = '<div class="empty"><i class="fas fa-clock"></i><p>لا توجد ورديات مضافة بعد</p></div>'; return; }
   el.innerHTML = _shifts.map(s=>{
     const cnt = _employees.filter(e=>e.shiftId===s.id && e.status!=='resigned').length;
+    const wd = (s.workDays && s.workDays.length) ? s.workDays : DEFAULT_WORK_DAYS;
+    const wdText = wd.length===7 ? 'كل أيام الأسبوع' : [...wd].sort((a,b)=>a-b).map(i=>DAY_LABELS[i]).join('، ');
     return `<div class="stat-card">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
         <div class="stat-ic bg-ac" style="margin-bottom:0"><i class="fas fa-clock"></i></div>
@@ -1024,7 +1067,8 @@ function renderShifts() {
       <div style="font-size:12px;color:var(--slate-500);margin-top:4px">${s.start} — ${s.end}</div>
       <div style="font-size:11px;color:var(--slate-500);margin-top:8px;line-height:1.7">
         حضور: ${s.checkinFrom} - ${s.checkinTo}<br>
-        انصراف: ${s.checkoutFrom} - ${s.checkoutTo}
+        انصراف: ${s.checkoutFrom} - ${s.checkoutTo}<br>
+        أيام العمل: ${wdText}
       </div>
       <div class="badge bg-ac" style="margin-top:10px">${cnt} موظف</div>
     </div>`;
@@ -1043,6 +1087,11 @@ window.openShiftModal = (id=null) => {
   document.getElementById('shift-checkin-to').value = s?.checkinTo || '';
   document.getElementById('shift-checkout-from').value = s?.checkoutFrom || '';
   document.getElementById('shift-checkout-to').value = s?.checkoutTo || '';
+  const workDays = (s?.workDays && s.workDays.length) ? s.workDays : DEFAULT_WORK_DAYS;
+  document.getElementById('shift-workdays').innerHTML = DAY_LABELS.map((label,i)=>`
+    <label style="display:flex;align-items:center;gap:5px;font-size:12.5px;font-weight:600;cursor:pointer">
+      <input type="checkbox" class="shift-wd-cb" value="${i}" ${workDays.includes(i)?'checked':''}> ${label}
+    </label>`).join('');
   openM('mo-shift');
 };
 
@@ -1054,9 +1103,11 @@ window.saveShift = async () => {
   const checkinTo = document.getElementById('shift-checkin-to').value;
   const checkoutFrom = document.getElementById('shift-checkout-from').value;
   const checkoutTo = document.getElementById('shift-checkout-to').value;
+  const workDays = Array.from(document.querySelectorAll('.shift-wd-cb:checked')).map(cb=>Number(cb.value));
   if (!name) { toast('اكتب اسم الوردية', 'error'); return; }
   if (!start || !end || !checkinFrom || !checkinTo || !checkoutFrom || !checkoutTo) { toast('املأ كل التوقيتات', 'error'); return; }
-  const data = { name, start, end, checkinFrom, checkinTo, checkoutFrom, checkoutTo };
+  if (!workDays.length) { toast('حدد يوم عمل واحد على الأقل', 'error'); return; }
+  const data = { name, start, end, checkinFrom, checkinTo, checkoutFrom, checkoutTo, workDays };
   try {
     if (window._editShiftId) {
       await updateDoc(doc(db,'shifts',window._editShiftId), data);
@@ -1501,12 +1552,14 @@ function normalizeDigits(str) {
   return String(str).replace(/[٠-٩]/g, d=>eastern.indexOf(d)).replace(/[۰-۹]/g, d=>persian.indexOf(d)).trim();
 }
 
-// أيام الشغل: الأحد–الخميس. الجمعة (5) والسبت (6) إجازة أسبوعية ثابتة (JS: الأحد=0 ... السبت=6)
-const WEEKLY_OFF_DAYS = [5,6];
-function isWeeklyOffDate(dateStr) {
+// الافتراضي: أيام الشغل الأحد–الخميس (JS: الأحد=0 ... السبت=6) — قابل للتخصيص لكل وردية على حدة من إعدادات الوردية
+const DEFAULT_WORK_DAYS = [0,1,2,3,4];
+function isWeeklyOffDate(dateStr, workDays) {
+  const days = (workDays && workDays.length) ? workDays : DEFAULT_WORK_DAYS;
   const d = new Date(dateStr+'T00:00:00');
-  return WEEKLY_OFF_DAYS.includes(d.getDay());
+  return !days.includes(d.getDay());
 }
+const DAY_LABELS = ['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
 // هل كان الموظف معيّناً بالفعل في هذا التاريخ؟ (في حال عدم وجود تاريخ تعيين مسجّل، يُعتبر موجوداً دائماً توافقاً مع البيانات القديمة)
 function employeeHiredBy(emp, dateStr) {
   return !emp.hireDate || emp.hireDate <= dateStr;
@@ -1612,14 +1665,14 @@ async function kioskLoadStatus() {
   const emp = window._kioskEmp;
   if (!emp.shiftId) { kioskRenderCodeEntry(`أهلاً ${emp.name} — لم يحدّد لك الأدمن وردية بعد، يُرجى التواصل مع الأدمن.`); return; }
   const today = todayStr();
-  if (isWeeklyOffDate(today)) { kioskRenderCodeEntry(`أهلاً ${emp.name} — اليوم إجازة أسبوعية (الجمعة/السبت)، لا يوجد تسجيل حضور.`); return; }
+  const shift = await getEffectiveShift(emp.shiftId, today, secDb);
+  if (!shift) { kioskRenderCodeEntry('الوردية الخاصة بك غير موجودة، يُرجى التواصل مع الأدمن.'); return; }
+  if (isWeeklyOffDate(today, shift.workDays)) { kioskRenderCodeEntry(`أهلاً ${emp.name} — اليوم إجازة أسبوعية بالنسبة لورديتك، لا يوجد تسجيل حضور.`); return; }
   const holiday = await getHolidayForDate(today, secDb);
   if (holiday && !(holiday.exemptEmployeeIds||[]).includes(emp.id)) {
     kioskRenderCodeEntry(`أهلاً ${emp.name} — اليوم إجازة رسمية (${holiday.title})، لا يوجد تسجيل حضور.`);
     return;
   }
-  const shift = await getEffectiveShift(emp.shiftId, today, secDb);
-  if (!shift) { kioskRenderCodeEntry('الوردية الخاصة بك غير موجودة، يُرجى التواصل مع الأدمن.'); return; }
   window._kioskShift = shift;
 
   const attSnap = await getDocs(query(collection(secDb,'attendance'), where('employeeId','==',emp.id), where('date','==',today)));
@@ -1941,16 +1994,6 @@ async function renderDaily() {
   const body = document.getElementById('daily-body');
   body.innerHTML = '<div class="empty"><i class="fas fa-spinner fa-spin"></i><p>جاري التحميل...</p></div>';
 
-  // يوم إجازة أسبوعية (جمعة/سبت) — لا توجد متابعة حضور إطلاقاً
-  if (isWeeklyOffDate(date)) {
-    body.innerHTML = `<div class="card"><div class="card-body" style="text-align:center;padding:40px 20px">
-      <div style="font-size:30px;color:var(--slate-500);margin-bottom:10px"><i class="fas fa-couch"></i></div>
-      <div style="font-weight:800;font-size:15px">اليوم إجازة أسبوعية</div>
-      <div style="font-size:12.5px;color:var(--slate-500);margin-top:4px">الشركة شغالة من الأحد للخميس — الجمعة والسبت إجازة، ولذلك لا توجد متابعة حضور لهذا اليوم</div>
-    </div></div>`;
-    return;
-  }
-
   const holiday = await getHolidayForDate(date, db);
   const exemptIds = holiday ? (holiday.exemptEmployeeIds||[]) : null;
 
@@ -1994,63 +2037,86 @@ async function renderDaily() {
 
   const holidayBanner = holiday ? `<div class="card" style="margin-bottom:16px;border-color:var(--ac-500)"><div class="card-body" style="font-size:12.5px;color:var(--ac-700);font-weight:700"><i class="fas fa-flag"></i> اليوم إجازة رسمية (${holiday.title}) — الموظفين دول مستثنين ومطلوب يحضروا</div></div>` : '';
 
+  // نجيب المواعيد الفعلية لكل وردية (بتاخد في الاعتبار أي تعديل مؤقت shiftOverrides لهذا اليوم بالذات)
+  const effShifts = await Promise.all(_shifts.map(shift => getEffectiveShift(shift.id, date, db)));
+  const effByShiftId = {}; _shifts.forEach((s,i)=>{ effByShiftId[s.id] = effShifts[i] || s; });
+
+  const canDel = hasPerm('data_delete');
+
   body.innerHTML = holidayBanner + _shifts.map(shift=>{
     const emps = byShift[shift.id]||[];
     if (!emps.length) return '';
 
-    const present = [], due = [], notYetDue = [];
-    emps.forEach(e=>{
-      const chk = checkins[e.id];
-      if (chk) { present.push({e,chk}); return; }
-      // لم يحن معاد الوردية بعد (فقط إذا كان اليوم الحالي وقبل معاد الحضور المسموح)
-      const isDue = !isToday && !isFuture ? true : (isToday ? nowM >= hmToMin(shift.checkinFrom) : false);
-      if (isDue) due.push(e); else notYetDue.push(e);
-    });
+    const effShift = effByShiftId[shift.id] || shift;
+    const overrideNote = effShift.isOverridden ? ' <span style="color:var(--ac-600);font-weight:700">(مواعيد معدّلة اليوم)</span>' : '';
 
-    const canDel = hasPerm('data_delete');
-    const presentRows = present.map(({e,chk})=>{
-      const co = checkouts[e.id];
+    if (isWeeklyOffDate(date, effShift.workDays)) {
+      return `<div class="card" style="margin-bottom:16px"><div class="card-body">
+        <div style="font-weight:800;font-size:14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <span><i class="fas fa-clock"></i> ${shift.name}</span>
+          <span class="badge bg-slate"><i class="fas fa-couch"></i> اليوم إجازة أسبوعية بالنسبة لهذه الوردية</span>
+        </div>
+      </div></div>`;
+    }
+
+    const shiftStarted = !isToday && !isFuture ? true : (isToday ? nowM >= hmToMin(effShift.checkinFrom) : false);
+
+    if (!shiftStarted) {
+      return `<div class="card" style="margin-bottom:16px"><div class="card-body">
+        <div style="font-weight:800;font-size:14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <span><i class="fas fa-clock"></i> ${shift.name} <span style="font-weight:400;color:var(--slate-500);font-size:12px">(${effShift.start}-${effShift.end})</span>${overrideNote}</span>
+          <span class="badge bg-slate"><i class="fas fa-hourglass-half"></i> لم يبدأ العمل بعد</span>
+        </div>
+      </div></div>`;
+    }
+
+    // قائمة موحدة: الحاضرين مرتبين بوقت الحضور (الأول اللي سجل الأول)، وبعدهم اللي لسه ما سجلوش
+    const present = emps.filter(e=>checkins[e.id]).sort((a,b)=> checkins[a.id].time.localeCompare(checkins[b.id].time));
+    const notPresent = emps.filter(e=>!checkins[e.id]);
+
+    const manualBtn = (empId, defaultAction) => `<button class="btn btn-ghost btn-xs" onclick="openManualAttendance('${empId}','${date}','${defaultAction}')" title="تسجيل حضور/انصراف يدوي (لو الموظف معرفش يبصم لأي سبب)"><i class="fas fa-user-edit"></i> تسجيل يدوي</button>`;
+
+    const presentRows = present.map(e=>{
+      const chk = checkins[e.id], co = checkouts[e.id];
       return `
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border-bottom:1px solid var(--border)">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:6px">
         <span style="font-weight:700">${e.name}</span>
         <span style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-          <span class="badge bg-ok"><i class="fas fa-sign-in-alt"></i> حضور ${chk.time}</span>
+          <span class="badge bg-ok"><i class="fas fa-check-circle"></i> حضور ${chk.time}</span>
           ${canDel?`<button class="btn btn-red btn-ic btn-xs" onclick="deleteAttendanceRecord('${chk.id}','${date}')"><i class="fas fa-trash"></i></button>`:''}
           ${co
-            ? `<span class="badge bg-ac"><i class="fas fa-sign-out-alt"></i> انصراف ${co.time}</span>${canDel?`<button class="btn btn-red btn-ic btn-xs" onclick="deleteAttendanceRecord('${co.id}','${date}')"><i class="fas fa-trash"></i></button>`:''}`
-            : `<span class="badge bg-slate"><i class="fas fa-hourglass-half"></i> لا يزال في العمل</span>`}
+            ? `<span class="badge bg-ac"><i class="fas fa-check-circle"></i> انصراف ${co.time}</span>${canDel?`<button class="btn btn-red btn-ic btn-xs" onclick="deleteAttendanceRecord('${co.id}','${date}')"><i class="fas fa-trash"></i></button>`:''}`
+            : `<span class="badge bg-slate"><i class="far fa-circle"></i> لسه ما سجلش انصراف</span>${manualBtn(e.id,'checkout')}`}
         </span>
       </div>`;
     }).join('');
 
-    const dueRows = due.map(e=>{
+    const notPresentRows = notPresent.map(e=>{
       const mark = marks[e.id];
       if (mark) {
         const label = mark.status==='leave' ? 'إجازة من الرصيد' : 'غياب بدون إذن';
         const cls = mark.status==='leave' ? 'bg-ac' : 'bg-danger';
-        return `<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border-bottom:1px solid var(--border)">
+        return `<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:6px">
           <span style="font-weight:700;color:var(--danger-600)">${e.name}</span>
-          <span style="display:flex;align-items:center;gap:6px">
+          <span style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
             <span class="badge ${cls}" style="cursor:pointer" onclick="openDailyMark('${e.id}','${date}')">${label} <i class="fas fa-edit"></i></span>
             ${canDel?`<button class="btn btn-red btn-ic btn-xs" onclick="deleteDailyMarkRecord('${mark.id}','${date}')"><i class="fas fa-trash"></i></button>`:''}
+            ${manualBtn(e.id,'checkin')}
           </span>
         </div>`;
       }
-      return `<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border-bottom:1px solid var(--border)">
+      return `<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:6px">
         <span style="font-weight:700;color:var(--danger-600)">${e.name}</span>
-        <button class="btn btn-red btn-xs" onclick="openDailyMark('${e.id}','${date}')"><i class="fas fa-exclamation-circle"></i> لم يسجّل حضوره بعد</button>
+        <span style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+          <button class="btn btn-red btn-xs" onclick="openDailyMark('${e.id}','${date}')"><i class="fas fa-exclamation-circle"></i> لم يسجّل حضوره بعد</button>
+          ${manualBtn(e.id,'checkin')}
+        </span>
       </div>`;
     }).join('');
 
-    const notYetDueRows = notYetDue.map(e=>`
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border-bottom:1px solid var(--border)">
-        <span style="font-weight:700;color:var(--slate-500)">${e.name}</span>
-        <span class="badge bg-slate"><i class="fas fa-hourglass-half"></i> لم يحن موعد العمل بعد</span>
-      </div>`).join('');
-
     return `<div class="card" style="margin-bottom:16px"><div class="card-body">
-      <div style="font-weight:800;font-size:14px;margin-bottom:8px"><i class="fas fa-clock"></i> ${shift.name} <span style="font-weight:400;color:var(--slate-500);font-size:12px">(${shift.start}-${shift.end})</span></div>
-      ${presentRows}${dueRows}${notYetDueRows}
+      <div style="font-weight:800;font-size:14px;margin-bottom:8px"><i class="fas fa-clock"></i> ${shift.name} <span style="font-weight:400;color:var(--slate-500);font-size:12px">(${effShift.start}-${effShift.end})</span>${overrideNote}</div>
+      ${presentRows}${notPresentRows}
     </div></div>`;
   }).join('');
 }
@@ -2063,7 +2129,10 @@ window.deleteAttendanceRecord = async (id, date) => {
 };
 window.deleteDailyMarkRecord = async (id, date) => {
   if (!confirm('متأكد من حذف الحالة المسجّلة دي؟')) return;
-  try { await deleteDoc(doc(db,'dailyMarks',id)); toast('تم الحذف', 'success'); renderDaily(); }
+  try {
+    await deleteDoc(doc(db,'dailyMarks',id)); toast('تم الحذف', 'success');
+    if (_page==='dailymark') renderDailyMarkPage(); else renderDaily();
+  }
   catch(e) { toast('خطأ: '+e.message, 'error'); }
 };
 
@@ -2088,9 +2157,90 @@ window.saveDailyMark = async () => {
     }
     toast('تم الحفظ', 'success');
     closeM('mo-dailymark');
-    renderDaily();
+    if (_page==='dailymark') renderDailyMarkPage(); else renderDaily();
   } catch(e) { toast('خطأ: '+e.message, 'error'); }
 };
+
+// تسجيل حضور/انصراف يدوي من الأدمن — للموظف اللي معرفش يبصم بنفسه لأي سبب
+window.openManualAttendance = (empId, date, defaultType) => {
+  const emp = _employees.find(x=>x.id===empId);
+  document.getElementById('ma-emp-name').textContent = emp?.name || '';
+  window._maEmpId = empId; window._maDate = date;
+  document.getElementById('ma-type').value = defaultType || 'checkin';
+  document.getElementById('ma-time').value = nowHM();
+  document.getElementById('ma-note').value = '';
+  openM('mo-manualatt');
+};
+
+window.saveManualAttendance = async () => {
+  const type = document.getElementById('ma-type').value;
+  const time = document.getElementById('ma-time').value;
+  const note = document.getElementById('ma-note').value.trim();
+  if (!time) { toast('حدد الساعة', 'error'); return; }
+  try {
+    const existing = await getDocs(query(collection(db,'attendance'),
+      where('employeeId','==',window._maEmpId), where('date','==',window._maDate), where('type','==',type)));
+    if (!existing.empty) {
+      await updateDoc(doc(db,'attendance',existing.docs[0].id), { time, note, method:'manual_admin', markedBy: CU?.email||'admin', markedAt: Date.now() });
+    } else {
+      await addDoc(collection(db,'attendance'), {
+        employeeId: window._maEmpId, date: window._maDate, type, time, note,
+        method: 'manual_admin', markedBy: CU?.email||'admin', markedAt: Date.now()
+      });
+    }
+    toast('تم الحفظ', 'success');
+    closeM('mo-manualatt');
+    if (_page==='dailymark') renderDailyMarkPage(); else renderDaily();
+  } catch(e) { toast('خطأ: '+e.message, 'error'); }
+};
+
+async function renderDailyMarkPage() {
+  const dateInput = document.getElementById('dm-page-date');
+  if (!dateInput.value) dateInput.value = todayStr();
+  const date = dateInput.value;
+  const tbody = document.getElementById('dailymark-page-body');
+  tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px"><i class="fas fa-spinner fa-spin"></i></td></tr>';
+
+  let attSnap, markSnap;
+  try {
+    [attSnap, markSnap] = await Promise.all([
+      getDocs(query(collection(db,'attendance'), where('date','==',date))),
+      getDocs(query(collection(db,'dailyMarks'), where('date','==',date)))
+    ]);
+  } catch(e) { tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--danger-600)">خطأ: ${e.message}</td></tr>`; return; }
+
+  const checkins = {}; attSnap.docs.forEach(d=>{ const v=d.data(); if (v.type==='checkin') checkins[v.employeeId]={id:d.id,...v}; });
+  const marks = {}; markSnap.docs.forEach(d=>{ const v=d.data(); marks[v.employeeId]={id:d.id,...v}; });
+
+  const activeEmps = _employees.filter(e=>e.status!=='resigned' && employeeHiredBy(e,date))
+    .sort((a,b)=>a.name.localeCompare(b.name,'ar'));
+
+  if (!activeEmps.length) { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--slate-500)">لا يوجد موظفون</td></tr>'; return; }
+
+  const canDel = hasPerm('data_delete');
+  tbody.innerHTML = activeEmps.map(e=>{
+    const dept = _departments.find(d=>d.id===e.departmentId);
+    const chk = checkins[e.id];
+    const mark = marks[e.id];
+    let statusCell;
+    if (chk) {
+      statusCell = `<span class="badge bg-ok"><i class="fas fa-sign-in-alt"></i> حضر الساعة ${chk.time}</span>`;
+    } else if (mark) {
+      const label = mark.status==='leave' ? 'إجازة من الرصيد' : 'غياب بدون إذن';
+      const cls = mark.status==='leave' ? 'bg-ac' : 'bg-danger';
+      statusCell = `<span class="badge ${cls}" style="cursor:pointer" onclick="openDailyMark('${e.id}','${date}')">${label} <i class="fas fa-edit"></i></span>`;
+    } else {
+      statusCell = `<span class="badge bg-slate">لا يوجد سجل</span>`;
+    }
+    return `<tr>
+      <td style="font-weight:700">${e.name}</td>
+      <td>${dept ? dept.name : '—'}</td>
+      <td>${statusCell}</td>
+      <td>${!chk?`<button class="btn btn-ghost btn-xs" onclick="openDailyMark('${e.id}','${date}')"><i class="fas fa-edit"></i> ${mark?'تعديل':'تسجيل حالة'}</button>`:''}${mark&&canDel?` <button class="btn btn-red btn-ic btn-xs" onclick="deleteDailyMarkRecord('${mark.id}','${date}')"><i class="fas fa-trash"></i></button>`:''}</td>
+    </tr>`;
+  }).join('');
+}
+window.renderDailyMarkPage = renderDailyMarkPage;
 
 // ══════════════════════════════════════════════
 // OVERTIME APPROVALS
