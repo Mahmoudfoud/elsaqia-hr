@@ -1725,9 +1725,9 @@ const DAY_LABELS = ['الأحد','الاثنين','الثلاثاء','الأرب
 
 // أنواع الإجازة: كل نوع رصيد مستقل تمامًا عن التاني
 const LEAVE_TYPES = {
-  regular:  { label:'إجازة اعتيادية', field:'leaveBalanceRegular',  defaultBalance:14, monthlyCap:true  },
-  casual:   { label:'إجازة عارضة',    field:'leaveBalanceCasual',   defaultBalance:7,  monthlyCap:true  },
-  marriage: { label:'إجازة جواز',     field:'leaveBalanceMarriage', defaultBalance:15, monthlyCap:false, oneTime:true }
+  regular:  { label:'إجازة اعتيادية', field:'leaveBalanceRegular',  defaultBalance:14, monthlyCap:true,  advanceDays:1 },
+  casual:   { label:'إجازة عارضة',    field:'leaveBalanceCasual',   defaultBalance:7,  monthlyCap:true,  advanceDays:0 },
+  marriage: { label:'إجازة جواز',     field:'leaveBalanceMarriage', defaultBalance:15, monthlyCap:false, advanceDays:1, oneTime:true }
 };
 function leaveBalanceOf(emp, type) {
   const t = LEAVE_TYPES[type] || LEAVE_TYPES.regular;
@@ -2035,9 +2035,16 @@ window.kioskUpdateLeaveTypeNote = () => {
   const balance = leaveBalanceOf(emp, type);
   const overflowNote = emp.category==='rep' ? '' : ' — لو الطلب أكتر من رصيدك، الفرق بيتخصم من راتبك بعد الموافقة';
   document.getElementById('kv-balance-note').textContent = `رصيدك الحالي من ${LEAVE_TYPES[type].label}: ${balance} يوم${overflowNote}`;
-  document.getElementById('kv-cap-note').innerHTML = LEAVE_TYPES[type].monthlyCap
+  const advanceDays = LEAVE_TYPES[type].advanceDays || 0;
+  const minD = new Date(); minD.setDate(minD.getDate() + advanceDays);
+  const minDateStr = minD.toISOString().slice(0,10);
+  const fromInput = document.getElementById('kv-from');
+  fromInput.min = minDateStr;
+  if (fromInput.value && fromInput.value < minDateStr) fromInput.value = '';
+  document.getElementById('kv-cap-note').innerHTML = (LEAVE_TYPES[type].monthlyCap
     ? '<i class="fas fa-info-circle"></i> ملحوظة: مسموح بطلب واحد بس في اليوم، والحد الأقصى لهذا النوع عن طريق التطبيق يومين في الشهر — لو محتاج أكتر، ارجع لمدير الشؤون شخصياً'
-    : '<i class="fas fa-info-circle"></i> ملحوظة: مسموح بطلب واحد بس في اليوم. إجازة الجواز مرة واحدة بس في حياة الموظف';
+    : '<i class="fas fa-info-circle"></i> ملحوظة: مسموح بطلب واحد بس في اليوم. إجازة الجواز مرة واحدة بس في حياة الموظف')
+    + (advanceDays>0 ? `<br>لازم تتقدّم بطلب ${LEAVE_TYPES[type].label} قبل تاريخها بيوم على الأقل` : '<br>ممكن تتقدّم بطلب إجازة عارضة في نفس اليوم لو الموضوع طارئ');
 };
 
 window.kioskSubmitLeaveRequest = async () => {
@@ -2049,6 +2056,19 @@ window.kioskSubmitLeaveRequest = async () => {
   const err = document.getElementById('kv-err');
   if (!dateFrom || !dateTo) { err.textContent = 'حدد تاريخ البداية والنهاية'; return; }
   if (dateTo < dateFrom) { err.textContent = 'تاريخ النهاية لازم يكون بعد تاريخ البداية'; return; }
+
+  const today = todayStr();
+  if (dateFrom < today) { err.textContent = 'مينفعش تطلب إجازة لتاريخ فات — الطلب لازم يكون لتاريخ النهاردة أو بعده.'; return; }
+  const advanceDays = LEAVE_TYPES[leaveType].advanceDays || 0;
+  if (advanceDays > 0) {
+    const minD = new Date(); minD.setDate(minD.getDate() + advanceDays);
+    const minDateStr = minD.toISOString().slice(0,10);
+    if (dateFrom < minDateStr) {
+      err.textContent = `${LEAVE_TYPES[leaveType].label} لازم تتقدّم بيها قبل تاريخها بيوم على الأقل — أقرب تاريخ ممكن تطلبه هو ${minDateStr}. لو الموضوع طارئ، إجازة عارضة ممكن تتقدّم في نفس اليوم.`;
+      return;
+    }
+  }
+
   const daysCount = Math.round((new Date(dateTo)-new Date(dateFrom))/86400000)+1;
   const btn = document.getElementById('kiosk-leave-btn');
   btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التحقق...';
@@ -2058,8 +2078,7 @@ window.kioskSubmitLeaveRequest = async () => {
     const myReqs = mySnap.docs.map(d=>d.data());
 
     // 1) حد طلب واحد في اليوم — بنمنع أي طلب جديد لو قدّم طلب (أي حالة/نوع) النهاردة بالفعل
-    const todayStr = new Date().toISOString().slice(0,10);
-    const submittedToday = myReqs.some(r => r.requestedAt && new Date(r.requestedAt).toISOString().slice(0,10) === todayStr);
+    const submittedToday = myReqs.some(r => r.requestedAt && new Date(r.requestedAt).toISOString().slice(0,10) === today);
     if (submittedToday) {
       err.textContent = 'قدّمت طلب إجازة النهاردة بالفعل — مسموح بطلب واحد بس في اليوم. استنى رد المدير أو جرّب بكرة.';
       btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i>إرسال الطلب';
