@@ -2026,7 +2026,7 @@ function kioskRenderLeaveFormBody() {
       <select class="fc" id="kv-type" onchange="kioskUpdateLeaveTypeNote()">
         <option value="regular">إجازة اعتيادية</option>
         <option value="casual">إجازة عارضة</option>
-        <option value="marriage">إجازة جواز (مرة واحدة في حياة الموظف)</option>
+        <option value="marriage">إجازة جواز (مرة واحدة )</option>
       </select>
     </div>
     <div class="fg" style="text-align:right"><label class="fl">من تاريخ</label><input class="fc" type="date" id="kv-from"></div>
@@ -2056,7 +2056,7 @@ window.kioskUpdateLeaveTypeNote = () => {
   if (fromInput.value && fromInput.value < minDateStr) fromInput.value = '';
   document.getElementById('kv-cap-note').innerHTML = (LEAVE_TYPES[type].monthlyCap
     ? '<i class="fas fa-info-circle"></i> ملحوظة: مسموح بطلب واحد بس في اليوم، والحد الأقصى لهذا النوع عن طريق التطبيق يومين في الشهر — لو محتاج أكتر، ارجع لمدير الشؤون شخصياً'
-    : '<i class="fas fa-info-circle"></i> ملحوظة: مسموح بطلب واحد بس في اليوم. إجازة الجواز مرة واحدة بس في حياة الموظف')
+    : '<i class="fas fa-info-circle"></i> ملحوظة: مسموح بطلب واحد بس في اليوم. إجازة الجواز مرة واحدة    ')
     + (advanceDays>0 ? `<br>لازم تتقدّم بطلب ${LEAVE_TYPES[type].label} قبل تاريخها بيوم على الأقل` : '<br>ممكن تتقدّم بطلب إجازة عارضة في نفس اليوم لو الموضوع طارئ');
 };
 
