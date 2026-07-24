@@ -198,6 +198,7 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
       <div class="nav-link" data-page="departments" data-perm="departments_manage" onclick="goPage('departments')"><i class="fas fa-sitemap"></i>الأقسام</div>
       <div class="nav-link" data-page="shifts" data-perm="shifts_manage" onclick="goPage('shifts')"><i class="fas fa-clock"></i>الورديات</div>
       <div class="nav-link" data-page="reps" data-perm="reps_manage" onclick="goPage('reps')"><i class="fas fa-route"></i>المناديب</div>
+      <div class="nav-link" data-page="drivers" data-perm="drivers_manage" onclick="goPage('drivers')"><i class="fas fa-truck"></i>السائقون</div>
 
       <div class="nav-group-lbl">الحضور</div>
       <div class="nav-link" data-page="daily" data-perm="daily_view" onclick="goPage('daily')"><i class="fas fa-calendar-check"></i>الدخول اليومي</div>
@@ -206,6 +207,7 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
       <div class="nav-link" data-page="monthly" data-perm="monthly_manage" onclick="goPage('monthly')"><i class="fas fa-file-invoice"></i>الكشف الشهري</div>
       <div class="nav-link" data-page="evaluation" data-perm="eval_manager" onclick="goPage('evaluation')"><i class="fas fa-star-half-alt"></i>التقييم الشهري</div>
       <div class="nav-link" data-page="leaves" data-perm="leaves_manage,leaves_dept_approve" onclick="goPage('leaves')"><i class="fas fa-calendar-minus"></i>الإجازات</div>
+      <div class="nav-link" data-page="penalties" data-perm="penalties_rewards_manage" onclick="goPage('penalties')"><i class="fas fa-balance-scale"></i>الجزاءات والمكافآت</div>
       <div class="nav-link" data-page="holidays" data-perm="holidays_manage" onclick="goPage('holidays')"><i class="fas fa-flag"></i>الإجازات الرسمية</div>
 
       <div class="nav-group-lbl">التقارير</div>
@@ -297,6 +299,33 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
       </table></div>
     </div>
 
+    <!-- DRIVERS (السائقون) -->
+    <div class="page" id="page-drivers">
+      <div class="ph">
+        <div><div class="ph-title">السائقون</div><div class="ph-sub">8 ساعات عمل تُحسب من وقت الحضور الفعلي، وبعدها ساعات إضافية</div></div>
+        <div class="ph-acts">
+          <input class="fc" type="date" id="drivers-date" style="width:160px" onchange="renderDrivers()">
+          <button class="btn btn-ac btn-sm" onclick="openDriverModal()"><i class="fas fa-plus"></i>سائق جديد</button>
+        </div>
+      </div>
+      <div class="card"><table class="tbl">
+        <thead><tr><th>الاسم</th><th>الهاتف</th><th>حضور</th><th>انصراف</th><th>الساعات</th><th>وجبة</th><th></th></tr></thead>
+        <tbody id="drivers-body"></tbody>
+      </table></div>
+    </div>
+
+    <!-- PENALTIES & REWARDS (الجزاءات والمكافآت) -->
+    <div class="page" id="page-penalties">
+      <div class="ph">
+        <div><div class="ph-title">الجزاءات والمكافآت</div><div class="ph-sub">تسجيل حالة لكل موظف — القيمة = (الراتب الأساسي ÷ 30) × عدد الأيام</div></div>
+        <div class="ph-acts"><button class="btn btn-ac btn-sm" onclick="openPenaltyModal()"><i class="fas fa-plus"></i>تسجيل حالة</button></div>
+      </div>
+      <div class="card"><table class="tbl">
+        <thead><tr><th>الموظف</th><th>النوع</th><th>الأيام</th><th>القيمة</th><th>السبب</th><th>التاريخ</th><th></th></tr></thead>
+        <tbody id="penalties-body"></tbody>
+      </table></div>
+    </div>
+
     <!-- SETTINGS -->
     <div class="page" id="page-settings">
       <div class="ph">
@@ -349,7 +378,7 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
         </div>
       </div>
       <div class="card" style="overflow-x:auto"><table class="tbl">
-        <thead><tr><th>الاسم</th><th>الوظيفة</th><th>ساعات إضافية</th><th>أيام إضافية</th><th>إجازة من الرصيد</th><th>إجازة مرضية</th><th>إجازة بالخصم</th><th>غياب</th><th>إذن شخصي</th><th>الحافز %</th><th>جزاءات (أيام)</th><th>ملاحظات</th><th></th></tr></thead>
+        <thead><tr><th>الاسم</th><th>الوظيفة</th><th>ساعات إضافية</th><th>أيام إضافية</th><th>إجازة من الرصيد</th><th>إجازة مرضية</th><th>إجازة بالخصم</th><th>غياب</th><th>إذن شخصي</th><th>الحافز %</th><th>جزاءات (أيام)</th><th>مكافآت (أيام)</th><th>ملاحظات</th><th></th></tr></thead>
         <tbody id="monthly-body"></tbody>
       </table></div>
     </div>
@@ -407,6 +436,7 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
             <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="rep-absence" checked>غياب</label>
             <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="rep-permission" checked>إذن شخصي</label>
             <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="rep-penalty" checked>جزاءات</label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="rep-reward" checked>مكافآت</label>
             <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="rep-extra" checked>ساعات/أيام إضافية</label>
             <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="rep-attendance">تفاصيل الحضور يوم بيوم (هل حضر/غاب في تاريخ معيّن)</label>
           </div>
@@ -607,6 +637,69 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
     <div class="mf">
       <button class="btn btn-ghost" onclick="closeM('mo-rep')">إلغاء</button>
       <button class="btn btn-ac" onclick="saveRep()"><i class="fas fa-save"></i>حفظ</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="mo-driver">
+  <div class="modal" style="max-width:440px">
+    <div class="mh"><span class="mh-title" id="driver-modal-title">سائق جديد</span><button class="mclose" onclick="closeM('mo-driver')">×</button></div>
+    <div class="mb">
+      <div class="fg"><label class="fl">اسم السائق</label><input class="fc" id="driver-name" placeholder="الاسم بالكامل"></div>
+      <div class="frow c2">
+        <div class="fg"><label class="fl">كود التسجيل (للكيوسك)</label><input class="fc" id="driver-code" inputmode="numeric" placeholder="مثال: 3001"></div>
+        <div class="fg"><label class="fl">رقم الهاتف</label><input class="fc" id="driver-phone" placeholder="01xxxxxxxxx"></div>
+      </div>
+      <div class="frow c2">
+        <div class="fg"><label class="fl">القسم (اختياري — لتحديد مدير يوافق على إجازاته)</label><select class="fc" id="driver-dept"><option value="">— بدون —</option></select></div>
+        <div class="fg"><label class="fl">تاريخ التعيين</label><input class="fc" type="date" id="driver-hire"></div>
+      </div>
+      <div class="frow c2">
+        <div class="fg"><label class="fl">تقييد مكان الحضور</label><select class="fc" id="driver-checkin-loc"></select></div>
+        <div class="fg"><label class="fl">تقييد مكان الانصراف</label><select class="fc" id="driver-checkout-loc"></select></div>
+      </div>
+      <div style="font-size:11px;color:var(--slate-500);margin-top:-6px;margin-bottom:10px">لو سيبت أي خانة "بدون تقييد"، السائق يقدر يسجّل من أي مكان في الاتجاه ده.</div>
+      <div class="frow c2">
+        <div class="fg"><label class="fl">رصيد اعتيادية</label><input class="fc" type="number" id="driver-leave-regular" placeholder="14"></div>
+        <div class="fg"><label class="fl">رصيد عارضة</label><input class="fc" type="number" id="driver-leave-casual" placeholder="7"></div>
+      </div>
+      <div class="fg"><label class="fl">رصيد جواز (مرة واحدة)</label><input class="fc" type="number" id="driver-leave-marriage" placeholder="15"></div>
+      <div class="fg"><label class="fl">الحالة</label><select class="fc" id="driver-status"><option value="active">شغال</option><option value="resigned">مستقيل</option></select></div>
+      <div class="fg" id="driver-passkeys-wrap" style="display:none">
+        <label class="fl">بصمات الدخول المسجّلة (WebAuthn)</label>
+        <div id="driver-passkeys-list" style="font-size:12.5px;color:var(--slate-500);display:flex;flex-direction:column;gap:6px"></div>
+        <div style="font-size:11px;color:var(--slate-500);margin-top:6px">في حال حذف البصمة، سيسجّل السائق بصمة جديدة تلقائياً في أول استخدام لكوده بعد ذلك.</div>
+      </div>
+    </div>
+    <div class="mf">
+      <button class="btn btn-ghost" onclick="closeM('mo-driver')">إلغاء</button>
+      <button class="btn btn-ac" onclick="saveDriver()"><i class="fas fa-save"></i>حفظ</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="mo-penalty">
+  <div class="modal" style="max-width:440px">
+    <div class="mh"><span class="mh-title">تسجيل جزاء / مكافأة</span><button class="mclose" onclick="closeM('mo-penalty')">×</button></div>
+    <div class="mb">
+      <div class="fg"><label class="fl">الموظف</label><select class="fc" id="pen-emp"></select></div>
+      <div class="frow c2">
+        <div class="fg"><label class="fl">النوع</label><select class="fc" id="pen-type" onchange="updatePenaltyPreview()">
+          <option value="penalty">جزاء</option>
+          <option value="reward">مكافأة</option>
+        </select></div>
+        <div class="fg"><label class="fl">عدد الأيام</label><select class="fc" id="pen-days" onchange="updatePenaltyPreview()">
+          <option value="1">يوم كامل</option>
+          <option value="0.5">نص يوم</option>
+        </select></div>
+      </div>
+      <div class="fg"><label class="fl">التاريخ</label><input class="fc" type="date" id="pen-date"></div>
+      <div class="fg"><label class="fl">السبب / ملاحظة</label><textarea class="fc" id="pen-reason" rows="3" placeholder="اكتب سبب الجزاء أو المكافأة"></textarea></div>
+      <div id="pen-preview" style="font-size:12.5px;color:var(--ac-700);font-weight:700"></div>
+    </div>
+    <div class="mf">
+      <button class="btn btn-ghost" onclick="closeM('mo-penalty')">إلغاء</button>
+      <button class="btn btn-ac" onclick="savePenalty()"><i class="fas fa-save"></i>حفظ</button>
     </div>
   </div>
 </div>
@@ -926,6 +1019,8 @@ const PERMS_DEF = [
   { key:'leaves_manage', label:'الإجازات (تسجيل وموافقة الشؤون)' },
   { key:'leaves_dept_approve', label:'الموافقة على إجازات القسم (كمدير مباشر)' },
   { key:'reps_manage', label:'المناديب (إدارة وتسجيل حضور)' },
+  { key:'drivers_manage', label:'السائقون (إدارة وتسجيل حضور)' },
+  { key:'penalties_rewards_manage', label:'الجزاءات والمكافآت' },
   { key:'holidays_manage', label:'الإجازات الرسمية' },
   { key:'data_delete', label:'حذف السجلات (تعديلات/تقييمات/إجازات/حضور) — خطر' },
   { key:'reports_view', label:'التقارير المخصصة' },
@@ -1040,7 +1135,7 @@ function updateLeavesBadge(count) {
 // ══════════════════════════════════════════════
 // NAVIGATION
 // ══════════════════════════════════════════════
-const PAGE_PERM = { employees:'employees_manage', departments:'departments_manage', shifts:'shifts_manage', reps:'reps_manage', settings:'settings_manage', daily:'daily_view', dailymark:'daily_view', overtime:'overtime_approve', monthly:'monthly_manage', evaluation:'eval_manager', profile:'profiles_view', reports:'reports_view', leaves:'leaves_manage', holidays:'holidays_manage', expenses:'expenses_manage' };
+const PAGE_PERM = { employees:'employees_manage', departments:'departments_manage', shifts:'shifts_manage', reps:'reps_manage', drivers:'drivers_manage', settings:'settings_manage', daily:'daily_view', dailymark:'daily_view', overtime:'overtime_approve', monthly:'monthly_manage', evaluation:'eval_manager', profile:'profiles_view', reports:'reports_view', leaves:'leaves_manage', penalties:'penalties_rewards_manage', holidays:'holidays_manage', expenses:'expenses_manage' };
 window.goPage = (name) => {
   const perm = PAGE_PERM[name];
   const evalAlt = name==='evaluation' && (hasPerm('eval_hr')||hasPerm('eval_factory'));
@@ -1052,7 +1147,7 @@ window.goPage = (name) => {
   document.getElementById('page-'+name)?.classList.add('active');
   document.querySelectorAll('.nav-link').forEach(n=>n.classList.toggle('active', n.dataset.page===name));
   toggleSidebar(false);
-  const renders = { dashboard:renderDashboard, employees:renderEmployees, departments:renderDepartments, shifts:renderShifts, reps:renderReps, settings:renderSettings, daily:renderDaily, dailymark:renderDailyMarkPage, overtime:renderOvertime, monthly:renderMonthly, evaluation:renderEvaluation, profile:renderProfile, reports:renderReports, leaves:renderLeaves, holidays:renderHolidays, expenses:renderExpenses, users:renderUsers };
+  const renders = { dashboard:renderDashboard, employees:renderEmployees, departments:renderDepartments, shifts:renderShifts, reps:renderReps, drivers:renderDrivers, settings:renderSettings, daily:renderDaily, dailymark:renderDailyMarkPage, overtime:renderOvertime, monthly:renderMonthly, evaluation:renderEvaluation, profile:renderProfile, reports:renderReports, leaves:renderLeaves, penalties:renderPenalties, holidays:renderHolidays, expenses:renderExpenses, users:renderUsers };
   renders[name]?.();
 };
 
@@ -1066,16 +1161,18 @@ window.toggleSidebar = (open) => {
 // ══════════════════════════════════════════════
 function renderDashboard() {
   document.getElementById('dash-date').textContent = new Date().toLocaleDateString('ar-EG', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
-  const active = _employees.filter(e=>e.status!=='resigned' && e.category!=='rep');
+  const active = _employees.filter(e=>e.status!=='resigned' && e.category!=='rep' && e.category!=='driver');
   const activeReps = _employees.filter(e=>e.status!=='resigned' && e.category==='rep');
+  const activeDrivers = _employees.filter(e=>e.status!=='resigned' && e.category==='driver');
   document.getElementById('dash-stats').innerHTML = `
     <div class="stat-card"><div class="stat-ic bg-ac"><i class="fas fa-id-card"></i></div><div class="stat-val">${active.length}</div><div class="stat-lbl">موظف شغال</div></div>
     <div class="stat-card"><div class="stat-ic bg-slate"><i class="fas fa-sitemap"></i></div><div class="stat-val">${_departments.length}</div><div class="stat-lbl">قسم</div></div>
     <div class="stat-card"><div class="stat-ic bg-ac"><i class="fas fa-route"></i></div><div class="stat-val">${activeReps.length}</div><div class="stat-lbl">مندوب</div></div>
+    <div class="stat-card"><div class="stat-ic bg-ac"><i class="fas fa-truck"></i></div><div class="stat-val">${activeDrivers.length}</div><div class="stat-lbl">سائق</div></div>
     <div class="stat-card"><div class="stat-ic bg-danger"><i class="fas fa-user-slash"></i></div><div class="stat-val">${_employees.filter(e=>e.status==='resigned').length}</div><div class="stat-lbl">مستقيل</div></div>
   `;
   const rows = _departments.map(d=>{
-    const cnt = _employees.filter(e=>e.departmentId===d.id && e.status!=='resigned' && e.category!=='rep').length;
+    const cnt = _employees.filter(e=>e.departmentId===d.id && e.status!=='resigned' && e.category!=='rep' && e.category!=='driver').length;
     const mgr = _employees.find(e=>e.id===d.managerEmployeeId);
     return `<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)">
       <div style="display:flex;align-items:center;gap:10px">
@@ -1103,8 +1200,14 @@ function refreshShiftSelects() {
   if (s) s.innerHTML = '<option value="">— بدون وردية —</option>' + _shifts.map(x=>`<option value="${x.id}">${x.name} (${x.start}-${x.end})</option>`).join('');
 }
 function refreshLocationSelects() {
+  const opts = '<option value="">— أي فرع من الفروع المسجّلة —</option>' + _locations.map(x=>`<option value="${x.id}">${x.name}</option>`).join('');
   const s = document.getElementById('emp-location');
-  if (s) s.innerHTML = '<option value="">— أي فرع من الفروع المسجّلة —</option>' + _locations.map(x=>`<option value="${x.id}">${x.name}</option>`).join('');
+  if (s) s.innerHTML = opts;
+  const freeOpts = '<option value="">— بدون تقييد (من أي مكان) —</option>' + _locations.map(x=>`<option value="${x.id}">${x.name}</option>`).join('');
+  const dci = document.getElementById('driver-checkin-loc');
+  if (dci) dci.innerHTML = freeOpts;
+  const dco = document.getElementById('driver-checkout-loc');
+  if (dco) dco.innerHTML = freeOpts;
 }
 
 // ══════════════════════════════════════════════
@@ -1294,6 +1397,206 @@ window.saveRep = async () => {
 window.deleteRep = async (id) => {
   if (!confirm('متأكد من حذف المندوب ده نهائياً؟')) return;
   try { await deleteDoc(doc(db,'employees',id)); toast('تم الحذف', 'success'); }
+  catch(e) { toast('خطأ: '+e.message, 'error'); }
+};
+
+// ══════════════════════════════════════════════
+// DRIVERS (السائقون) — 8 ساعات من وقت الحضور الفعلي، بدون وردية ثابتة
+// ══════════════════════════════════════════════
+async function renderDrivers() {
+  const dateInput = document.getElementById('drivers-date');
+  if (!dateInput.value) dateInput.value = todayStr();
+  const date = dateInput.value;
+  const body = document.getElementById('drivers-body');
+  body.innerHTML = `<tr><td colspan="7"><div class="empty"><i class="fas fa-spinner fa-spin"></i><p>جاري التحميل...</p></div></td></tr>`;
+
+  const drivers = _employees.filter(e=>e.category==='driver').sort((a,b)=>a.name.localeCompare(b.name,'ar'));
+  if (!drivers.length) { body.innerHTML = `<tr><td colspan="7"><div class="empty"><i class="fas fa-truck"></i><p>لا يوجد سائقون مضافون بعد</p></div></td></tr>`; return; }
+
+  let attSnap;
+  try { attSnap = await getDocs(query(collection(db,'attendance'), where('date','==',date))); }
+  catch(e) { body.innerHTML = `<tr><td colspan="7"><div class="empty"><p>خطأ: ${e.message}</p></div></td></tr>`; return; }
+
+  const checkins = {}, checkouts = {};
+  attSnap.docs.forEach(d=>{
+    const v = d.data();
+    if (v.type==='checkin') checkins[v.employeeId] = {id:d.id,...v};
+    else if (v.type==='checkout') checkouts[v.employeeId] = {id:d.id,...v};
+  });
+
+  const mapLink = r => r.location ? `<a href="https://www.google.com/maps?q=${r.location.lat},${r.location.lng}" target="_blank" rel="noopener" style="color:var(--ac-600);font-weight:700"><i class="fas fa-map-marker-alt"></i> عرض الموقع</a>` : '';
+  const canDel = hasPerm('data_delete');
+  const cell = r => r ? `<div style="font-weight:700">${r.time}</div><div style="font-size:11px">${mapLink(r)}${canDel?` <button class="btn btn-red btn-ic btn-xs" onclick="deleteAttendanceRecord('${r.id}','${date}');setTimeout(renderDrivers,400)"><i class="fas fa-trash"></i></button>`:''}</div>` : '<span class="badge bg-slate">لا يوجد</span>';
+
+  body.innerHTML = drivers.map(e=>{
+    const statusBadge = e.status==='resigned' ? '<span class="badge bg-danger">مستقيل</span>' : '';
+    const ci = checkins[e.id], co = checkouts[e.id];
+    let hoursCell = '—';
+    if (ci && co) {
+      const worked = Math.max(0, hmToMin(co.time) - hmToMin(ci.time));
+      const regular = Math.min(worked, 480);
+      const extra = Math.max(0, worked - 480);
+      hoursCell = `${Math.round(regular/60*10)/10} ساعة${extra>0?` <span style="color:var(--warn-600);font-weight:700">+ ${Math.round(extra/60*10)/10} إضافي</span>`:''}`;
+    }
+    const mealCell = co && co.mealEligible ? '<span class="badge bg-ac">مستحق وجبة</span>' : '—';
+    return `<tr>
+      <td style="font-weight:700">${e.name} ${statusBadge}</td>
+      <td style="font-size:12px;color:var(--slate-500)">${e.phone||'—'}</td>
+      <td>${cell(ci)}</td>
+      <td>${cell(co)}</td>
+      <td style="font-size:12.5px">${hoursCell}</td>
+      <td>${mealCell}</td>
+      <td style="display:flex;gap:4px">
+        <button class="btn btn-ghost btn-ic btn-xs" onclick="openDriverModal('${e.id}')"><i class="fas fa-edit"></i></button>
+        <button class="btn btn-red btn-ic btn-xs" onclick="deleteDriver('${e.id}')"><i class="fas fa-trash"></i></button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+window.renderDrivers = renderDrivers;
+
+window.openDriverModal = (id=null) => {
+  window._editDriverId = id;
+  const e = id ? _employees.find(x=>x.id===id) : null;
+  document.getElementById('driver-modal-title').textContent = id ? 'تعديل سائق' : 'سائق جديد';
+  document.getElementById('driver-name').value = e?.name || '';
+  document.getElementById('driver-code').value = e?.code || '';
+  document.getElementById('driver-phone').value = e?.phone || '';
+  document.getElementById('driver-hire').value = e?.hireDate || '';
+  document.getElementById('driver-leave-regular').value = leaveBalanceOf(e,'regular');
+  document.getElementById('driver-leave-casual').value = leaveBalanceOf(e,'casual');
+  document.getElementById('driver-leave-marriage').value = leaveBalanceOf(e,'marriage');
+  document.getElementById('driver-status').value = e?.status || 'active';
+  const deptSel = document.getElementById('driver-dept');
+  deptSel.innerHTML = '<option value="">— بدون —</option>' + _departments.map(d=>`<option value="${d.id}">${d.name}</option>`).join('');
+  deptSel.value = e?.departmentId || '';
+  refreshLocationSelects();
+  document.getElementById('driver-checkin-loc').value = e?.driverCheckinLocationId || '';
+  document.getElementById('driver-checkout-loc').value = e?.driverCheckoutLocationId || '';
+  const pkWrap = document.getElementById('driver-passkeys-wrap');
+  if (id) {
+    pkWrap.style.display = '';
+    renderEmpPasskeys(id, 'driver-passkeys-list');
+  } else {
+    pkWrap.style.display = 'none';
+  }
+  openM('mo-driver');
+};
+
+window.saveDriver = async () => {
+  const name = document.getElementById('driver-name').value.trim();
+  const code = normalizeDigits(document.getElementById('driver-code').value.trim());
+  if (!name) { toast('اكتب اسم السائق', 'error'); return; }
+  if (code) {
+    const dup = _employees.find(x=>x.code===code && x.id!==window._editDriverId);
+    if (dup) { toast(`الكود ده مستخدم بالفعل مع "${dup.name}"`, 'error'); return; }
+  }
+  const data = {
+    name, category:'driver',
+    code: code || null,
+    phone: document.getElementById('driver-phone').value.trim(),
+    departmentId: document.getElementById('driver-dept').value || null,
+    hireDate: document.getElementById('driver-hire').value || null,
+    driverCheckinLocationId: document.getElementById('driver-checkin-loc').value || null,
+    driverCheckoutLocationId: document.getElementById('driver-checkout-loc').value || null,
+    leaveBalanceRegular: parseFloat(document.getElementById('driver-leave-regular').value ?? 14),
+    leaveBalanceCasual: parseFloat(document.getElementById('driver-leave-casual').value ?? 7),
+    leaveBalanceMarriage: parseFloat(document.getElementById('driver-leave-marriage').value ?? 15),
+    status: document.getElementById('driver-status').value,
+    shiftId: null,
+  };
+  try {
+    if (window._editDriverId) {
+      await updateDoc(doc(db,'employees',window._editDriverId), data);
+      toast('تم تعديل بيانات السائق', 'success');
+    } else {
+      await addDoc(collection(db,'employees'), { ...data, createdAt:Date.now(), passkeys:[] });
+      toast('تم إضافة السائق', 'success');
+    }
+    closeM('mo-driver');
+  } catch(e) { toast('خطأ: '+e.message, 'error'); }
+};
+
+window.deleteDriver = async (id) => {
+  if (!confirm('متأكد من حذف السائق ده نهائياً؟')) return;
+  try { await deleteDoc(doc(db,'employees',id)); toast('تم الحذف', 'success'); }
+  catch(e) { toast('خطأ: '+e.message, 'error'); }
+};
+
+// ══════════════════════════════════════════════
+// PENALTIES & REWARDS (الجزاءات والمكافآت)
+// ══════════════════════════════════════════════
+async function renderPenalties() {
+  const body = document.getElementById('penalties-body');
+  body.innerHTML = `<tr><td colspan="7"><div class="empty"><i class="fas fa-spinner fa-spin"></i><p>جاري التحميل...</p></div></td></tr>`;
+  let snap;
+  try { snap = await getDocs(query(collection(db,'penaltyRewards'), orderBy('date','desc'))); }
+  catch(e) { body.innerHTML = `<tr><td colspan="7"><div class="empty"><p>خطأ: ${e.message}</p></div></td></tr>`; return; }
+  if (snap.empty) { body.innerHTML = `<tr><td colspan="7"><div class="empty"><i class="fas fa-balance-scale"></i><p>لا توجد حالات مسجّلة بعد</p></div></td></tr>`; return; }
+  const canDel = hasPerm('data_delete');
+  body.innerHTML = snap.docs.map(d=>{
+    const r = d.data();
+    const typeBadge = r.type==='reward' ? '<span class="badge bg-ok">مكافأة</span>' : '<span class="badge bg-danger">جزاء</span>';
+    return `<tr>
+      <td style="font-weight:700">${r.employeeName}</td>
+      <td>${typeBadge}</td>
+      <td>${r.days===0.5?'نص يوم':'يوم كامل'}</td>
+      <td style="font-weight:700">${r.amount} ج.م</td>
+      <td style="font-size:12.5px;color:var(--slate-500)">${r.reason||'—'}</td>
+      <td>${r.date}</td>
+      <td>${canDel?`<button class="btn btn-red btn-ic btn-xs" onclick="deletePenalty('${d.id}')"><i class="fas fa-trash"></i></button>`:''}</td>
+    </tr>`;
+  }).join('');
+}
+window.renderPenalties = renderPenalties;
+
+window.openPenaltyModal = () => {
+  const sel = document.getElementById('pen-emp');
+  const eligible = _employees.filter(e=>e.status!=='resigned').sort((a,b)=>a.name.localeCompare(b.name,'ar'));
+  sel.innerHTML = eligible.map(e=>`<option value="${e.id}">${e.name}${e.category==='rep'?' (مندوب)':e.category==='driver'?' (سائق)':''}</option>`).join('');
+  document.getElementById('pen-type').value = 'penalty';
+  document.getElementById('pen-days').value = '1';
+  document.getElementById('pen-date').value = todayStr();
+  document.getElementById('pen-reason').value = '';
+  updatePenaltyPreview();
+  openM('mo-penalty');
+};
+
+window.updatePenaltyPreview = () => {
+  const empId = document.getElementById('pen-emp').value;
+  const emp = _employees.find(x=>x.id===empId);
+  const days = parseFloat(document.getElementById('pen-days').value);
+  const type = document.getElementById('pen-type').value;
+  const dailyRate = (emp?.salary||0)/30;
+  const amount = Math.round(dailyRate*days*100)/100;
+  document.getElementById('pen-preview').textContent =
+    `القيمة: ${amount} ج.م (${type==='reward'?'تُضاف':'تُخصم'} من راتب الشهر الحالي)`;
+};
+
+window.savePenalty = async () => {
+  const empId = document.getElementById('pen-emp').value;
+  const emp = _employees.find(x=>x.id===empId);
+  if (!emp) { toast('اختر الموظف', 'error'); return; }
+  const type = document.getElementById('pen-type').value;
+  const days = parseFloat(document.getElementById('pen-days').value);
+  const date = document.getElementById('pen-date').value || todayStr();
+  const reason = document.getElementById('pen-reason').value.trim();
+  const dailyRate = (emp.salary||0)/30;
+  const amount = Math.round(dailyRate*days*100)/100;
+  try {
+    await addDoc(collection(db,'penaltyRewards'), {
+      employeeId: empId, employeeName: emp.name, type, days, amount, reason, date,
+      createdBy: CU.displayName||CU.email, createdAt: Date.now(), seen: false,
+    });
+    toast('تم تسجيل الحالة', 'success');
+    closeM('mo-penalty');
+    renderPenalties();
+  } catch(e) { toast('خطأ: '+e.message, 'error'); }
+};
+
+window.deletePenalty = async (id) => {
+  if (!confirm('متأكد من حذف السجل ده نهائياً؟')) return;
+  try { await deleteDoc(doc(db,'penaltyRewards',id)); toast('تم الحذف', 'success'); renderPenalties(); }
   catch(e) { toast('خطأ: '+e.message, 'error'); }
 };
 
@@ -1509,7 +1812,7 @@ window.deleteDept = async (id) => {
 // ══════════════════════════════════════════════
 function renderEmployees() {
   const filterDept = document.getElementById('emp-filter-dept')?.value || '';
-  const staffOnly = _employees.filter(e=>e.category!=='rep');
+  const staffOnly = _employees.filter(e=>e.category!=='rep' && e.category!=='driver');
   const list = filterDept ? staffOnly.filter(e=>e.departmentId===filterDept) : staffOnly;
   document.getElementById('emp-count-sub').textContent = `${list.length} موظف`;
   if (!list.length) {
@@ -1626,6 +1929,12 @@ function computeExtraDaysAmount(emp, sheet) {
   if (!sheet || !sheet.extraDays) return 0;
   const dailyRate = (emp.salary||0)/30;
   return Math.round(sheet.extraDays*dailyRate*2*100)/100;
+}
+// قيمة المكافآت المسجّلة من صفحة الجزاءات والمكافآت — يوم واحد = الراتب الأساسي/30 (تُضاف للصافي)
+function computeMonthlyRewardAmount(emp, sheet) {
+  if (!sheet || !sheet.rewardDays) return 0;
+  const dailyRate = (emp.salary||0)/30;
+  return Math.round(sheet.rewardDays*dailyRate*100)/100;
 }
 // قيمة الساعات الإضافية المعتمدة — الساعة = (الراتب/30/8) × 1.7
 function computeOvertimeAmount(emp, sheet) {
@@ -1847,9 +2156,37 @@ window.kioskSubmitCode = async () => {
   }
 };
 
+async function kioskPenaltyBanner(emp) {
+  let snap;
+  try { snap = await getDocs(query(collection(secDb,'penaltyRewards'), where('employeeId','==',emp.id), where('seen','==',false))); }
+  catch(e) { return ''; }
+  if (snap.empty) return '';
+  window._kioskUnseenPenalties = snap.docs.map(d=>d.id);
+  const items = snap.docs.map(d=>{
+    const r = d.data();
+    const isReward = r.type==='reward';
+    return `<div style="text-align:right;padding:6px 0;border-bottom:1px solid rgba(0,0,0,.06);font-size:12.5px">
+      <span style="font-weight:800;color:${isReward?'var(--ok-700)':'var(--danger-700)'}">${isReward?'مكافأة':'جزاء'} (${r.days===0.5?'نص يوم':'يوم كامل'} — ${r.amount} ج.م)</span>
+      ${r.reason?`<div style="color:var(--slate-500);margin-top:2px">${r.reason}</div>`:''}
+    </div>`;
+  }).join('');
+  return `<div style="text-align:right;background:var(--warn-50,#fff8e6);border:1px solid var(--warn-200,#f5d98b);border-radius:10px;padding:12px 14px;margin-bottom:12px">
+    <div style="font-weight:800;font-size:13px;margin-bottom:6px"><i class="fas fa-bell"></i> عندك إشعار جديد</div>
+    ${items}
+    <button class="btn btn-ghost btn-xs" style="margin-top:8px" onclick="kioskAckPenalties()">تم الاطلاع</button>
+  </div>`;
+}
+window.kioskAckPenalties = async () => {
+  const ids = window._kioskUnseenPenalties || [];
+  try { await Promise.all(ids.map(id=>updateDoc(doc(secDb,'penaltyRewards',id), { seen:true }))); } catch(e) {}
+  window._kioskUnseenPenalties = [];
+  kioskLoadStatus();
+};
+
 async function kioskLoadStatus() {
   const emp = window._kioskEmp;
   const today = todayStr();
+  const penaltyBanner = await kioskPenaltyBanner(emp);
 
   // المناديب: مفيش وردية ولا وقت محدد ولا تحقق من إجازة أسبوعية/رسمية — بس تسجيل وقت وموقع
   if (emp.category === 'rep') {
@@ -1861,10 +2198,41 @@ async function kioskLoadStatus() {
     window._kioskHasCheckin = !!hasCheckin;
     window._kioskHasCheckout = !!hasCheckout;
 
-    let bodyHtml = `
+    let bodyHtml = penaltyBanner + `
       <div style="text-align:right;background:var(--slate-100);border-radius:10px;padding:14px 16px;margin:16px 0">
         <div style="font-weight:800;font-size:15px">${emp.name}</div>
         <div style="font-size:12px;color:var(--slate-500);margin-top:2px">مندوب — تسجيل حر بدون وردية ثابتة</div>
+      </div>`;
+    if (hasCheckin && hasCheckout) {
+      bodyHtml += `<div class="auth-err" style="color:var(--ok-700)"><i class="fas fa-check-circle"></i> تم تسجيل حضورك وانصرافك اليوم بالفعل</div>`;
+    } else if (!hasCheckin) {
+      bodyHtml += `<button class="auth-btn" id="kiosk-act-btn" onclick="kioskDoAction('checkin')"><i class="fas fa-fingerprint"></i>تسجيل حضور</button>`;
+    } else {
+      bodyHtml += `<button class="auth-btn" id="kiosk-act-btn" onclick="kioskDoAction('checkout')"><i class="fas fa-fingerprint"></i>تسجيل انصراف</button>`;
+    }
+    bodyHtml += `<div style="margin-top:12px;display:flex;flex-direction:column;gap:8px">
+      <a href="javascript:void(0)" onclick="kioskShowLeaveForm()" style="font-size:12px;color:var(--ac-600);font-weight:700">طلب إجازة</a>
+      <a href="javascript:void(0)" onclick="kioskShowMyLeaveRequests()" style="font-size:12px;color:var(--ac-600);font-weight:700">حالة طلبات إجازتي</a>
+      <a href="javascript:void(0)" onclick="kioskRenderCodeEntry()" style="font-size:11.5px;color:var(--slate-500)">مش أنا؟ رجوع</a>
+    </div>`;
+    document.getElementById('kiosk-body').innerHTML = bodyHtml;
+    return;
+  }
+
+  // السائقون: بدون وردية ثابتة — 8 ساعات تُحسب من وقت الحضور الفعلي، وقيود موقع اختيارية لكل اتجاه
+  if (emp.category === 'driver') {
+    window._kioskShift = null;
+    const attSnap = await getDocs(query(collection(secDb,'attendance'), where('employeeId','==',emp.id), where('date','==',today)));
+    const recs = attSnap.docs.map(d=>d.data());
+    const hasCheckin = recs.find(r=>r.type==='checkin');
+    const hasCheckout = recs.find(r=>r.type==='checkout');
+    window._kioskHasCheckin = !!hasCheckin;
+    window._kioskHasCheckout = !!hasCheckout;
+
+    let bodyHtml = penaltyBanner + `
+      <div style="text-align:right;background:var(--slate-100);border-radius:10px;padding:14px 16px;margin:16px 0">
+        <div style="font-weight:800;font-size:15px">${emp.name}</div>
+        <div style="font-size:12px;color:var(--slate-500);margin-top:2px">سائق — 8 ساعات من وقت الحضور، بدون وردية ثابتة</div>
       </div>`;
     if (hasCheckin && hasCheckout) {
       bodyHtml += `<div class="auth-err" style="color:var(--ok-700)"><i class="fas fa-check-circle"></i> تم تسجيل حضورك وانصرافك اليوم بالفعل</div>`;
@@ -1901,7 +2269,7 @@ async function kioskLoadStatus() {
   window._kioskHasCheckout = !!hasCheckout;
 
   const now = nowMin();
-  let bodyHtml = `
+  let bodyHtml = penaltyBanner + `
     <div style="text-align:right;background:var(--slate-100);border-radius:10px;padding:14px 16px;margin:16px 0">
       <div style="font-weight:800;font-size:15px">${emp.name}</div>
       <div style="font-size:12px;color:var(--slate-500);margin-top:2px">${emp.jobTitle||'—'} · ${shift.name}${shift.isOverridden?' <span style="color:var(--ac-700);font-weight:700">(مواعيد معدّلة اليوم)</span>':''}</div>
@@ -1972,7 +2340,7 @@ async function kioskRenderProfileBody() {
       if (!s && !ev) continue;
       rows += `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:12px;text-align:right;gap:8px">
         <span style="font-weight:700;white-space:nowrap">${period}</span>
-        <span>إجازة: ${s?.leaveFromBalance??0} · مرضي: ${s?.sickLeave??0} · بالخصم: ${s?.leaveUnpaid??0} · غياب: ${s?.absence??0} · إذن: ${s?.personalPermission??0} · جزاءات: ${s?.penaltyDays??0} · إضافي: ${s?.overtimeHours??0}س/${s?.extraDays??0}ي${ev?.finalScore!=null?' · حافز: '+ev.finalScore+'%':''}</span>
+        <span>إجازة: ${s?.leaveFromBalance??0} · مرضي: ${s?.sickLeave??0} · بالخصم: ${s?.leaveUnpaid??0} · غياب: ${s?.absence??0} · إذن: ${s?.personalPermission??0} · جزاءات: ${s?.penaltyDays??0} · مكافآت: ${s?.rewardDays??0} · إضافي: ${s?.overtimeHours??0}س/${s?.extraDays??0}ي${ev?.finalScore!=null?' · حافز: '+ev.finalScore+'%':''}</span>
       </div>`;
     }
 
@@ -1981,6 +2349,7 @@ async function kioskRenderProfileBody() {
     const deduction = computeMonthlyDeduction(emp, curSheet);
     const extraAmount = computeExtraDaysAmount(emp, curSheet);
     const otAmount = computeOvertimeAmount(emp, curSheet);
+    const rewardAmount = computeMonthlyRewardAmount(emp, curSheet);
 
     body.innerHTML = `
       <div style="text-align:right;background:var(--slate-100);border-radius:10px;padding:14px 16px;margin:16px 0;display:flex;flex-direction:column;gap:6px">
@@ -1989,6 +2358,7 @@ async function kioskRenderProfileBody() {
         <div style="display:flex;justify-content:space-between;font-size:13px"><span>رصيد إجازة الجواز</span><span style="font-weight:800">${leaveBalanceOf(emp,'marriage')} يوم</span></div>
         <div style="display:flex;justify-content:space-between;font-size:13px"><span>الراتب الأساسي الصافي (يوم 1)</span><span style="font-weight:800">${netSalary} ج.م</span></div>
         <div style="display:flex;justify-content:space-between;font-size:13px"><span>+ قيمة الأيام والساعات الإضافية هذا الشهر</span><span style="font-weight:800;color:var(--ok-600)">${extraAmount+otAmount} ج.م</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:13px"><span>+ قيمة المكافآت هذا الشهر</span><span style="font-weight:800;color:var(--ok-600)">${rewardAmount} ج.م</span></div>
         <div style="display:flex;justify-content:space-between;font-size:13px"><span>- خصم الغياب والجزاءات هذا الشهر</span><span style="font-weight:800;color:var(--danger-600)">${deduction} ج.م</span></div>
         <div style="display:flex;justify-content:space-between;font-size:13px"><span>الحافز المستحق (يوم 15)</span><span style="font-weight:800">${curEval?.finalScore!=null ? computeIncentive(emp,curEval.finalScore)+' ج.م' : 'محتاج تقييم الشهر الأول'}</span></div>
         <div style="display:flex;justify-content:space-between;font-size:13px"><span>تقييم/حافز الشهر الحالي</span><span style="font-weight:800">${curEval?.finalScore!=null ? curEval.finalScore+'%' : 'لم يُحدَّد بعد'}</span></div>
@@ -2026,7 +2396,7 @@ function kioskRenderLeaveFormBody() {
       <select class="fc" id="kv-type" onchange="kioskUpdateLeaveTypeNote()">
         <option value="regular">إجازة اعتيادية</option>
         <option value="casual">إجازة عارضة</option>
-        <option value="marriage">إجازة جواز (مرة واحدة )</option>
+        <option value="marriage">إجازة جواز (مرة واحدة في حياة الموظف)</option>
       </select>
     </div>
     <div class="fg" style="text-align:right"><label class="fl">من تاريخ</label><input class="fc" type="date" id="kv-from"></div>
@@ -2046,7 +2416,7 @@ window.kioskUpdateLeaveTypeNote = () => {
   const emp = window._kioskEmp;
   const type = document.getElementById('kv-type').value;
   const balance = leaveBalanceOf(emp, type);
-  const overflowNote = emp.category==='rep' ? '' : ' — لو الطلب أكتر من رصيدك، الفرق بيتخصم من راتبك بعد الموافقة';
+  const overflowNote = (emp.category==='rep'||emp.category==='driver') ? '' : ' — لو الطلب أكتر من رصيدك، الفرق بيتخصم من راتبك بعد الموافقة';
   document.getElementById('kv-balance-note').textContent = `رصيدك الحالي من ${LEAVE_TYPES[type].label}: ${balance} يوم${overflowNote}`;
   const advanceDays = LEAVE_TYPES[type].advanceDays || 0;
   const minD = new Date(); minD.setDate(minD.getDate() + advanceDays);
@@ -2056,7 +2426,7 @@ window.kioskUpdateLeaveTypeNote = () => {
   if (fromInput.value && fromInput.value < minDateStr) fromInput.value = '';
   document.getElementById('kv-cap-note').innerHTML = (LEAVE_TYPES[type].monthlyCap
     ? '<i class="fas fa-info-circle"></i> ملحوظة: مسموح بطلب واحد بس في اليوم، والحد الأقصى لهذا النوع عن طريق التطبيق يومين في الشهر — لو محتاج أكتر، ارجع لمدير الشؤون شخصياً'
-    : '<i class="fas fa-info-circle"></i> ملحوظة: مسموح بطلب واحد بس في اليوم. إجازة الجواز مرة واحدة    ')
+    : '<i class="fas fa-info-circle"></i> ملحوظة: مسموح بطلب واحد بس في اليوم. إجازة الجواز مرة واحدة بس في حياة الموظف')
     + (advanceDays>0 ? `<br>لازم تتقدّم بطلب ${LEAVE_TYPES[type].label} قبل تاريخها بيوم على الأقل` : '<br>ممكن تتقدّم بطلب إجازة عارضة في نفس اليوم لو الموضوع طارئ');
 };
 
@@ -2180,12 +2550,14 @@ window.kioskDoAction = async (type) => {
   const emp = window._kioskEmp;
   const shift = window._kioskShift;
   const isRep = emp.category === 'rep';
+  const isDriver = emp.category === 'driver';
   btn.disabled = true;
   try {
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري تحديد الموقع...';
     let best = null;
-    if (isRep) {
-      // مندوب: نسجل موقعه الحقيقي فين ما كان من غير أي تحقق من نطاق أو فرع محدد
+    const driverRestrictedLocId = isDriver ? (type==='checkin' ? emp.driverCheckinLocationId : emp.driverCheckoutLocationId) : null;
+    if (isRep || (isDriver && !driverRestrictedLocId)) {
+      // مندوب / سائق بدون تقييد في الاتجاه ده: نسجل موقعه الحقيقي فين ما كان من غير أي تحقق من نطاق
       const pos = await getPosition();
       best = { loc: { name: null }, dist: 0, pos };
     } else {
@@ -2194,7 +2566,10 @@ window.kioskDoAction = async (type) => {
         window._kioskLocations = locSnap.docs.map(d=>({id:d.id,...d.data()}));
       }
       let candidateLocations = window._kioskLocations;
-      if (emp.locationId) {
+      if (isDriver && driverRestrictedLocId) {
+        const assigned = candidateLocations.find(l=>l.id===driverRestrictedLocId);
+        if (assigned) candidateLocations = [assigned];
+      } else if (emp.locationId) {
         const assigned = candidateLocations.find(l=>l.id===emp.locationId);
         if (assigned) candidateLocations = [assigned];
       }
@@ -2232,7 +2607,7 @@ window.kioskDoAction = async (type) => {
 
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التسجيل...';
     let extra = {};
-    if (!isRep) {
+    if (!isRep && !isDriver) {
       const nowM = nowMin();
       if (type==='checkin') {
         extra.lateMinutes = Math.max(0, nowM - hmToMin(shift.checkinTo));
@@ -2245,9 +2620,24 @@ window.kioskDoAction = async (type) => {
         }
       }
     }
+    if (isDriver && type==='checkout') {
+      // وجبة: لو الانصراف بعد الساعة 12 بالليل (من نص الليل وحتى الفجر)
+      const h = new Date().getHours();
+      extra.mealEligible = (h >= 0 && h < 6);
+      if (window._kioskHasCheckin) {
+        const attSnap = await getDocs(query(collection(secDb,'attendance'), where('employeeId','==',emp.id), where('date','==',todayStr()), where('type','==','checkin')));
+        if (!attSnap.empty) {
+          const ci = attSnap.docs[0].data();
+          const worked = Math.max(0, hmToMin(nowHM()) - hmToMin(ci.time));
+          extra.workedMinutes = worked;
+          extra.regularMinutes = Math.min(worked, 480);
+          extra.overtimeMinutes = Math.max(0, worked - 480);
+        }
+      }
+    }
     await addDoc(collection(secDb,'attendance'), {
       employeeId: emp.id, employeeName: emp.name, departmentId: emp.departmentId||null,
-      shiftId: shift?.id||null, type, date: todayStr(), time: nowHM(), isRep,
+      shiftId: shift?.id||null, type, date: todayStr(), time: nowHM(), isRep, isDriver,
       location: { lat: pos.coords.latitude, lng: pos.coords.longitude }, distanceMeters: Math.round(dist), locationName: best.loc.name||null,
       createdAt: Date.now(), ...extra
     });
@@ -2257,6 +2647,7 @@ window.kioskDoAction = async (type) => {
         <div style="font-size:40px;color:var(--ok-600);margin-bottom:10px"><i class="fas fa-check-circle"></i></div>
         <div style="font-weight:800;font-size:15px">تم تسجيل ${type==='checkin'?'حضورك':'انصرافك'} الساعة ${nowHM()}</div>
         ${extra.pendingOvertimeMinutes ? `<div style="font-size:12px;color:var(--warn-600);margin-top:8px">وقت إضافي معلّق (${Math.round(extra.pendingOvertimeMinutes/60*10)/10} ساعة) — محتاج موافقة المدير</div>` : ''}
+        ${extra.mealEligible ? `<div style="font-size:12px;color:var(--ac-700);margin-top:8px">مستحق وجبة</div>` : ''}
       </div>`;
     setTimeout(()=>kioskRenderCodeEntry(), 3500);
   } catch(e) {
@@ -2494,7 +2885,7 @@ async function renderDailyMarkPage() {
   const checkins = {}; attSnap.docs.forEach(d=>{ const v=d.data(); if (v.type==='checkin') checkins[v.employeeId]={id:d.id,...v}; });
   const marks = {}; markSnap.docs.forEach(d=>{ const v=d.data(); marks[v.employeeId]={id:d.id,...v}; });
 
-  const activeEmps = _employees.filter(e=>e.status!=='resigned' && e.category!=='rep' && employeeHiredBy(e,date))
+  const activeEmps = _employees.filter(e=>e.status!=='resigned' && e.category!=='rep' && e.category!=='driver' && employeeHiredBy(e,date))
     .sort((a,b)=>a.name.localeCompare(b.name,'ar'));
 
   if (!activeEmps.length) { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--slate-500)">لا يوجد موظفون</td></tr>'; return; }
@@ -2598,19 +2989,26 @@ async function renderMonthly() {
   if (!periodInput.value) periodInput.value = currentPeriodStr();
   const period = periodInput.value;
   const body = document.getElementById('monthly-body');
-  body.innerHTML = `<tr><td colspan="13"><div class="empty"><i class="fas fa-spinner fa-spin"></i><p>جاري التحميل...</p></div></td></tr>`;
+  body.innerHTML = `<tr><td colspan="14"><div class="empty"><i class="fas fa-spinner fa-spin"></i><p>جاري التحميل...</p></div></td></tr>`;
 
-  const activeEmps = _employees.filter(e=>e.status!=='resigned' && e.category!=='rep' && employeeInPeriod(e,period));
-  if (!activeEmps.length) { body.innerHTML = `<tr><td colspan="13"><div class="empty"><p>لا يوجد موظفون لهذا الشهر</p></div></td></tr>`; return; }
+  const activeEmps = _employees.filter(e=>e.status!=='resigned' && e.category!=='rep' && e.category!=='driver' && employeeInPeriod(e,period));
+  if (!activeEmps.length) { body.innerHTML = `<tr><td colspan="14"><div class="empty"><p>لا يوجد موظفون لهذا الشهر</p></div></td></tr>`; return; }
 
-  let sheets = {}, evals = {};
+  let sheets = {}, evals = {}, penaltySum = {}, rewardSum = {};
   try {
-    const [sheetSnap, evalSnap] = await Promise.all([
+    const { startDate, endDate } = cycleRangeForPeriod(period);
+    const [sheetSnap, evalSnap, prSnap] = await Promise.all([
       getDocs(query(collection(db,'monthlySheets'), where('period','==',period))),
-      getDocs(query(collection(db,'evaluations'), where('period','==',period)))
+      getDocs(query(collection(db,'evaluations'), where('period','==',period))),
+      getDocs(query(collection(db,'penaltyRewards'), where('date','>=',startDate), where('date','<=',endDate)))
     ]);
     sheetSnap.docs.forEach(d=>{ sheets[d.data().employeeId] = { id:d.id, ...d.data() }; });
     evalSnap.docs.forEach(d=>{ evals[d.data().employeeId] = d.data(); });
+    prSnap.docs.forEach(d=>{
+      const r = d.data();
+      if (r.type==='penalty') penaltySum[r.employeeId] = (penaltySum[r.employeeId]||0) + r.days;
+      else rewardSum[r.employeeId] = (rewardSum[r.employeeId]||0) + r.days;
+    });
   } catch(e) { /* لو حصل خطأ نعرض صفوف فاضية بدل ما نوقف */ }
 
   body.innerHTML = activeEmps.map(e=>{
@@ -2628,7 +3026,8 @@ async function renderMonthly() {
       <td><input class="fc" style="width:70px;padding:6px" type="number" min="0" step="0.5" id="ms-absence-${e.id}" value="${s.absence ?? 0}"></td>
       <td><input class="fc" style="width:70px;padding:6px" type="number" min="0" step="0.5" id="ms-permission-${e.id}" value="${s.personalPermission ?? 0}"></td>
       <td style="font-weight:800">${ev?.finalScore != null ? ev.finalScore+'%' : '—'}</td>
-      <td><input class="fc" style="width:70px;padding:6px" type="number" min="0" step="0.5" id="ms-penalty-${e.id}" value="${s.penaltyDays ?? 0}"></td>
+      <td><input class="fc" style="width:70px;padding:6px" type="number" min="0" step="0.5" id="ms-penalty-${e.id}" value="${s.penaltyDays ?? (penaltySum[e.id]||0)}"></td>
+      <td><input class="fc" style="width:70px;padding:6px" type="number" min="0" step="0.5" id="ms-reward-${e.id}" value="${s.rewardDays ?? (rewardSum[e.id]||0)}"></td>
       <td><input class="fc" style="width:150px;padding:6px" id="ms-notes-${e.id}" value="${notesEsc}"></td>
       <td style="display:flex;gap:4px">
         <button class="btn btn-ac btn-xs" onclick="saveMonthlyRow('${e.id}')"><i class="fas fa-save"></i></button>
@@ -2657,6 +3056,7 @@ window.saveMonthlyRow = async (empId) => {
     absence: parseFloat(document.getElementById(`ms-absence-${empId}`).value)||0,
     personalPermission: parseFloat(document.getElementById(`ms-permission-${empId}`).value)||0,
     penaltyDays: parseFloat(document.getElementById(`ms-penalty-${empId}`).value)||0,
+    rewardDays: parseFloat(document.getElementById(`ms-reward-${empId}`).value)||0,
     notes: document.getElementById(`ms-notes-${empId}`).value.trim(),
     updatedAt: Date.now()
   };
@@ -2710,7 +3110,7 @@ async function renderEvaluation() {
   body.innerHTML = `<tr><td colspan="6"><div class="empty"><i class="fas fa-spinner fa-spin"></i><p>جاري التحميل...</p></div></td></tr>`;
 
   const canMgr = hasPerm('eval_manager'), canHr = hasPerm('eval_hr'), canFactory = hasPerm('eval_factory');
-  let activeEmps = _employees.filter(e=>e.status!=='resigned' && e.category!=='rep' && employeeInPeriod(e,period));
+  let activeEmps = _employees.filter(e=>e.status!=='resigned' && e.category!=='rep' && e.category!=='driver' && employeeInPeriod(e,period));
   // مدير قسم بصلاحية eval_manager بس (مش أدمن ومش عنده الصلاحيات التانية) يشوف موظفين قسمه فقط
   if (CU.role!=='admin' && canMgr && !canHr && !canFactory && CU.departmentId) {
     activeEmps = activeEmps.filter(e=>e.departmentId===CU.departmentId);
@@ -2776,7 +3176,7 @@ window.openProfile = (empId) => {
 async function renderProfile() {
   const sel = document.getElementById('profile-emp');
   if (!sel.options.length) {
-    sel.innerHTML = _employees.filter(e=>e.status!=='resigned' && e.category!=='rep').map(e=>`<option value="${e.id}">${e.name}</option>`).join('');
+    sel.innerHTML = _employees.filter(e=>e.status!=='resigned' && e.category!=='rep' && e.category!=='driver').map(e=>`<option value="${e.id}">${e.name}</option>`).join('');
   }
   const yearInput = document.getElementById('profile-year');
   if (!yearInput.value) yearInput.value = new Date().getFullYear();
@@ -2815,10 +3215,11 @@ async function renderProfile() {
       <td>${s?.personalPermission ?? '—'}</td>
       <td style="font-weight:800">${ev?.finalScore != null ? ev.finalScore+'%' : '—'}</td>
       <td>${s?.penaltyDays ?? '—'}</td>
+      <td>${s?.rewardDays ?? '—'}</td>
       <td style="font-size:12px;color:var(--slate-500)">${s?.notes || '—'}</td>
     </tr>`;
   }
-  if (!rows) rows = `<tr><td colspan="11"><div class="empty"><p>لا توجد بيانات مسجّلة لهذه السنة بعد</p></div></td></tr>`;
+  if (!rows) rows = `<tr><td colspan="12"><div class="empty"><p>لا توجد بيانات مسجّلة لهذه السنة بعد</p></div></td></tr>`;
 
   const curPeriod = currentPeriodStr();
   const curSheet = sheets[curPeriod];
@@ -2827,8 +3228,9 @@ async function renderProfile() {
   const deduction = computeMonthlyDeduction(emp, curSheet);
   const extraAmount = computeExtraDaysAmount(emp, curSheet);
   const otAmount = computeOvertimeAmount(emp, curSheet);
+  const rewardAmount = computeMonthlyRewardAmount(emp, curSheet);
   const incentive = computeIncentive(emp, curEvalScore);
-  const estimatedTotal = Math.round((netSalary - deduction + extraAmount + otAmount)*100)/100;
+  const estimatedTotal = Math.round((netSalary - deduction + extraAmount + otAmount + rewardAmount)*100)/100;
 
   body.innerHTML = `
     <div class="card"><div class="card-body">
@@ -2841,13 +3243,14 @@ async function renderProfile() {
         <div>الراتب الصافي الأساسي (يوم 1): <b>${netSalary} ج.م</b></div>
         <div>+ قيمة أيام إضافية: <b style="color:var(--ok-600)">${extraAmount} ج.م</b></div>
         <div>+ قيمة ساعات إضافية معتمدة: <b style="color:var(--ok-600)">${otAmount} ج.م</b></div>
+        <div>+ قيمة المكافآت: <b style="color:var(--ok-600)">${rewardAmount} ج.م</b></div>
         <div>- خصم الغياب والإجازة بالخصم والجزاءات: <b style="color:var(--danger-600)">${deduction} ج.م</b></div>
         <div>الصافي التقديري لهذا الشهر: <b>${estimatedTotal} ج.م</b></div>
         <div>الحافز المستحق هذا الشهر (يوم 15): <b>${incentive!=null ? incentive+' ج.م' : 'لا يوجد تقييم لهذا الشهر بعد'}</b></div>
       </div>
     </div></div>
     <div class="card" style="overflow-x:auto"><table class="tbl">
-      <thead><tr><th>الشهر</th><th>ساعات إضافية</th><th>أيام إضافية</th><th>إجازة من الرصيد</th><th>إجازة مرضية</th><th>إجازة بالخصم</th><th>غياب</th><th>إذن شخصي</th><th>الحافز %</th><th>جزاءات (أيام)</th><th>ملاحظات</th></tr></thead>
+      <thead><tr><th>الشهر</th><th>ساعات إضافية</th><th>أيام إضافية</th><th>إجازة من الرصيد</th><th>إجازة مرضية</th><th>إجازة بالخصم</th><th>غياب</th><th>إذن شخصي</th><th>الحافز %</th><th>جزاءات (أيام)</th><th>مكافآت (أيام)</th><th>ملاحظات</th></tr></thead>
       <tbody>${rows}</tbody>
     </table></div>`;
 }
@@ -2859,7 +3262,7 @@ window.renderProfile = renderProfile;
 function renderReports() {
   const sel = document.getElementById('rep-emp');
   if (sel.options.length <= 1) {
-    const opts = _employees.filter(e=>e.status!=='resigned' && e.category!=='rep').map(e=>`<option value="${e.id}">${e.name}</option>`).join('');
+    const opts = _employees.filter(e=>e.status!=='resigned' && e.category!=='rep' && e.category!=='driver').map(e=>`<option value="${e.id}">${e.name}</option>`).join('');
     sel.insertAdjacentHTML('beforeend', opts);
   }
   if (!document.getElementById('rep-from').value) {
@@ -2889,6 +3292,7 @@ window.generateCustomReport = async () => {
     wantAbsence: document.getElementById('rep-absence').checked,
     wantPermission: document.getElementById('rep-permission').checked,
     wantPenalty: document.getElementById('rep-penalty').checked,
+    wantReward: document.getElementById('rep-reward').checked,
     wantExtra: document.getElementById('rep-extra').checked,
     wantAttendance: document.getElementById('rep-attendance').checked
   };
@@ -2943,6 +3347,7 @@ window.generateCustomReport = async () => {
         absence: sum(sheets,'absence'),
         personalPermission: sum(sheets,'personalPermission'),
         penaltyDays: sum(sheets,'penaltyDays'),
+        rewardDays: sum(sheets,'rewardDays'),
         overtimeHours: sum(sheets,'overtimeHours'),
         extraDays: sum(sheets,'extraDays'),
         evalAvg,
@@ -2969,6 +3374,7 @@ function renderReportResults() {
   if (flags.wantAbsence) cols.push(['absence','غياب', v=>v]);
   if (flags.wantPermission) cols.push(['personalPermission','إذن شخصي', v=>v]);
   if (flags.wantPenalty) cols.push(['penaltyDays','جزاءات', v=>v]);
+  if (flags.wantReward) cols.push(['rewardDays','مكافآت', v=>v]);
   if (flags.wantExtra) { cols.push(['overtimeHours','ساعات إضافية', v=>v]); cols.push(['extraDays','أيام إضافية', v=>v]); }
 
   let html = `<div class="card"><div class="card-body" style="font-size:12.5px;color:var(--slate-500)">الفترة: من ${dateFrom} حتى ${dateTo}</div></div>`;
@@ -3027,7 +3433,7 @@ async function bumpMonthlySheet(employeeId, period, deltas, noteAppend) {
     if (noteAppend) updates.notes = (cur.notes ? cur.notes+' | ' : '') + noteAppend;
     await updateDoc(ref, updates);
   } else {
-    const data = { employeeId, period, leaveFromBalance:0, leaveUnpaid:0, sickLeave:0, absence:0, personalPermission:0, penaltyDays:0, overtimeHours:0, extraDays:0, notes: noteAppend||'', createdAt:Date.now(), updatedAt:Date.now() };
+    const data = { employeeId, period, leaveFromBalance:0, leaveUnpaid:0, sickLeave:0, absence:0, personalPermission:0, penaltyDays:0, rewardDays:0, overtimeHours:0, extraDays:0, notes: noteAppend||'', createdAt:Date.now(), updatedAt:Date.now() };
     for (const k in deltas) data[k] = deltas[k];
     await addDoc(collection(db,'monthlySheets'), data);
   }
