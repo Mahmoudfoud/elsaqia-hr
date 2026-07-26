@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root{
   --navy-950:#0b1220; --navy-900:#111827; --navy-800:#1a2436; --navy-700:#1f2937;
@@ -364,7 +365,15 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
 
     <!-- OVERTIME APPROVALS -->
     <div class="page" id="page-overtime">
-      <div class="ph"><div><div class="ph-title">موافقات الوقت الإضافي</div><div class="ph-sub">مراجعة والموافقة على طلبات الوقت الإضافي الناتجة عن الانصراف بعد الموعد المحدد</div></div></div>
+      <div class="ph">
+        <div><div class="ph-title">موافقات الوقت الإضافي</div><div class="ph-sub">مراجعة والموافقة على طلبات الوقت الإضافي الناتجة عن الانصراف بعد الموعد المحدد</div></div>
+        <div class="ph-acts" style="align-items:center">
+          <span style="font-size:12px;color:var(--slate-500)">من</span>
+          <input class="fc" type="date" id="ot-from" style="width:150px" onchange="renderOvertime()">
+          <span style="font-size:12px;color:var(--slate-500)">لحد</span>
+          <input class="fc" type="date" id="ot-to" style="width:150px" onchange="renderOvertime()">
+        </div>
+      </div>
       <div id="overtime-body"></div>
     </div>
 
@@ -375,6 +384,9 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
         <div class="ph-acts">
           <input class="fc" type="month" id="monthly-period" style="width:160px" onchange="renderMonthly()">
           <button class="btn btn-ghost btn-sm" onclick="autoFillMonthly()"><i class="fas fa-magic"></i>تحميل تلقائي من السجلات</button>
+          <button class="btn btn-ghost btn-sm" onclick="exportMonthlyToExcel()"><i class="fas fa-file-excel"></i>تصدير Excel</button>
+          <input type="file" id="monthly-import-file" accept=".xlsx,.xls" style="display:none" onchange="importMonthlyFromExcel(event)">
+          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('monthly-import-file').click()"><i class="fas fa-file-import"></i>استيراد من Excel</button>
         </div>
       </div>
       <div class="card" style="overflow-x:auto"><table class="tbl">
@@ -444,6 +456,7 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
         <div style="display:flex;gap:10px;margin-top:8px">
           <button class="btn btn-ac" onclick="generateCustomReport()"><i class="fas fa-magic"></i>إنشاء التقرير</button>
           <button class="btn btn-ghost" id="rep-print-btn" style="display:none" onclick="printCustomReport()"><i class="fas fa-print"></i>تقرير مطبوع</button>
+          <button class="btn btn-ghost" id="rep-excel-btn" style="display:none" onclick="exportReportToExcel()"><i class="fas fa-file-excel"></i>تصدير Excel</button>
         </div>
       </div></div>
       <div id="reports-body" style="margin-top:16px"></div>
@@ -878,6 +891,17 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
     <div class="mf">
       <button class="btn btn-ghost" onclick="closeM('mo-user')">إلغاء</button>
       <button class="btn btn-ac" onclick="saveUser()"><i class="fas fa-save"></i>حفظ</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="mo-import-monthly">
+  <div class="modal" style="max-width:680px">
+    <div class="mh"><span class="mh-title">مراجعة استيراد الكشف الشهري قبل الحفظ</span><button class="mclose" onclick="closeM('mo-import-monthly')">×</button></div>
+    <div class="mb" id="import-monthly-body"></div>
+    <div class="mf">
+      <button class="btn btn-ghost" onclick="closeM('mo-import-monthly')">إلغاء</button>
+      <button class="btn btn-ac" id="import-monthly-confirm-btn" onclick="confirmMonthlyImport()"><i class="fas fa-check"></i>تأكيد وحفظ التغييرات</button>
     </div>
   </div>
 </div>
@@ -3022,17 +3046,32 @@ window.renderDailyMarkPage = renderDailyMarkPage;
 // OVERTIME APPROVALS
 // ══════════════════════════════════════════════
 async function renderOvertime() {
+  const fromInput = document.getElementById('ot-from');
+  const toInput = document.getElementById('ot-to');
+  // افتراضيًا: آخر 30 يوم لحد النهاردة — قابلة للتغيير بالكامل من الأدمن (فترة أطول أو أقصر أو تاريخ تاني خالص)
+  if (!fromInput.value) {
+    const d = new Date(); d.setDate(d.getDate()-30);
+    fromInput.value = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  }
+  if (!toInput.value) toInput.value = todayStr();
+  const dateFrom = fromInput.value, dateTo = toInput.value;
+
   const body = document.getElementById('overtime-body');
   body.innerHTML = '<div class="empty"><i class="fas fa-spinner fa-spin"></i><p>جاري التحميل...</p></div>';
+  if (dateTo < dateFrom) { body.innerHTML = '<div class="empty"><p>تاريخ النهاية لازم يكون بعد تاريخ البداية</p></div>'; return; }
+
   let snap;
-  try { snap = await getDocs(query(collection(db,'attendance'), where('type','==','checkout'))); }
-  catch(e) { body.innerHTML = `<div class="empty"><p>خطأ: ${e.message}</p></div>`; return; }
+  try {
+    snap = await getDocs(query(collection(db,'attendance'),
+      where('type','==','checkout'), where('date','>=',dateFrom), where('date','<=',dateTo)));
+  }
+  catch(e) { body.innerHTML = `<div class="empty"><p>خطأ: ${e.message} (ممكن Firestore يحتاج index، هيديك رابط في الـ console تعمله بضغطة)</p></div>`; return; }
 
   const pending = snap.docs.map(d=>({id:d.id,...d.data()}))
     .filter(r=>r.pendingOvertimeMinutes>0 && !r.overtimeApproved && !r.overtimeRejected)
     .sort((a,b)=>b.createdAt-a.createdAt);
 
-  if (!pending.length) { body.innerHTML = '<div class="empty"><i class="fas fa-check-circle"></i><p>لا توجد طلبات وقت إضافي معلّقة حالياً</p></div>'; return; }
+  if (!pending.length) { body.innerHTML = `<div class="empty"><i class="fas fa-check-circle"></i><p>لا توجد طلبات وقت إضافي معلّقة في الفترة من ${dateFrom} لحد ${dateTo}</p></div>`; return; }
 
   body.innerHTML = pending.map(r=>{
     const emp = _employees.find(e=>e.id===r.employeeId);
@@ -3214,6 +3253,220 @@ window.autoFillMonthly = async () => {
     });
     toast('اتحمّلت البيانات من السجلات — راجعها واحفظ كل صف', 'success');
   } catch(e) { toast('خطأ: '+e.message+' (ممكن Firestore يحتاج index، هيديك رابط في الـ console تعمله بضغطة)', 'error'); }
+};
+
+// ══════════════════════════════════════════════
+// تصدير/استيراد الكشف الشهري من وإلى Excel
+// ══════════════════════════════════════════════
+// نفس الحقول القابلة للتعديل يدويًا في صفحة الكشف الشهري — دول بس اللي بيتقروا وقت الاستيراد
+// (نسبة التقييم مش موجودة هنا لأنها جاية من صفحة التقييم المنفصلة، والأعمدة المالية مجرد مرجع محسوب مش مصدر بيانات)
+const MONTHLY_IMPORT_FIELDS = [
+  ['overtimeHours','ساعات إضافية'],
+  ['extraDays','أيام إضافية'],
+  ['leaveFromBalance','إجازة من الرصيد'],
+  ['sickLeave','إجازة مرضية'],
+  ['leaveUnpaid','إجازة بالخصم'],
+  ['absence','غياب'],
+  ['personalPermission','إذن شخصي'],
+  ['penaltyDays','جزاءات (أيام)'],
+  ['rewardDays','مكافآت (أيام)'],
+  ['notes','ملاحظات'],
+];
+
+window.exportMonthlyToExcel = async () => {
+  const period = document.getElementById('monthly-period').value || currentPeriodStr();
+  document.getElementById('monthly-period').value = period;
+  const activeEmps = _employees.filter(e=>e.status!=='resigned' && e.category!=='rep' && e.category!=='driver' && employeeInPeriod(e,period));
+  if (!activeEmps.length) { toast('لا يوجد موظفون لهذا الشهر', 'error'); return; }
+
+  let sheets = {}, evals = {};
+  try {
+    const [sheetSnap, evalSnap] = await Promise.all([
+      getDocs(query(collection(db,'monthlySheets'), where('period','==',period))),
+      getDocs(query(collection(db,'evaluations'), where('period','==',period)))
+    ]);
+    sheetSnap.docs.forEach(d=>{ sheets[d.data().employeeId] = d.data(); });
+    evalSnap.docs.forEach(d=>{ evals[d.data().employeeId] = d.data(); });
+  } catch(e) { toast('خطأ: '+e.message, 'error'); return; }
+
+  const headers = ['كود الموظف','اسم الموظف','المسمى الوظيفي','القسم',
+    'ساعات إضافية','أيام إضافية','إجازة من الرصيد','إجازة مرضية','إجازة بالخصم','غياب','إذن شخصي',
+    'نسبة التقييم %','جزاءات (أيام)','مكافآت (أيام)',
+    'الراتب الأساسي الإجمالي (ج.م)','صافي الراتب بعد الاستقطاعات (ج.م)','الحافز الأساسي المستهدف (ج.م)',
+    'خصم الغياب والجزاءات (ج.م)','قيمة الأيام الإضافية (ج.م)','قيمة الساعات الإضافية (ج.م)','قيمة المكافآت (ج.م)',
+    'الحافز المستحق (ج.م)','الصافي التقديري لهذا الشهر (ج.م)','ملاحظات'];
+
+  const aoa = [headers];
+  activeEmps.forEach(e=>{
+    const s = sheets[e.id] || {};
+    const ev = evals[e.id];
+    const dept = _departments.find(d=>d.id===e.departmentId);
+    aoa.push([
+      e.code||'', e.name, e.jobTitle||'', dept?dept.name:'',
+      s.overtimeHours ?? 0, s.extraDays ?? 0, s.leaveFromBalance ?? 0, s.sickLeave ?? 0,
+      s.leaveUnpaid ?? 0, s.absence ?? 0, s.personalPermission ?? 0,
+      ev?.finalScore ?? '', s.penaltyDays ?? 0, s.rewardDays ?? 0,
+      e.salary||0, computeNetSalaryForPeriod(e,period), e.incentiveBase||0,
+      0,0,0,0,0,0, // R..W: أعمدة معادلات، بتتحط تحتها فورًا
+      s.notes||''
+    ]);
+  });
+
+  const wb = XLSX.utils.book_new();
+  wb.Workbook = { Views: [{ RTL: true }] };
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+
+  // أعمدة الحسابات المالية بمعادلات Excel حقيقية (مش أرقام ثابتة) — لو غيّرت الراتب أو أي رقم في الصف،
+  // الأعمدة دي بتتحدث تلقائي جوه Excel نفسه، بنفس معادلات النظام بالظبط
+  for (let i=0;i<activeEmps.length;i++) {
+    const r = i+2; // صف العناوين = 1
+    ws[`R${r}`] = { t:'n', f:`(J${r}+I${r}+M${r})*O${r}/30` };   // خصم الغياب والإجازة بالخصم والجزاءات
+    ws[`S${r}`] = { t:'n', f:`F${r}*O${r}/30*2` };               // قيمة الأيام الإضافية (يوم = ضعف اليومية)
+    ws[`T${r}`] = { t:'n', f:`E${r}*(O${r}/30/8)*1.7` };         // قيمة الساعات الإضافية (الساعة × 1.7)
+    ws[`U${r}`] = { t:'n', f:`N${r}*O${r}/30` };                 // قيمة المكافآت
+    ws[`V${r}`] = { t:'n', f:`Q${r}*L${r}/100` };                // الحافز المستحق = الحافز الأساسي × نسبة التقييم
+    ws[`W${r}`] = { t:'n', f:`P${r}-R${r}+S${r}+T${r}+U${r}` };  // الصافي التقديري لهذا الشهر
+  }
+
+  ws['!cols'] = [
+    {wch:12},{wch:20},{wch:16},{wch:12},
+    {wch:10},{wch:9},{wch:11},{wch:10},{wch:10},{wch:8},{wch:9},
+    {wch:10},{wch:10},{wch:10},
+    {wch:16},{wch:16},{wch:16},
+    {wch:14},{wch:14},{wch:14},{wch:13},
+    {wch:14},{wch:16},{wch:26}
+  ];
+
+  XLSX.utils.book_append_sheet(wb, ws, 'الكشف الشهري');
+  XLSX.writeFile(wb, `الكشف-الشهري-${period}.xlsx`);
+};
+
+window.importMonthlyFromExcel = async (event) => {
+  const file = event.target.files[0];
+  event.target.value = ''; // نصفّرها عشان لو اخترت نفس الملف تاني يشتغل onchange تاني
+  if (!file) return;
+  const period = document.getElementById('monthly-period').value || currentPeriodStr();
+  try {
+    const buf = await file.arrayBuffer();
+    const wb = XLSX.read(buf, { type:'array' });
+    const sheet = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(sheet, { header:1, raw:true, defval:'' });
+    if (!rows.length) { toast('الملف فاضي', 'error'); return; }
+
+    const header = rows[0].map(h=>String(h||'').trim());
+    const idx = {}; header.forEach((h,i)=>{ idx[h]=i; });
+    const codeCol = idx['كود الموظف'], nameCol = idx['اسم الموظف'];
+    if (codeCol===undefined && nameCol===undefined) {
+      toast('الملف لازم يحتوي على عمود "كود الموظف" أو "اسم الموظف" على الأقل عشان نقدر نطابق الموظفين', 'error');
+      return;
+    }
+    const presentFields = MONTHLY_IMPORT_FIELDS.filter(([,label])=> idx[label]!==undefined);
+    if (!presentFields.length) { toast('الملف مش فيه أي عمود من الأعمدة القابلة للاستيراد (ساعات إضافية، أيام إضافية، إجازة، غياب...إلخ)', 'error'); return; }
+
+    const empByCode = {}; _employees.forEach(e=>{ if (e.code) empByCode[e.code]=e; });
+    const empByName = {}; _employees.forEach(e=>{ empByName[e.name] = (e.name in empByName) ? null : e; });
+
+    let existingSheets = {};
+    try {
+      const snap = await getDocs(query(collection(db,'monthlySheets'), where('period','==',period)));
+      snap.docs.forEach(d=>{ existingSheets[d.data().employeeId] = { id:d.id, ...d.data() }; });
+    } catch(e) { toast('خطأ في قراءة البيانات الحالية: '+e.message, 'error'); return; }
+
+    const changes = [], unmatched = [], ambiguous = [];
+    for (let r=1; r<rows.length; r++) {
+      const row = rows[r];
+      if (!row || !row.length) continue;
+      const codeVal = codeCol!==undefined ? String(row[codeCol]||'').trim() : '';
+      const nameVal = nameCol!==undefined ? String(row[nameCol]||'').trim() : '';
+      if (!codeVal && !nameVal) continue;
+
+      let emp = null;
+      if (codeVal && empByCode[codeVal]) emp = empByCode[codeVal];
+      else if (nameVal) {
+        if (empByName[nameVal] === null) { ambiguous.push(nameVal); continue; }
+        emp = empByName[nameVal] || null;
+      }
+      if (!emp) { unmatched.push(codeVal || nameVal); continue; }
+
+      const existing = existingSheets[emp.id] || {};
+      const fieldChanges = [];
+      presentFields.forEach(([key,label])=>{
+        const raw = row[idx[label]];
+        const newVal = key==='notes' ? String(raw||'').trim() : (raw===''||raw==null ? 0 : (parseFloat(raw)||0));
+        const oldVal = key==='notes' ? (existing.notes||'') : (existing[key] ?? 0);
+        if (String(oldVal) !== String(newVal)) fieldChanges.push({ key, label, oldVal, newVal });
+      });
+      if (fieldChanges.length) changes.push({ emp, existingId: existing.id||null, fields: fieldChanges });
+    }
+
+    if (!changes.length && !unmatched.length && !ambiguous.length) {
+      toast('مفيش أي فرق بين الملف والبيانات الحالية لهذه الدورة', 'info');
+      return;
+    }
+    window._monthlyImportPending = { changes, period };
+    renderMonthlyImportPreview(unmatched, ambiguous, period);
+    openM('mo-import-monthly');
+  } catch(e) {
+    toast('خطأ في قراءة الملف: '+e.message, 'error');
+  }
+};
+
+function renderMonthlyImportPreview(unmatched, ambiguous, period) {
+  const { changes } = window._monthlyImportPending;
+  const body = document.getElementById('import-monthly-body');
+  let html = `<div style="font-size:13px;margin-bottom:10px">الدورة المستهدفة: <b>${esc(period)}</b> (نفس الفترة المحددة في الصفحة) — عدد الموظفين اللي فيهم تغيير: <b>${changes.length}</b></div>`;
+  if (unmatched.length) html += `<div class="auth-err" style="margin-bottom:8px">تعذّر إيجاد ${unmatched.length} في النظام: ${esc(unmatched.join('، '))} — هيتم تجاهلهم.</div>`;
+  if (ambiguous.length) html += `<div class="auth-err" style="margin-bottom:8px">أسماء متكررة في النظام (مش قادرين نحدد المقصود بالاسم بس): ${esc(ambiguous.join('، '))} — هيتم تجاهلهم، استخدم عمود "كود الموظف" لو محتاج تعدّلهم.</div>`;
+  if (!changes.length) {
+    html += `<div class="empty"><p>لا توجد تغييرات فعلية لحفظها</p></div>`;
+  } else {
+    html += `<div style="max-height:340px;overflow-y:auto"><table class="tbl"><thead><tr><th>الموظف</th><th>الحقل</th><th>القيمة الحالية</th><th>القيمة الجديدة</th></tr></thead><tbody>`;
+    changes.forEach(c=>{
+      c.fields.forEach((f,i)=>{
+        html += `<tr>
+          <td style="font-weight:700">${i===0?esc(c.emp.name):''}</td>
+          <td>${esc(f.label)}</td>
+          <td>${esc(String(f.oldVal))}</td>
+          <td style="font-weight:700;color:var(--ac-700)">${esc(String(f.newVal))}</td>
+        </tr>`;
+      });
+    });
+    html += `</tbody></table></div>`;
+  }
+  body.innerHTML = html;
+  document.getElementById('import-monthly-confirm-btn').style.display = changes.length ? '' : 'none';
+}
+window.renderMonthlyImportPreview = renderMonthlyImportPreview;
+
+window.confirmMonthlyImport = async () => {
+  const pending = window._monthlyImportPending;
+  if (!pending || !pending.changes.length) { closeM('mo-import-monthly'); return; }
+  const btn = document.getElementById('import-monthly-confirm-btn');
+  btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الحفظ...';
+  let saved = false;
+  try {
+    for (const c of pending.changes) {
+      const patch = { updatedAt: Date.now() };
+      c.fields.forEach(f=>{ patch[f.key] = f.newVal; });
+      if (c.existingId) {
+        await updateDoc(doc(db,'monthlySheets', c.existingId), patch);
+      } else {
+        const base = { employeeId:c.emp.id, period:pending.period, leaveFromBalance:0, leaveUnpaid:0, sickLeave:0, absence:0, personalPermission:0, penaltyDays:0, rewardDays:0, overtimeHours:0, extraDays:0, notes:'', createdAt:Date.now() };
+        await addDoc(collection(db,'monthlySheets'), { ...base, ...patch });
+      }
+    }
+    saved = true;
+    toast(`تم تحديث بيانات ${pending.changes.length} موظف من الملف`, 'success');
+    closeM('mo-import-monthly');
+    window._monthlyImportPending = null;
+  } catch(e) {
+    toast('خطأ أثناء الحفظ: '+e.message, 'error');
+  } finally {
+    btn.disabled = false; btn.innerHTML = '<i class="fas fa-check"></i>تأكيد وحفظ التغييرات';
+  }
+  // تحديث الجدول بعد الحفظ منفصل عمدًا عن try/catch بتاع الحفظ نفسه —
+  // لو حصل خطأ هنا (مثلاً الصفحة اتغيرت) ميظهرش كإنه خطأ في الحفظ، لأن الحفظ خلص فعلاً بنجاح
+  if (saved && _page==='monthly') { try { renderMonthly(); } catch(e) { /* البيانات محفوظة بالفعل، مجرد تحديث العرض فشل */ } }
 };
 
 // ══════════════════════════════════════════════
@@ -3407,6 +3660,7 @@ function renderReports() {
   }
   document.getElementById('reports-body').innerHTML = '';
   document.getElementById('rep-print-btn').style.display = 'none';
+  document.getElementById('rep-excel-btn').style.display = 'none';
 }
 window.renderReports = renderReports;
 
@@ -3419,6 +3673,7 @@ window.generateCustomReport = async () => {
   const body = document.getElementById('reports-body');
   body.innerHTML = '<div class="empty"><i class="fas fa-spinner fa-spin"></i><p>جاري تجميع التقرير...</p></div>';
   document.getElementById('rep-print-btn').style.display = 'none';
+  document.getElementById('rep-excel-btn').style.display = 'none';
 
   const flags = {
     wantEval: document.getElementById('rep-eval').checked,
@@ -3494,6 +3749,7 @@ window.generateCustomReport = async () => {
     window._lastReport = { results, dateFrom, dateTo, flags };
     renderReportResults();
     document.getElementById('rep-print-btn').style.display = '';
+    document.getElementById('rep-excel-btn').style.display = '';
   } catch(e) {
     body.innerHTML = `<div class="empty"><p>خطأ: ${e.message} (ممكن Firestore محتاج index، هيديك رابط في الـ console تعمله بضغطة)</p></div>`;
   }
@@ -3549,6 +3805,51 @@ window.printCustomReport = () => {
     </head><body><h2>تقرير مخصص — شركة الساقية</h2>${content}</body></html>`);
   w.document.close();
   setTimeout(()=>w.print(), 400);
+};
+
+// تصدير التقرير المخصص لملف Excel — نفس البيانات اللي عملنا منها التقرير المطبوع، في شيتين (ملخص + تفاصيل حضور لو مفعّلة)
+window.exportReportToExcel = () => {
+  if (!window._lastReport) { toast('اعمل التقرير الأول', 'error'); return; }
+  const { results, dateFrom, dateTo, flags } = window._lastReport;
+
+  const cols = [['emp','الموظف']];
+  if (flags.wantEval) cols.push(['evalAvg','متوسط التقييم %']);
+  if (flags.wantLeave) cols.push(['leaveFromBalance','إجازة من الرصيد']);
+  if (flags.wantSick) cols.push(['sickLeave','إجازة مرضية']);
+  if (flags.wantUnpaid) cols.push(['leaveUnpaid','إجازة بالخصم']);
+  if (flags.wantAbsence) cols.push(['absence','غياب']);
+  if (flags.wantPermission) cols.push(['personalPermission','إذن شخصي']);
+  if (flags.wantPenalty) cols.push(['penaltyDays','جزاءات']);
+  if (flags.wantReward) cols.push(['rewardDays','مكافآت']);
+  if (flags.wantExtra) { cols.push(['overtimeHours','ساعات إضافية']); cols.push(['extraDays','أيام إضافية']); }
+
+  const aoa = [cols.map(c=>c[1])];
+  results.forEach(r=>{
+    aoa.push(cols.map(([key])=> key==='emp' ? r.emp.name : (r[key] ?? '')));
+  });
+
+  const wb = XLSX.utils.book_new();
+  wb.Workbook = { Views: [{ RTL: true }] };
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols'] = cols.map(([key])=> key==='emp' ? {wch:22} : {wch:14});
+  XLSX.utils.book_append_sheet(wb, ws, 'ملخص التقرير');
+
+  if (flags.wantAttendance) {
+    const attAoa = [['الموظف','التاريخ','الحالة']];
+    results.forEach(r=>{
+      r.attendanceDays.forEach(d=>{
+        const label = d.time ? `حضر الساعة ${d.time}` : (d.status==='leave' ? 'إجازة من الرصيد' : d.status==='absent' ? 'غياب بدون إذن' : 'لا يوجد سجل');
+        attAoa.push([r.emp.name, d.date, label]);
+      });
+    });
+    if (attAoa.length > 1) {
+      const ws2 = XLSX.utils.aoa_to_sheet(attAoa);
+      ws2['!cols'] = [{wch:22},{wch:14},{wch:22}];
+      XLSX.utils.book_append_sheet(wb, ws2, 'تفاصيل الحضور');
+    }
+  }
+
+  XLSX.writeFile(wb, `تقرير-الساقية-من-${dateFrom}-لحد-${dateTo}.xlsx`);
 };
 
 // ══════════════════════════════════════════════
@@ -3702,6 +4003,10 @@ window.saveLeaveRequest = async () => {
 
 // موافقة/رفض على مرحلة واحدة (مدير القسم أو الشؤون) — والقبول النهائي بيحصل لما الاتنين يوافقوا
 window.approveLeaveRequestStage = async (id, stage, override) => {
+  const msg = override
+    ? 'متأكد من الموافقة على طلب الإجازة ده؟ هتتصرف من الرصيد بتجاوز شرط الـ6 شهور خدمة.'
+    : 'متأكد من الموافقة على طلب الإجازة ده؟';
+  if (!confirm(msg)) return;
   try { await settleLeaveStage(id, stage, true, !!override); toast('تم تسجيل الموافقة', 'success'); renderLeaves(); }
   catch(e) { toast('خطأ: '+e.message, 'error'); }
 };
@@ -3764,6 +4069,10 @@ async function settleLeaveStage(id, stage, approved, override=false) {
 
 // نسخة قديمة (موافقة مرحلة واحدة) — لسه شغالة بس للطلبات القديمة قبل تفعيل الموافقة المزدوجة
 window.approveLeaveRequest = async (id, override) => {
+  const msg = override
+    ? 'متأكد من الموافقة على طلب الإجازة ده؟ هتتصرف من الرصيد بتجاوز شرط الـ6 شهور خدمة.'
+    : 'متأكد من الموافقة على طلب الإجازة ده؟';
+  if (!confirm(msg)) return;
   try {
     const rdoc = await getDoc(doc(db,'leaveRequests',id));
     const r = rdoc.data();
