@@ -472,6 +472,11 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
         </div>
       </div>
       <div id="leaves-body"></div>
+
+      <div class="ph" style="margin-top:24px">
+        <div><div class="ph-title" style="font-size:16px">طلبات الإذن الشخصي</div><div class="ph-sub">3 ساعات لكل موظف كل دورة شهرية — الطلبات المستقبلية (مخطط لها) تحتاج موافقة مدير القسم والشؤون، أما الاستهلاك الفوري (تأخير حصل بالفعل أو قطع إجازة) فبيظهر هنا للعلم بس</div></div>
+      </div>
+      <div id="pp-admin-body"></div>
     </div>
 
     <!-- OFFICIAL HOLIDAYS -->
@@ -2346,6 +2351,37 @@ async function kioskLoadStatus() {
   if (!shift) { kioskRenderCodeEntry('الوردية الخاصة بك غير موجودة، يُرجى التواصل مع الأدمن.'); return; }
   window._kioskShift = shift;
 
+  // هل عنده إجازة اعتيادية/عارضة معتمدة تغطي النهاردة؟ لو أيوه، بنعرض عليه خيار "قطع الإجازة" بدل الشاشة العادية —
+  // ده بيتفحص الأول قبل أي حاجة تانية لأنه أخص حالة من كل الحالات التانية
+  const leaveSnap = await getDocs(query(collection(secDb,'leaveRequests'), where('employeeId','==',emp.id), where('status','==','approved')));
+  const todayLeave = leaveSnap.docs.map(d=>({id:d.id,...d.data()})).find(r=> r.dateFrom<=today && today<=r.dateTo);
+  if (todayLeave) {
+    const attSnapL = await getDocs(query(collection(secDb,'attendance'), where('employeeId','==',emp.id), where('date','==',today)));
+    const recsL = attSnapL.docs.map(d=>d.data());
+    window._kioskHasCheckin = !!recsL.find(r=>r.type==='checkin');
+    window._kioskHasCheckout = !!recsL.find(r=>r.type==='checkout');
+    window._kioskTodayLeave = todayLeave;
+    const from = hmToMin(shift.checkinFrom);
+    let bodyHtml = penaltyBanner + `
+      <div style="text-align:right;background:var(--slate-100);border-radius:10px;padding:14px 16px;margin:16px 0">
+        <div style="font-weight:800;font-size:15px">${esc(emp.name)}</div>
+        <div style="font-size:12px;color:var(--slate-500);margin-top:2px">${esc(emp.jobTitle)||'—'} · ${esc(shift.name)}</div>
+      </div>
+      <div class="auth-err" style="color:var(--slate-600)"><i class="fas fa-info-circle"></i> النهاردة إجازة ${esc(LEAVE_TYPES[todayLeave.leaveType]?.label||'')} بالنسبة لك (من ${esc(todayLeave.dateFrom)} لحد ${esc(todayLeave.dateTo)})</div>`;
+    if (window._kioskHasCheckin) {
+      bodyHtml += `<div style="font-size:12px;color:var(--ok-700);margin-top:8px"><i class="fas fa-check-circle"></i> اتسجّل حضورك النهاردة بالفعل وقطعت إجازتك</div>`;
+    } else if (nowMin() < from) {
+      bodyHtml += `<div class="auth-err" style="margin-top:8px">لم يحن موعد الوردية بعد (تبدأ ${shift.checkinFrom}) — رجّع تاني بعدين لو عايز تشتغل وتقطع إجازتك</div>`;
+    } else {
+      bodyHtml += `<button class="auth-btn" onclick="kioskLeaveCutCheckin()"><i class="fas fa-briefcase"></i>عايز أشتغل النهاردة وأقطع إجازتي</button>`;
+    }
+    bodyHtml += `<div style="margin-top:12px;display:flex;flex-direction:column;gap:8px">
+      <a href="javascript:void(0)" onclick="kioskRenderCodeEntry()" style="font-size:11.5px;color:var(--slate-500)">مش أنا؟ رجوع</a>
+    </div>`;
+    document.getElementById('kiosk-body').innerHTML = bodyHtml;
+    return;
+  }
+
   const holiday = await getHolidayForDate(today, secDb);
   const isHolidayToday = holiday && !(holiday.exemptEmployeeIds||[]).includes(emp.id);
   const isWeeklyOffToday = isWeeklyOffDate(today, shift.workDays);
@@ -2380,6 +2416,15 @@ async function kioskLoadStatus() {
   window._kioskHasCheckin = !!hasCheckin;
   window._kioskHasCheckout = !!hasCheckout;
 
+  // في حالة عنده طلب إذن شخصي "مخطط له" معتمد النهاردة، بنزيح شباك الحضور/الانصراف حسب المعتمد
+  const period = periodForDate(today);
+  const ppSnap = await getDocs(query(collection(secDb,'personalPermissionRequests'),
+    where('employeeId','==',emp.id), where('kind','==','permission'), where('date','==',today), where('status','==','approved')));
+  const approvedStartPerm = ppSnap.docs.map(d=>d.data()).find(r=>r.position==='start');
+  const approvedEndPerm = ppSnap.docs.map(d=>d.data()).find(r=>r.position==='end');
+  window._kioskApprovedEndPerm = approvedEndPerm||null;
+  window._kioskApprovedStartPerm = approvedStartPerm||null;
+
   const now = nowMin();
   let bodyHtml = penaltyBanner + `
     <div style="text-align:right;background:var(--slate-100);border-radius:10px;padding:14px 16px;margin:16px 0">
@@ -2392,15 +2437,34 @@ async function kioskLoadStatus() {
     bodyHtml += `<div class="auth-err" style="color:var(--ok-700)"><i class="fas fa-check-circle"></i> تم تسجيل حضورك وانصرافك اليوم بالفعل</div>`;
   } else if (!hasCheckin) {
     const from = hmToMin(shift.checkinFrom), to = hmToMin(shift.checkinTo);
+    const permWindowEnd = approvedStartPerm ? to + approvedStartPerm.minutes : to;
     if (now>=from && now<=to) {
       bodyHtml += `<button class="auth-btn" id="kiosk-act-btn" onclick="kioskDoAction('checkin')"><i class="fas fa-fingerprint"></i>تسجيل حضور</button>`;
+    } else if (approvedStartPerm && now>to && now<=permWindowEnd+15) {
+      bodyHtml += `<div style="font-size:12px;color:var(--ac-700);margin-bottom:8px"><i class="fas fa-check-circle"></i> عندك إذن شخصي معتمد لتأخير الحضور لغاية ${minToHM(permWindowEnd)}</div>
+        <button class="auth-btn" id="kiosk-act-btn" onclick="kioskDoAction('checkin')"><i class="fas fa-fingerprint"></i>تسجيل حضور</button>`;
+    } else if (now>to) {
+      const lateMins = roundUpToHalfHour(now - hmToMin(shift.start));
+      const remaining = await ppRemainingMinutes(secDb, emp.id, period);
+      if (remaining >= lateMins) {
+        bodyHtml += `<div style="font-size:12px;color:var(--slate-600);margin-bottom:8px">اتأخرت عن معاد وردية، تقدر تسجل حضورك دلوقتي باستخدام ${minutesToHoursLabel(lateMins)} من رصيد إذنك الشخصي (المتبقي: ${minutesToHoursLabel(remaining)})</div>
+          <button class="auth-btn" onclick="kioskInstantPermissionCheckin(${lateMins})"><i class="fas fa-fingerprint"></i>تسجيل حضور بإذن شخصي</button>`;
+      } else {
+        bodyHtml += `<div class="auth-err">نأسف، لقد تأخرت في الحضور وانتهى رصيد الإذن الشخصي لديك</div>`;
+      }
     } else {
       bodyHtml += `<div class="auth-err">ليس وقت الحضور الآن — مسموح فقط من ${shift.checkinFrom} حتى ${shift.checkinTo}</div>`;
     }
   } else {
     const from = hmToMin(shift.checkoutFrom);
-    if (now>=from) {
+    const earlyFrom = approvedEndPerm ? from - approvedEndPerm.minutes : null;
+    if (approvedEndPerm && now>=earlyFrom && now<=earlyFrom+15) {
+      bodyHtml += `<div style="font-size:12px;color:var(--ac-700);margin-bottom:8px"><i class="fas fa-check-circle"></i> عندك إذن شخصي معتمد بالمغادرة بدري النهاردة</div>
+        <button class="auth-btn" id="kiosk-act-btn" onclick="kioskDoAction('checkout')"><i class="fas fa-fingerprint"></i>تسجيل انصراف</button>`;
+    } else if (now>=from) {
       bodyHtml += `<button class="auth-btn" id="kiosk-act-btn" onclick="kioskDoAction('checkout')"><i class="fas fa-fingerprint"></i>تسجيل انصراف</button>`;
+    } else if (approvedEndPerm && now<earlyFrom) {
+      bodyHtml += `<div class="auth-err">عندك إذن شخصي معتمد، هيفتح ليك تسجيل الانصراف الساعة ${minToHM(earlyFrom)} لمدة ربع ساعة</div>`;
     } else {
       bodyHtml += `<div class="auth-err">لم يحن وقت الانصراف بعد — مسموح من ${shift.checkoutFrom}</div>`;
     }
@@ -2409,6 +2473,8 @@ async function kioskLoadStatus() {
     <a href="javascript:void(0)" onclick="kioskShowProfile()" style="font-size:12px;color:var(--ac-600);font-weight:700">عرض سجلي السنوي</a>
     <a href="javascript:void(0)" onclick="kioskShowLeaveForm()" style="font-size:12px;color:var(--ac-600);font-weight:700">طلب إجازة</a>
     <a href="javascript:void(0)" onclick="kioskShowMyLeaveRequests()" style="font-size:12px;color:var(--ac-600);font-weight:700">حالة طلبات إجازتي</a>
+    <a href="javascript:void(0)" onclick="kioskShowPersonalPermissionForm()" style="font-size:12px;color:var(--ac-600);font-weight:700">طلب إذن شخصي (مستقبلي)</a>
+    <a href="javascript:void(0)" onclick="kioskShowMyPersonalPermissionRequests()" style="font-size:12px;color:var(--ac-600);font-weight:700">حالة طلبات إذني الشخصي</a>
     <a href="javascript:void(0)" onclick="kioskRenderCodeEntry()" style="font-size:11.5px;color:var(--slate-500)">مش أنا؟ رجوع</a>
   </div>`;
   document.getElementById('kiosk-body').innerHTML = bodyHtml;
@@ -2666,6 +2732,119 @@ window.kioskShowMyLeaveRequests = async () => {
   }
 };
 
+// الموظف عنده إجازة معتمدة النهاردة بس قرر يشتغل ويقطعها — تسجيل حضور فوري + إشعار للشؤون للعلم
+// (القرار النهائي لرجوع الرصيد من عدمه بيد الشؤون، مش تلقائي)
+window.kioskLeaveCutCheckin = async () => {
+  window._kioskLeaveCutContext = { leaveReq: window._kioskTodayLeave };
+  document.getElementById('kiosk-body').innerHTML = `<button class="auth-btn" id="kiosk-act-btn" disabled><i class="fas fa-spinner fa-spin"></i> جاري التسجيل...</button>`;
+  await kioskDoAction('checkin');
+};
+
+// الموظف اتأخر عن معاد وردية وعايز يسجل حضور دلوقتي مستهلكًا من رصيد إذنه الشخصي فورًا
+window.kioskInstantPermissionCheckin = async (lateMins) => {
+  window._kioskInstantPermContext = { minutes: lateMins };
+  document.getElementById('kiosk-body').innerHTML = `<button class="auth-btn" id="kiosk-act-btn" disabled><i class="fas fa-spinner fa-spin"></i> جاري التسجيل...</button>`;
+  await kioskDoAction('checkin');
+};
+
+// فورم طلب إذن شخصي "مستقبلي" (قبل ما الحدث يحصل فعليًا) — محتاج موافقة مزدوجة
+window.kioskShowPersonalPermissionForm = async () => {
+  const emp = window._kioskEmp;
+  const today = todayStr();
+  const period = periodForDate(today);
+  const remaining = await ppRemainingMinutes(secDb, emp.id, period);
+  const maxHalfHours = Math.floor(remaining/30);
+  let optionsHtml = '';
+  for (let i=1;i<=maxHalfHours;i++) optionsHtml += `<option value="${i*30}">${minutesToHoursLabel(i*30)}</option>`;
+  document.getElementById('kiosk-body').innerHTML = `
+    <div style="font-weight:800;font-size:15px;margin-bottom:4px">طلب إذن شخصي</div>
+    <div style="font-size:12px;color:var(--slate-500);margin-bottom:12px">رصيدك المتبقي هذه الدورة: ${minutesToHoursLabel(remaining)} — الطلب لازم يكون لنفس اليوم بس</div>
+    ${remaining<=0 ? `<div class="auth-err">رصيدك خلص لهذه الدورة، مينفعش تقدّم طلب جديد</div>` : `
+    <div style="margin-bottom:10px">
+      <label style="font-size:12.5px;font-weight:700;display:block;margin-bottom:4px">هتاخد الإذن فين؟</label>
+      <select class="fc" id="pp-position" style="width:100%">
+        <option value="start">أول الوردية (هوصل متأخر)</option>
+        <option value="end">آخر الوردية (همشي بدري)</option>
+      </select>
+    </div>
+    <div style="margin-bottom:10px">
+      <label style="font-size:12.5px;font-weight:700;display:block;margin-bottom:4px">المدة</label>
+      <select class="fc" id="pp-minutes" style="width:100%">${optionsHtml}</select>
+    </div>
+    <div style="margin-bottom:10px">
+      <label style="font-size:12.5px;font-weight:700;display:block;margin-bottom:4px">ملاحظة (اختياري)</label>
+      <input class="fc" type="text" id="pp-note" style="width:100%">
+    </div>
+    <div id="pp-err" class="auth-err" style="display:none"></div>
+    <button class="auth-btn" id="pp-submit-btn" onclick="kioskSubmitPersonalPermission()"><i class="fas fa-paper-plane"></i>إرسال الطلب</button>`}
+    <div style="margin-top:12px"><a href="javascript:void(0)" onclick="kioskLoadStatus()" style="font-size:12px;color:var(--slate-500)">رجوع</a></div>`;
+};
+
+window.kioskSubmitPersonalPermission = async () => {
+  const emp = window._kioskEmp;
+  const today = todayStr();
+  const period = periodForDate(today);
+  const position = document.getElementById('pp-position').value;
+  const minutes = parseInt(document.getElementById('pp-minutes').value, 10);
+  const note = document.getElementById('pp-note').value.trim();
+  const err = document.getElementById('pp-err');
+  err.style.display = 'none';
+  const btn = document.getElementById('pp-submit-btn');
+  btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الإرسال...';
+  try {
+    const remaining = await ppRemainingMinutes(secDb, emp.id, period);
+    if (minutes > remaining) {
+      err.textContent = `رصيدك المتبقي (${minutesToHoursLabel(remaining)}) أقل من المدة المطلوبة`;
+      err.style.display = '';
+      btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i>إرسال الطلب';
+      return;
+    }
+    await addDoc(collection(secDb,'personalPermissionRequests'), {
+      employeeId: emp.id, employeeName: emp.name, departmentId: emp.departmentId||null,
+      kind: 'permission', mode: 'planned', period, date: today, position, minutes,
+      status: 'pending', managerApproved: null, hrApproved: null, note,
+      requestedAt: Date.now(), requestedBy: 'kiosk:'+(emp.code||emp.id)
+    });
+    document.getElementById('kiosk-body').innerHTML = `
+      <div style="text-align:center;padding:20px 0">
+        <div style="font-size:40px;color:var(--ok-600);margin-bottom:10px"><i class="fas fa-check-circle"></i></div>
+        <div style="font-weight:800;font-size:15px">تم إرسال طلب الإذن الشخصي</div>
+        <div style="font-size:12px;color:var(--slate-500);margin-top:6px">لازم موافقة مديرك المباشر وموافقة الشؤون قبل ما يتقبل نهائيًا — لو اتأخر الرد عليك يُرجى التوجه للشؤون مباشرة</div>
+      </div>`;
+    setTimeout(()=>kioskRenderCodeEntry(), 3500);
+  } catch(e) {
+    err.textContent = 'خطأ: '+e.message; err.style.display = '';
+    btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i>إرسال الطلب';
+  }
+};
+
+window.kioskShowMyPersonalPermissionRequests = async () => {
+  const emp = window._kioskEmp;
+  document.getElementById('kiosk-body').innerHTML = '<div class="empty"><i class="fas fa-spinner fa-spin"></i><p>جاري التحميل...</p></div>';
+  const snap = await getDocs(query(collection(secDb,'personalPermissionRequests'), where('employeeId','==',emp.id)));
+  const reqs = snap.docs.map(d=>d.data()).sort((a,b)=>(b.requestedAt||0)-(a.requestedAt||0));
+  let html = `<div style="font-weight:800;font-size:15px;margin-bottom:10px">طلبات إذني الشخصي</div>`;
+  if (!reqs.length) {
+    html += `<div class="empty"><p>مفيش طلبات إذن شخصي مسجّلة</p></div>`;
+  } else {
+    reqs.forEach(r=>{
+      let statusLabel, statusColor;
+      if (r.kind==='leaveCut') { statusLabel = 'قطع إجازة — بانتظار قرار الشؤون'; statusColor='var(--slate-600)'; }
+      else if (r.status==='auto') { statusLabel = 'مستهلك تلقائيًا'; statusColor='var(--ok-700)'; }
+      else if (r.status==='approved') { statusLabel = 'متوافق عليه'; statusColor='var(--ok-700)'; }
+      else if (r.status==='rejected') { statusLabel = 'مرفوض'; statusColor='var(--danger-600)'; }
+      else { statusLabel = 'بانتظار الموافقة'; statusColor='var(--warn-600)'; }
+      html += `<div style="border:1px solid var(--slate-200);border-radius:8px;padding:10px 12px;margin-bottom:8px;font-size:12.5px">
+        <div style="font-weight:700">${esc(r.date)}${r.kind==='permission' ? ' — '+(r.position==='start'?'أول الوردية':'آخر الوردية')+' — '+esc(minutesToHoursLabel(r.minutes)) : ' — قطع إجازة'}</div>
+        <div style="color:${statusColor};font-weight:700;margin-top:2px">${statusLabel}</div>
+        ${r.note?`<div style="color:var(--slate-500);margin-top:2px">${esc(r.note)}</div>`:''}
+      </div>`;
+    });
+  }
+  html += `<div style="margin-top:8px"><a href="javascript:void(0)" onclick="kioskLoadStatus()" style="font-size:12px;color:var(--slate-500)">رجوع</a></div>`;
+  document.getElementById('kiosk-body').innerHTML = html;
+};
+
 window.kioskDoAction = async (type) => {
   const btn = document.getElementById('kiosk-act-btn');
   const emp = window._kioskEmp;
@@ -2766,15 +2945,45 @@ window.kioskDoAction = async (type) => {
       createdAt: Date.now(), ...extra
     });
 
+    let extraMsgHtml = '';
+    if (type==='checkin' && window._kioskLeaveCutContext && shift) {
+      const lr = window._kioskLeaveCutContext.leaveReq;
+      const shiftTotalMinutes = Math.max(1, hmToMin(shift.end) - hmToMin(shift.start));
+      const estWorkedMinutes = Math.max(0, hmToMin(shift.end) - nowMin());
+      await addDoc(collection(secDb,'personalPermissionRequests'), {
+        employeeId: emp.id, employeeName: emp.name, departmentId: emp.departmentId||null,
+        kind: 'leaveCut', date: todayStr(), leaveRequestId: lr.id, leaveType: lr.leaveType,
+        checkinAt: nowHM(), shiftTotalMinutes, estWorkedMinutes,
+        suggestedRefundFraction: Math.round((estWorkedMinutes/shiftTotalMinutes)*100)/100,
+        status: 'pending_hr_decision', requestedAt: Date.now(), requestedBy: 'kiosk:'+(emp.code||emp.id)
+      });
+      extraMsgHtml += `<div style="font-size:12px;color:var(--ac-700);margin-top:8px">اتقطعت إجازتك النهاردة — الشؤون هيتبلّغوا وهيقرروا رجوع رصيدك من عدمه</div>`;
+      window._kioskLeaveCutContext = null;
+    }
+    if (type==='checkin' && window._kioskInstantPermContext) {
+      const mins = window._kioskInstantPermContext.minutes;
+      await addDoc(collection(secDb,'personalPermissionRequests'), {
+        employeeId: emp.id, employeeName: emp.name, departmentId: emp.departmentId||null,
+        kind: 'permission', mode: 'instant', period: periodForDate(todayStr()), date: todayStr(),
+        position: 'start', minutes: mins, status: 'auto',
+        note: 'تسجيل حضور متأخر تلقائي', requestedAt: Date.now(), requestedBy: 'kiosk:'+(emp.code||emp.id)
+      });
+      extraMsgHtml += `<div style="font-size:12px;color:var(--ac-700);margin-top:8px">اتخصم ${esc(minutesToHoursLabel(mins))} من رصيد إذنك الشخصي</div>`;
+      window._kioskInstantPermContext = null;
+    }
+
     document.getElementById('kiosk-body').innerHTML = `
       <div style="text-align:center;padding:20px 0">
         <div style="font-size:40px;color:var(--ok-600);margin-bottom:10px"><i class="fas fa-check-circle"></i></div>
         <div style="font-weight:800;font-size:15px">تم تسجيل ${type==='checkin'?'حضورك':'انصرافك'} الساعة ${nowHM()}</div>
         ${extra.pendingOvertimeMinutes ? `<div style="font-size:12px;color:var(--warn-600);margin-top:8px">وقت إضافي معلّق (${Math.round(extra.pendingOvertimeMinutes/60*10)/10} ساعة) — محتاج موافقة المدير</div>` : ''}
         ${extra.mealEligible ? `<div style="font-size:12px;color:var(--ac-700);margin-top:8px">مستحق وجبة</div>` : ''}
+        ${extraMsgHtml}
       </div>`;
     setTimeout(()=>kioskRenderCodeEntry(), 3500);
   } catch(e) {
+    window._kioskLeaveCutContext = null;
+    window._kioskInstantPermContext = null;
     await kioskLoadStatus();
     const wrap = document.getElementById('kiosk-body');
     wrap.innerHTML += `<div class="auth-err">${e.message||e.code}</div>`;
@@ -2794,13 +3003,16 @@ async function renderDaily() {
   const holiday = await getHolidayForDate(date, db);
   const exemptIds = holiday ? (holiday.exemptEmployeeIds||[]) : null;
 
-  let attSnap, markSnap;
+  let attSnap, markSnap, ppSnapDaily;
   try {
-    [attSnap, markSnap] = await Promise.all([
+    [attSnap, markSnap, ppSnapDaily] = await Promise.all([
       getDocs(query(collection(db,'attendance'), where('date','==',date))),
-      getDocs(query(collection(db,'dailyMarks'), where('date','==',date)))
+      getDocs(query(collection(db,'dailyMarks'), where('date','==',date))),
+      getDocs(query(collection(db,'personalPermissionRequests'), where('date','==',date), where('kind','==','permission'), where('status','==','approved')))
     ]);
   } catch(e) { body.innerHTML = `<div class="empty"><p>خطأ: ${e.message}</p></div>`; return; }
+  const approvedPermsByEmp = {};
+  ppSnapDaily.docs.forEach(d=>{ const v=d.data(); (approvedPermsByEmp[v.employeeId]=approvedPermsByEmp[v.employeeId]||[]).push(v); });
 
   const checkins = {}, checkouts = {};
   attSnap.docs.forEach(d=>{
@@ -2875,6 +3087,14 @@ async function renderDaily() {
 
     const presentRows = present.map(e=>{
       const chk = checkins[e.id], co = checkouts[e.id];
+      const endPerm = (approvedPermsByEmp[e.id]||[]).find(p=>p.position==='end');
+      let ppFlag = '';
+      if (endPerm && !co) {
+        const windowEnd = hmToMin(effShift.checkoutFrom) - endPerm.minutes + 15;
+        if (date < todayStr() || (isToday && nowM > windowEnd)) {
+          ppFlag = `<span class="badge bg-danger" title="عنده إذن شخصي معتمد بالمغادرة بدري ولسه مبصمش انصراف"><i class="fas fa-exclamation-triangle"></i> إذن شخصي مستخدمش</span>`;
+        }
+      }
       return `
       <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:6px">
         <span style="font-weight:700">${esc(e.name)}</span>
@@ -2884,12 +3104,21 @@ async function renderDaily() {
           ${co
             ? `<span class="badge bg-ac"><i class="fas fa-check-circle"></i> انصراف ${co.time}</span>${canDel?`<button class="btn btn-red btn-ic btn-xs" onclick="deleteAttendanceRecord('${co.id}','${date}')"><i class="fas fa-trash"></i></button>`:''}`
             : `<span class="badge bg-slate"><i class="far fa-circle"></i> لسه ما سجلش انصراف</span>${manualBtn(e.id,'checkout')}`}
+          ${ppFlag}
         </span>
       </div>`;
     }).join('');
 
     const notPresentRows = notPresent.map(e=>{
       const mark = marks[e.id];
+      const startPerm = (approvedPermsByEmp[e.id]||[]).find(p=>p.position==='start');
+      let ppFlag = '';
+      if (startPerm) {
+        const windowEnd = hmToMin(effShift.checkinTo) + startPerm.minutes + 15;
+        if (date < todayStr() || (isToday && nowM > windowEnd)) {
+          ppFlag = `<span class="badge bg-danger" title="عنده إذن شخصي معتمد لتأخير الحضور ولسه مبصمش حضور"><i class="fas fa-exclamation-triangle"></i> إذن شخصي مستخدمش</span>`;
+        }
+      }
       if (mark) {
         const label = mark.status==='leave' ? 'إجازة من الرصيد' : 'غياب بدون إذن';
         const cls = mark.status==='leave' ? 'bg-ac' : 'bg-danger';
@@ -2899,6 +3128,7 @@ async function renderDaily() {
             <span class="badge ${cls}" style="cursor:pointer" onclick="openDailyMark('${e.id}','${date}')">${label} <i class="fas fa-edit"></i></span>
             ${canDel?`<button class="btn btn-red btn-ic btn-xs" onclick="deleteDailyMarkRecord('${mark.id}','${date}')"><i class="fas fa-trash"></i></button>`:''}
             ${manualBtn(e.id,'checkin')}
+            ${ppFlag}
           </span>
         </div>`;
       }
@@ -2907,6 +3137,7 @@ async function renderDaily() {
         <span style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
           <button class="btn btn-red btn-xs" onclick="openDailyMark('${e.id}','${date}')"><i class="fas fa-exclamation-circle"></i> لم يسجّل حضوره بعد</button>
           ${manualBtn(e.id,'checkin')}
+          ${ppFlag}
         </span>
       </div>`;
     }).join('');
@@ -3861,6 +4092,27 @@ function periodForDate(dateStr) {
   return `${y}-${String(m).padStart(2,'0')}`;
 }
 
+// ══════════════════════════════════════════════
+// الإذن الشخصي — 3 ساعات (180 دقيقة) لكل موظف كل دورة شهرية (26-25)
+// ══════════════════════════════════════════════
+const PERSONAL_PERMISSION_CYCLE_MINUTES = 180;
+// أقل وحدة نص ساعة — أي مدة بتترفع لأعلى مضاعف لـ30 دقيقة (مش بتتقرّب لأقرب حاجة، عشان الموظف ميتضررش)
+function roundUpToHalfHour(mins) { return Math.max(0, Math.ceil(mins/30)*30); }
+function minutesToHoursLabel(mins) {
+  const h = mins/60;
+  return (Number.isInteger(h) ? h : h.toFixed(1).replace(/\.0$/,'')) + ' ساعة';
+}
+// الرصيد المتبقي بيتحسب حي من مجموع الطلبات المستهلكة (auto أو approved) في نفس الدورة —
+// مفيش حاجة مخزّنة على الموظف نفسه، عشان نتجنب مشاكل التزامن ونضمن الرقم دايمًا محدث فعليًا من مصدره
+async function ppRemainingMinutes(dbRef, employeeId, period) {
+  const snap = await getDocs(query(collection(dbRef,'personalPermissionRequests'),
+    where('employeeId','==',employeeId), where('kind','==','permission'), where('period','==',period)));
+  const used = snap.docs.map(d=>d.data())
+    .filter(r=>r.status==='auto'||r.status==='approved')
+    .reduce((s,r)=>s+(r.minutes||0),0);
+  return Math.max(0, PERSONAL_PERMISSION_CYCLE_MINUTES - used);
+}
+
 async function bumpMonthlySheet(employeeId, period, deltas, noteAppend) {
   const existing = await getDocs(query(collection(db,'monthlySheets'), where('employeeId','==',employeeId), where('period','==',period)));
   if (!existing.empty) {
@@ -3950,8 +4202,131 @@ async function renderLeaves() {
       <div style="display:flex;gap:8px;flex-wrap:wrap">${actions}${delBtn}</div>
     </div></div>`;
   }).join('');
+  renderPersonalPermissionAdmin();
 }
 window.renderLeaves = renderLeaves;
+
+async function renderPersonalPermissionAdmin() {
+  const body = document.getElementById('pp-admin-body');
+  if (!body) return;
+  body.innerHTML = '<div class="empty"><i class="fas fa-spinner fa-spin"></i><p>جاري التحميل...</p></div>';
+  let snap;
+  try { snap = await getDocs(query(collection(db,'personalPermissionRequests'), orderBy('requestedAt','desc'))); }
+  catch(e) { body.innerHTML = `<div class="empty"><p>خطأ: ${e.message}</p></div>`; return; }
+  let reqs = snap.docs.map(d=>({id:d.id,...d.data()}));
+  if (CU.role!=='admin' && CU.departmentId) reqs = reqs.filter(r=>r.departmentId===CU.departmentId);
+
+  const pendingPlanned = reqs.filter(r=>r.kind==='permission' && r.mode==='planned' && r.status==='pending');
+  const pendingLeaveCut = reqs.filter(r=>r.kind==='leaveCut' && r.status==='pending_hr_decision');
+  const history = reqs.filter(r=> !pendingPlanned.includes(r) && !pendingLeaveCut.includes(r)).slice(0,20);
+
+  let html = '';
+
+  html += `<div style="font-weight:800;font-size:13.5px;margin:14px 0 8px">طلبات مستقبلية بانتظار الموافقة (${pendingPlanned.length})</div>`;
+  if (!pendingPlanned.length) {
+    html += `<div class="empty" style="padding:16px"><p>لا توجد طلبات معلّقة</p></div>`;
+  } else {
+    pendingPlanned.forEach(r=>{
+      const mgrDone = r.managerApproved===true, hrDone = r.hrApproved===true;
+      let actions = '';
+      if (hasPerm('leaves_manage')) {
+        actions = `<button class="btn btn-ac btn-sm" onclick="approvePersonalPermissionStage('${r.id}','manager',true);approvePersonalPermissionStage('${r.id}','hr',true)"><i class="fas fa-check"></i>موافقة (أدمن/شؤون كاملة)</button>
+          <button class="btn btn-ghost btn-sm" onclick="rejectPersonalPermissionRequest('${r.id}')"><i class="fas fa-times"></i>رفض</button>`;
+      } else if (hasPerm('leaves_dept_approve') && !mgrDone) {
+        actions = `<button class="btn btn-ac btn-sm" onclick="approvePersonalPermissionStage('${r.id}','manager',true)"><i class="fas fa-check"></i>موافقة (مدير)</button>
+          <button class="btn btn-ghost btn-sm" onclick="rejectPersonalPermissionRequest('${r.id}')"><i class="fas fa-times"></i>رفض</button>`;
+      }
+      html += `<div class="card" style="margin-bottom:8px;padding:12px 14px">
+        <div style="font-weight:700;font-size:13px">${esc(r.employeeName)} — ${esc(r.date)} — ${r.position==='start'?'أول الوردية':'آخر الوردية'} — ${esc(minutesToHoursLabel(r.minutes))}</div>
+        ${r.note?`<div style="font-size:12px;color:var(--slate-500);margin-top:3px">ملاحظة: ${esc(r.note)}</div>`:''}
+        <div style="font-size:11.5px;color:var(--slate-500);margin-top:4px">موافقة المدير: ${mgrDone?'✅':'—'} · موافقة الشؤون: ${hrDone?'✅':'—'}</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">${actions}</div>
+      </div>`;
+    });
+  }
+
+  html += `<div style="font-weight:800;font-size:13.5px;margin:18px 0 8px">قرارات قطع إجازة بانتظار الشؤون (${pendingLeaveCut.length})</div>`;
+  if (!hasPerm('leaves_manage')) {
+    html += `<div class="empty" style="padding:16px"><p>قرار قطع الإجازة مقصور على الشؤون فقط</p></div>`;
+  } else if (!pendingLeaveCut.length) {
+    html += `<div class="empty" style="padding:16px"><p>لا توجد قرارات معلّقة</p></div>`;
+  } else {
+    pendingLeaveCut.forEach(r=>{
+      const pct = Math.round((r.suggestedRefundFraction||0)*100);
+      html += `<div class="card" style="margin-bottom:8px;padding:12px 14px">
+        <div style="font-weight:700;font-size:13px">${esc(r.employeeName)} — ${esc(r.date)} — رجع الشغل وقطع إجازته (${esc(LEAVE_TYPES[r.leaveType]?.label||'')})</div>
+        <div style="font-size:11.5px;color:var(--slate-500);margin-top:4px">سجّل حضوره الساعة ${esc(r.checkinAt)} — نسبة الوقت المتوقع اشتغاله من الوردية: ${pct}%</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+          <button class="btn btn-ac btn-sm" onclick="resolveLeaveCut('${r.id}','full')"><i class="fas fa-check"></i>رجّع اليوم كامل</button>
+          <button class="btn btn-ghost btn-sm" onclick="resolveLeaveCut('${r.id}','partial')"><i class="fas fa-percent"></i>رجّع نسبيًا (${pct}%)</button>
+          <button class="btn btn-ghost btn-sm" onclick="resolveLeaveCut('${r.id}','none')"><i class="fas fa-ban"></i>من غير استرجاع</button>
+        </div>
+      </div>`;
+    });
+  }
+
+  html += `<div style="font-weight:800;font-size:13.5px;margin:18px 0 8px">آخر الحركات</div>`;
+  if (!history.length) {
+    html += `<div class="empty" style="padding:16px"><p>لا يوجد سجل بعد</p></div>`;
+  } else {
+    html += history.map(r=>{
+      let label;
+      if (r.kind==='leaveCut') label = `قطع إجازة${r.status==='pending_hr_decision'?'':' — '+(r.refundDecision==='full'?'رجّع اليوم كامل':r.refundDecision==='partial'?'رجّع نسبيًا':'من غير استرجاع')}`;
+      else label = `${r.mode==='instant'?'تأخير فوري':'طلب مستقبلي'} — ${r.position==='start'?'أول الوردية':'آخر الوردية'} — ${esc(minutesToHoursLabel(r.minutes))} — ${r.status==='auto'?'مستهلك تلقائيًا':r.status==='approved'?'متوافق عليه':r.status==='rejected'?'مرفوض':'معلّق'}`;
+      return `<div style="font-size:12px;color:var(--slate-600);padding:6px 4px;border-bottom:1px solid var(--slate-100)">${esc(r.employeeName)} — ${esc(r.date)} — ${label}</div>`;
+    }).join('');
+  }
+
+  body.innerHTML = html;
+}
+window.renderPersonalPermissionAdmin = renderPersonalPermissionAdmin;
+
+window.approvePersonalPermissionStage = async (id, stage, approved) => {
+  try {
+    const patch = stage==='manager'
+      ? { managerApproved: approved, managerApprovedBy: CU.email, managerApprovedAt: Date.now() }
+      : { hrApproved: approved, hrApprovedBy: CU.email, hrApprovedAt: Date.now() };
+    const rdoc = await getDoc(doc(db,'personalPermissionRequests',id));
+    const cur = { ...rdoc.data(), ...patch };
+    if (cur.managerApproved===true && cur.hrApproved===true) patch.status = 'approved';
+    await updateDoc(doc(db,'personalPermissionRequests',id), patch);
+    toast('تم تسجيل الموافقة', 'success');
+    renderPersonalPermissionAdmin();
+  } catch(e) { toast('خطأ: '+e.message, 'error'); }
+};
+window.rejectPersonalPermissionRequest = async (id) => {
+  if (!confirm('متأكد من رفض طلب الإذن الشخصي ده؟')) return;
+  try {
+    await updateDoc(doc(db,'personalPermissionRequests',id), { status:'rejected', rejectedBy: CU.email, rejectedAt: Date.now() });
+    toast('تم الرفض', 'success');
+    renderPersonalPermissionAdmin();
+  } catch(e) { toast('خطأ: '+e.message, 'error'); }
+};
+window.resolveLeaveCut = async (id, decision) => {
+  const labels = { full:'رجّع اليوم كامل', partial:'رجّع نسبيًا', none:'من غير استرجاع' };
+  if (!confirm(`متأكد من "${labels[decision]}"؟`)) return;
+  try {
+    const rdoc = await getDoc(doc(db,'personalPermissionRequests',id));
+    const r = rdoc.data();
+    if (decision !== 'none') {
+      const leaveDoc = await getDoc(doc(db,'leaveRequests', r.leaveRequestId));
+      if (leaveDoc.exists()) {
+        const lr = leaveDoc.data();
+        const field = (LEAVE_TYPES[lr.leaveType]||LEAVE_TYPES.regular).field;
+        const empDoc = await getDoc(doc(db,'employees', r.employeeId));
+        if (empDoc.exists()) {
+          const fraction = decision==='full' ? 1 : (r.suggestedRefundFraction||0);
+          const refundDays = Math.round((lr.daysFromBalance||0) * fraction * 100) / 100;
+          const curBalance = empDoc.data()[field] || 0;
+          await updateDoc(doc(db,'employees', r.employeeId), { [field]: curBalance + refundDays });
+        }
+      }
+    }
+    await updateDoc(doc(db,'personalPermissionRequests',id), { status:'resolved', refundDecision: decision, resolvedBy: CU.email, resolvedAt: Date.now() });
+    toast('تم تسجيل القرار', 'success');
+    renderPersonalPermissionAdmin();
+  } catch(e) { toast('خطأ: '+e.message, 'error'); }
+};
 
 window.deleteLeaveRequest = async (id) => {
   if (!confirm('متأكد من حذف طلب الإجازة ده نهائياً؟')) return;
