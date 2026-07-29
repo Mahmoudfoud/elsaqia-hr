@@ -308,282 +308,6 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
         </div>
       </div>
       <div class="card"><table class="tbl">
-        <thead><tr><th>الاسم</th><th>الهاتف</th><th>حضور</th><th>انصراف</th><th>الساعات<.auth-sub{font-size:12.5px;color:var(--slate-500);margin-top:4px;margin-bottom:24px}
-.fg{margin-bottom:14px;text-align:right}
-.fl{display:block;font-size:12px;font-weight:700;color:var(--slate-500);margin-bottom:5px}
-.fc{width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:var(--rs);font-size:14px;color:var(--navy-900);background:#fafaf8;outline:none;transition:.15s}
-.fc:focus{border-color:var(--ac-500);background:#fff;box-shadow:0 0 0 3px var(--ac-100)}
-.auth-btn{width:100%;padding:13px;margin-top:6px;background:linear-gradient(135deg,var(--ac-600),var(--ac-500));color:#fff;border:none;border-radius:var(--rs);font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:.15s}
-.auth-btn:hover{filter:brightness(1.06)}
-.auth-btn:disabled{opacity:.6;cursor:default}
-.auth-err{color:var(--danger-600);font-size:12.5px;margin-top:12px;min-height:16px;font-weight:600}
-
-/* ── LAYOUT ── */
-#app{display:flex}
-.sidebar{width:250px;flex-shrink:0;background:var(--navy-950);color:#fff;display:flex;flex-direction:column;height:100vh;position:sticky;top:0}
-.sb-brand{padding:22px 20px 18px;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(255,255,255,.08)}
-.sb-brand-ic{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--ac-600),var(--ac-500));display:flex;align-items:center;justify-content:center;font-size:15px}
-.sb-brand-txt{font-size:14.5px;font-weight:800}
-.sb-brand-sub{font-size:10.5px;color:rgba(255,255,255,.45)}
-.sb-nav{flex:1;overflow-y:auto;padding:14px 12px}
-.nav-group-lbl{font-size:10.5px;color:rgba(255,255,255,.35);font-weight:700;padding:14px 10px 6px;text-transform:uppercase;letter-spacing:.5px}
-.nav-link{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:9px;color:rgba(255,255,255,.7);font-size:13.5px;font-weight:600;cursor:pointer;transition:.15s;margin-bottom:2px}
-.nav-link i{width:18px;text-align:center;font-size:14px}
-.nav-link:hover{background:rgba(255,255,255,.06);color:#fff}
-.nav-link.active{background:linear-gradient(135deg,var(--ac-700),var(--ac-600));color:#fff}
-.nav-link.soon{opacity:.4;cursor:default}
-.nav-link.soon:hover{background:none;color:rgba(255,255,255,.7)}
-.soon-tag{margin-inline-start:auto;font-size:9px;background:rgba(255,255,255,.1);padding:2px 6px;border-radius:5px}
-.sb-user{padding:14px;border-top:1px solid rgba(255,255,255,.08)}
-.sb-user-row{display:flex;align-items:center;gap:9px;margin-bottom:10px}
-.sb-avatar{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,var(--ac-600),var(--ac-500));display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0}
-.sb-user-name{font-size:12.5px;font-weight:700}
-.sb-user-role{font-size:10.5px;color:rgba(255,255,255,.4)}
-.logout-btn{width:100%;padding:9px;border-radius:9px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.6);cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;gap:6px}
-.logout-btn:hover{background:rgba(255,255,255,.1);color:#fff}
-
-.main{flex:1;min-width:0;padding:26px 30px;max-width:1400px}
-.page{display:none}
-.page.active{display:block}
-.ph{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:22px}
-.ph-title{font-size:21px;font-weight:800;color:var(--navy-900)}
-.ph-sub{font-size:12.5px;color:var(--slate-500);margin-top:3px}
-.ph-acts{display:flex;gap:8px;flex-wrap:wrap}
-
-/* ── COMPONENTS ── */
-.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden;margin-bottom:16px}
-.card-body{padding:20px}
-.btn{padding:9px 16px;border-radius:var(--rs);font-size:13px;font-weight:700;cursor:pointer;border:none;display:inline-flex;align-items:center;gap:7px;transition:.15s;white-space:nowrap}
-.btn-ac{background:linear-gradient(135deg,var(--ac-600),var(--ac-500));color:#fff}
-.btn-ac:hover{filter:brightness(1.06)}
-.btn-navy{background:var(--navy-900);color:#fff}
-.btn-ghost{background:#fff;border:1.5px solid var(--border);color:var(--navy-900)}
-.btn-ghost:hover{background:var(--slate-100)}
-.btn-red{background:var(--danger-100);color:var(--danger-600)}
-.btn-red:hover{background:#fecaca}
-.btn-sm{padding:6px 11px;font-size:12px}
-.btn-xs{padding:4px 8px;font-size:11px}
-.btn-ic{padding:6px 9px}
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-bottom:22px}
-.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:18px;box-shadow:var(--shadow)}
-.stat-ic{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;margin-bottom:10px}
-.stat-val{font-size:24px;font-weight:900;color:var(--navy-900)}
-.stat-lbl{font-size:12px;color:var(--slate-500);margin-top:2px}
-.tbl{width:100%;border-collapse:collapse}
-.tbl th{background:var(--slate-100);color:var(--slate-500);font-size:11.5px;font-weight:700;text-align:right;padding:11px 14px}
-.tbl td{padding:11px 14px;font-size:13px;border-top:1px solid var(--border);color:var(--navy-900)}
-.tbl tr:hover td{background:#fafaf8}
-.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
-.bg-ok{background:var(--ok-100);color:var(--ok-700)}
-.bg-danger{background:var(--danger-100);color:var(--danger-600)}
-.bg-ac{background:var(--ac-100);color:var(--ac-700)}
-.bg-slate{background:var(--slate-100);color:var(--slate-500)}
-.bg-warn{background:var(--warn-100);color:var(--warn-600)}
-.empty{text-align:center;padding:50px 20px;color:var(--slate-500)}
-.empty i{font-size:34px;margin-bottom:12px;opacity:.4}
-.empty p{font-size:13px;max-width:340px;margin:0 auto}
-.frow{display:grid;gap:12px}
-.frow.c2{grid-template-columns:1fr 1fr}
-.frow.c3{grid-template-columns:1fr 1fr 1fr}
-@media(max-width:640px){.frow.c2,.frow.c3{grid-template-columns:1fr}}
-
-/* ── MODAL ── */
-.overlay{position:fixed;inset:0;background:rgba(11,18,32,.55);display:flex;align-items:center;justify-content:center;z-index:200;padding:16px;opacity:0;pointer-events:none;transition:opacity .15s}
-.overlay.open{opacity:1;pointer-events:auto}
-.modal{background:#fff;border-radius:var(--r);width:100%;max-width:520px;max-height:90vh;display:flex;flex-direction:column;box-shadow:var(--shadow-lg)}
-.mh{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border)}
-.mh-title{font-size:15.5px;font-weight:800}
-.mclose{background:none;border:none;font-size:20px;color:var(--slate-500);cursor:pointer;line-height:1}
-.mb{padding:20px;overflow-y:auto}
-.mf{display:flex;justify-content:flex-end;gap:8px;padding:14px 20px;border-top:1px solid var(--border)}
-
-/* ── TOAST ── */
-#toast-wrap{position:fixed;bottom:20px;left:20px;z-index:400;display:flex;flex-direction:column;gap:8px}
-.toast{background:var(--navy-900);color:#fff;padding:12px 18px;border-radius:9px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:9px;box-shadow:var(--shadow-lg);animation:toastIn .2s}
-.toast.success{background:var(--ok-700)}
-.toast.error{background:var(--danger-600)}
-@keyframes toastIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-
-/* ── MOBILE ── */
-.mbtn{display:none}
-@media(max-width:900px){
-  .sidebar{position:fixed;right:0;top:0;z-index:150;transform:translateX(100%);transition:transform .2s}
-  .sidebar.open{transform:translateX(0)}
-  .main{padding:18px 16px;width:100%}
-  .mbtn{display:flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:9px;background:var(--navy-900);color:#fff;border:none;font-size:16px;cursor:pointer;margin-bottom:14px}
-  #sb-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:140}
-  #sb-backdrop.open{display:block}
-}
-</style>
-</head>
-<body>
-
-<!-- ══════════ AUTH ══════════ -->
-<div id="auth-screen">
-  <div class="auth-card">
-    <div class="auth-logo"><i class="fas fa-users"></i></div>
-    <div class="auth-title">الشؤون الإدارية</div>
-    <div class="auth-sub">شركة الساقية</div>
-    <div class="fg">
-      <label class="fl">البريد الإلكتروني</label>
-      <input class="fc" id="a-email" type="email" placeholder="example@elsaqia.com" onkeydown="if(event.key==='Enter')doLogin()">
-    </div>
-    <div class="fg">
-      <label class="fl">كلمة المرور</label>
-      <input class="fc" id="a-pass" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
-    </div>
-    <button class="auth-btn" id="login-btn" onclick="doLogin()"><i class="fas fa-sign-in-alt"></i>دخول</button>
-    <div class="auth-err" id="auth-err"></div>
-    <div style="margin-top:18px;padding-top:16px;border-top:1px solid var(--border)">
-      <a href="javascript:void(0)" onclick="showKiosk()" style="font-size:12.5px;color:var(--ac-600);font-weight:700"><i class="fas fa-fingerprint"></i>&nbsp; تسجيل حضور / انصراف الموظفين</a>
-    </div>
-  </div>
-</div>
-
-<!-- ══════════ KIOSK (شاشة الموظف) ══════════ -->
-<div id="kiosk-screen" class="hidden" style="height:100%;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 30% 20%,#1a2436 0%,var(--navy-950) 60%);padding:20px">
-  <div class="auth-card" style="max-width:400px">
-    <div class="auth-logo"><i class="fas fa-fingerprint"></i></div>
-    <div class="auth-title">تسجيل حضور / انصراف</div>
-    <div class="auth-sub">شركة الساقية</div>
-    <div id="kiosk-body"></div>
-    <div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border)">
-      <a href="javascript:void(0)" onclick="backToLogin()" style="font-size:12px;color:var(--slate-500)">→ رجوع لتسجيل دخول الأدمن</a>
-    </div>
-  </div>
-</div>
-
-<!-- ══════════ APP ══════════ -->
-<div id="app" class="hidden">
-  <div id="sb-backdrop" onclick="toggleSidebar(false)"></div>
-  <div class="sidebar" id="sidebar">
-    <div class="sb-brand">
-      <div class="sb-brand-ic"><i class="fas fa-users"></i></div>
-      <div>
-        <div class="sb-brand-txt">الشؤون الإدارية</div>
-        <div class="sb-brand-sub">شركة الساقية</div>
-      </div>
-    </div>
-    <div class="sb-nav">
-      <div class="nav-group-lbl">الرئيسية</div>
-      <div class="nav-link" data-page="dashboard" onclick="goPage('dashboard')"><i class="fas fa-th-large"></i>لوحة التحكم</div>
-
-      <div class="nav-group-lbl">الموظفين</div>
-      <div class="nav-link" data-page="employees" data-perm="employees_manage" onclick="goPage('employees')"><i class="fas fa-id-card"></i>الموظفين</div>
-      <div class="nav-link" data-page="departments" data-perm="departments_manage" onclick="goPage('departments')"><i class="fas fa-sitemap"></i>الأقسام</div>
-      <div class="nav-link" data-page="shifts" data-perm="shifts_manage" onclick="goPage('shifts')"><i class="fas fa-clock"></i>الورديات</div>
-      <div class="nav-link" data-page="reps" data-perm="reps_manage" onclick="goPage('reps')"><i class="fas fa-route"></i>المناديب</div>
-      <div class="nav-link" data-page="drivers" data-perm="drivers_manage" onclick="goPage('drivers')"><i class="fas fa-truck"></i>السائقون</div>
-
-      <div class="nav-group-lbl">الحضور</div>
-      <div class="nav-link" data-page="daily" data-perm="daily_view" onclick="goPage('daily')"><i class="fas fa-calendar-check"></i>الدخول اليومي</div>
-      <div class="nav-link" data-page="dailymark" data-perm="daily_view" onclick="goPage('dailymark')"><i class="fas fa-user-edit"></i>تسجيل حالة اليوم</div>
-      <div class="nav-link" data-page="overtime" data-perm="overtime_approve" onclick="goPage('overtime')"><i class="fas fa-business-time"></i>موافقات الوقت الإضافي</div>
-      <div class="nav-link" data-page="monthly" data-perm="monthly_manage" onclick="goPage('monthly')"><i class="fas fa-file-invoice"></i>الكشف الشهري</div>
-      <div class="nav-link" data-page="evaluation" data-perm="eval_manager" onclick="goPage('evaluation')"><i class="fas fa-star-half-alt"></i>التقييم الشهري</div>
-      <div class="nav-link" data-page="leaves" data-perm="leaves_manage,leaves_dept_approve" onclick="goPage('leaves')"><i class="fas fa-calendar-minus"></i>الإجازات</div>
-      <div class="nav-link" data-page="penalties" data-perm="penalties_rewards_manage" onclick="goPage('penalties')"><i class="fas fa-balance-scale"></i>الجزاءات والمكافآت</div>
-      <div class="nav-link" data-page="holidays" data-perm="holidays_manage" onclick="goPage('holidays')"><i class="fas fa-flag"></i>الإجازات الرسمية</div>
-
-      <div class="nav-group-lbl">التقارير</div>
-      <div class="nav-link" data-page="profile" data-perm="profiles_view" onclick="goPage('profile')"><i class="fas fa-address-card"></i>ملفات الموظفين</div>
-      <div class="nav-link" data-page="reports" data-perm="reports_view" onclick="goPage('reports')"><i class="fas fa-chart-bar"></i>تقرير مخصص</div>
-
-      <div class="nav-group-lbl">المصاريف</div>
-      <div class="nav-link" data-page="expenses" data-perm="expenses_manage" onclick="goPage('expenses')"><i class="fas fa-file-invoice-dollar"></i>مصاريف الكهرباء</div>
-
-      <div class="nav-group-lbl">النظام</div>
-      <div class="nav-link" data-page="settings" data-perm="settings_manage" onclick="goPage('settings')"><i class="fas fa-cog"></i>الإعدادات</div>
-      <div class="nav-link" data-page="users" data-adminonly onclick="goPage('users')"><i class="fas fa-user-shield"></i>المستخدمون والصلاحيات</div>
-    </div>
-    <div class="sb-user">
-      <div class="sb-user-row">
-        <div class="sb-avatar" id="sb-avatar-txt">?</div>
-        <div>
-          <div class="sb-user-name" id="sb-user-name">—</div>
-          <div class="sb-user-role" id="sb-user-role">—</div>
-        </div>
-      </div>
-      <button class="logout-btn" onclick="doLogout()"><i class="fas fa-sign-out-alt"></i>تسجيل الخروج</button>
-    </div>
-  </div>
-
-  <div class="main">
-    <button class="mbtn" onclick="toggleSidebar(true)"><i class="fas fa-bars"></i></button>
-
-    <!-- DASHBOARD -->
-    <div class="page" id="page-dashboard">
-      <div class="ph"><div><div class="ph-title">لوحة التحكم</div><div class="ph-sub" id="dash-date"></div></div></div>
-      <div class="stats" id="dash-stats"></div>
-      <div class="card"><div class="card-body" id="dash-depts"></div></div>
-    </div>
-
-    <!-- EMPLOYEES -->
-    <div class="page" id="page-employees">
-      <div class="ph">
-        <div><div class="ph-title">الموظفين</div><div class="ph-sub" id="emp-count-sub">—</div></div>
-        <div class="ph-acts">
-          <select class="fc" id="emp-filter-dept" style="max-width:170px" onchange="renderEmployees()"><option value="">كل الأقسام</option></select>
-          <button class="btn btn-ac btn-sm" onclick="openEmpModal()"><i class="fas fa-plus"></i>إضافة موظف</button>
-        </div>
-      </div>
-      <div class="card"><table class="tbl">
-        <thead><tr><th>الاسم</th><th>الوظيفة</th><th>القسم</th><th>الوردية</th><th>تاريخ التعيين</th><th>الحالة</th><th></th></tr></thead>
-        <tbody id="emp-body"></tbody>
-      </table></div>
-    </div>
-
-    <!-- DEPARTMENTS -->
-    <div class="page" id="page-departments">
-      <div class="ph">
-        <div><div class="ph-title">الأقسام</div><div class="ph-sub">أقسام الشركة ومدير كل قسم</div></div>
-        <div class="ph-acts"><button class="btn btn-ac btn-sm" onclick="openDeptModal()"><i class="fas fa-plus"></i>قسم جديد</button></div>
-      </div>
-      <div class="stats" id="dept-cards"></div>
-    </div>
-
-    <!-- SHIFTS -->
-    <div class="page" id="page-shifts">
-      <div class="ph">
-        <div><div class="ph-title">الورديات</div><div class="ph-sub">ورديات العمل وتوقيتات الحضور والانصراف</div></div>
-        <div class="ph-acts">
-          <button class="btn btn-ghost btn-sm" onclick="openShiftOverrideModal()"><i class="fas fa-calendar-day"></i>تعديل وردية ليوم محدد</button>
-          <button class="btn btn-ac btn-sm" onclick="openShiftModal()"><i class="fas fa-plus"></i>وردية جديدة</button>
-        </div>
-      </div>
-      <div class="stats" id="shift-cards"></div>
-      <div style="font-weight:800;font-size:14px;margin:20px 0 10px">تعديلات الورديات ليوم محدد</div>
-      <div class="card"><table class="tbl">
-        <thead><tr><th>التاريخ</th><th>الوردية</th><th>حضور</th><th>انصراف</th><th></th></tr></thead>
-        <tbody id="shift-override-body"></tbody>
-      </table></div>
-    </div>
-
-    <!-- REPS (المناديب) -->
-    <div class="page" id="page-reps">
-      <div class="ph">
-        <div><div class="ph-title">المناديب</div><div class="ph-sub">تسجيل حر بدون وردية أو موقع ثابت — نسجل الوقت والموقع الفعلي لكل بصمة</div></div>
-        <div class="ph-acts">
-          <input class="fc" type="date" id="reps-date" style="width:160px" onchange="renderReps()">
-          <button class="btn btn-ac btn-sm" onclick="openRepModal()"><i class="fas fa-plus"></i>مندوب جديد</button>
-        </div>
-      </div>
-      <div class="card"><table class="tbl">
-        <thead><tr><th>الاسم</th><th>الهاتف</th><th>حضور اليوم</th><th>انصراف اليوم</th><th></th></tr></thead>
-        <tbody id="reps-body"></tbody>
-      </table></div>
-    </div>
-
-    <!-- DRIVERS (السائقون) -->
-    <div class="page" id="page-drivers">
-      <div class="ph">
-        <div><div class="ph-title">السائقون</div><div class="ph-sub">8 ساعات عمل تُحسب من وقت الحضور الفعلي، وبعدها ساعات إضافية</div></div>
-        <div class="ph-acts">
-          <input class="fc" type="date" id="drivers-date" style="width:160px" onchange="renderDrivers()">
-          <button class="btn btn-ac btn-sm" onclick="openDriverModal()"><i class="fas fa-plus"></i>سائق جديد</button>
-        </div>
-      </div>
-      <div class="card"><table class="tbl">
         <thead><tr><th>الاسم</th><th>الهاتف</th><th>حضور</th><th>انصراف</th><th>الساعات</th><th>وجبة</th><th></th></tr></thead>
         <tbody id="drivers-body"></tbody>
       </table></div>
@@ -765,18 +489,15 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
       </table></div>
     </div>
 
-    <!-- EXPENSES: ELECTRICITY -->
-    <div class="page" id="page-expenses">
+    <!-- ADVANCES: السلف -->
+    <div class="page" id="page-advances">
       <div class="ph">
-        <div><div class="ph-title">مصاريف الكهرباء</div><div class="ph-sub">قراءة العداد والفاتورة الشهرية</div></div>
-        <div class="ph-acts">
-          <button class="btn btn-ghost btn-sm" onclick="printElectricityReport()"><i class="fas fa-print"></i>تقرير مطبوع</button>
-          <button class="btn btn-ac btn-sm" onclick="openExpenseModal()"><i class="fas fa-plus"></i>سجل جديد</button>
-        </div>
+        <div><div class="ph-title">السلف</div><div class="ph-sub">سلفة بتتقسّط على عدد شهور تحددها، وبتتخصم أوتوماتيك من صافي راتب الموظف كل شهر بداية من الدورة اللي تختارها — آخر شهر بياخد فرق التقريب لو المبلغ ماتقسمش بالظبط</div></div>
+        <div class="ph-acts"><button class="btn btn-ac btn-sm" onclick="openAdvanceModal()"><i class="fas fa-plus"></i>سلفة جديدة</button></div>
       </div>
       <div class="card"><table class="tbl">
-        <thead><tr><th>التاريخ</th><th>القراءة السابقة</th><th>القراءة الحالية</th><th>الاستهلاك (ك.و)</th><th>قيمة الفاتورة</th><th>سعر ك.و</th><th>البيان</th><th></th></tr></thead>
-        <tbody id="expenses-body"></tbody>
+        <thead><tr><th>الموظف</th><th>المبلغ الإجمالي</th><th>القسط الشهري</th><th>من دورة</th><th>لحد دورة</th><th>المسدد</th><th>المتبقي</th><th>الحالة</th><th></th></tr></thead>
+        <tbody id="advances-body"></tbody>
       </table></div>
     </div>
 
@@ -1132,23 +853,24 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
   </div>
 </div>
 
-<div class="overlay" id="mo-expense">
+<div class="overlay" id="mo-advance">
   <div class="modal" style="max-width:460px">
-    <div class="mh"><span class="mh-title" id="exp-modal-title">سجل كهرباء جديد</span><button class="mclose" onclick="closeM('mo-expense')">×</button></div>
+    <div class="mh"><span class="mh-title">سلفة جديدة</span><button class="mclose" onclick="closeM('mo-advance')">×</button></div>
     <div class="mb">
-      <div class="fg"><label class="fl">التاريخ</label><input class="fc" type="date" id="exp-date"></div>
-      <div class="frow c2">
-        <div class="fg"><label class="fl">القراءة السابقة</label><input class="fc" type="number" id="exp-prev" oninput="updateExpenseCalc()"></div>
-        <div class="fg"><label class="fl">القراءة الحالية</label><input class="fc" type="number" id="exp-curr" oninput="updateExpenseCalc()"></div>
+      <div class="fg"><label class="fl">الموظف</label>
+        <select class="fc" id="adv-emp"></select>
       </div>
-      <div class="fg"><label class="fl">قيمة الفاتورة (ج.م)</label><input class="fc" type="number" id="exp-bill" oninput="updateExpenseCalc()"></div>
-      <div id="exp-calc-note" style="font-size:13px;font-weight:700;color:var(--ac-700);margin-bottom:10px"></div>
-      <div class="fg"><label class="fl">البيان/الوصف</label><textarea class="fc" id="exp-desc" rows="2"></textarea></div>
-      <div class="fg"><label class="fl">صورة الفاتورة (اختياري)</label><input class="fc" type="file" id="exp-img" accept="image/*"></div>
+      <div class="frow c2">
+        <div class="fg"><label class="fl">المبلغ الإجمالي (ج.م)</label><input class="fc" type="number" min="1" id="adv-amount" oninput="updateAdvanceCalc()"></div>
+        <div class="fg"><label class="fl">عدد الشهور</label><input class="fc" type="number" min="1" id="adv-months" value="1" oninput="updateAdvanceCalc()"></div>
+      </div>
+      <div class="fg"><label class="fl">تبدأ الخصم من دورة</label><input class="fc" type="month" id="adv-start"></div>
+      <div id="adv-calc-note" style="font-size:13px;font-weight:700;color:var(--ac-700);margin-bottom:10px"></div>
+      <div class="fg"><label class="fl">ملاحظات (اختياري)</label><textarea class="fc" id="adv-note" rows="2"></textarea></div>
     </div>
     <div class="mf">
-      <button class="btn btn-ghost" onclick="closeM('mo-expense')">إلغاء</button>
-      <button class="btn btn-ac" id="exp-save-btn" onclick="saveExpense()"><i class="fas fa-save"></i>حفظ</button>
+      <button class="btn btn-ghost" onclick="closeM('mo-advance')">إلغاء</button>
+      <button class="btn btn-ac" id="adv-save-btn" onclick="saveAdvance()"><i class="fas fa-save"></i>حفظ</button>
     </div>
   </div>
 </div>
@@ -1228,7 +950,6 @@ let _employees = [];
 let _shifts = [];
 let _locations = [];
 let _companySettings = null;
-let _expensesCache = [];
 let _usersCache = [];
 let _unsubs = [];
 const DEFAULT_DEPTS = ['المعمل','المخزن','الإنتاج','الإدارة'];
@@ -1335,7 +1056,7 @@ const PERMS_DEF = [
   { key:'holidays_manage', label:'الإجازات الرسمية' },
   { key:'data_delete', label:'حذف السجلات (تعديلات/تقييمات/إجازات/حضور) — خطر' },
   { key:'reports_view', label:'التقارير المخصصة' },
-  { key:'expenses_manage', label:'المصاريف الإدارية' },
+  { key:'advances_manage', label:'إدارة السلف' },
 ];
 function hasPerm(key) {
   if (!CU) return false;
@@ -1481,7 +1202,7 @@ function refreshCombinedLeavesBadge() { updateLeavesBadge(_leavesActionableCount
 // ══════════════════════════════════════════════
 // NAVIGATION
 // ══════════════════════════════════════════════
-const PAGE_PERM = { employees:'employees_manage', departments:'departments_manage', shifts:'shifts_manage', reps:'reps_manage', drivers:'drivers_manage', settings:'settings_manage', daily:'daily_view', dailymark:'daily_view', overtime:'overtime_approve', monthly:'monthly_manage', evaluation:'eval_manager', profile:'profiles_view', reports:'reports_view', leaves:'leaves_manage', penalties:'penalties_rewards_manage', holidays:'holidays_manage', expenses:'expenses_manage' };
+const PAGE_PERM = { employees:'employees_manage', departments:'departments_manage', shifts:'shifts_manage', reps:'reps_manage', drivers:'drivers_manage', settings:'settings_manage', daily:'daily_view', dailymark:'daily_view', overtime:'overtime_approve', monthly:'monthly_manage', evaluation:'eval_manager', profile:'profiles_view', reports:'reports_view', leaves:'leaves_manage', penalties:'penalties_rewards_manage', holidays:'holidays_manage', advances:'advances_manage' };
 window.goPage = (name) => {
   const perm = PAGE_PERM[name];
   const evalAlt = name==='evaluation' && (hasPerm('eval_hr')||hasPerm('eval_factory'));
@@ -1493,7 +1214,7 @@ window.goPage = (name) => {
   document.getElementById('page-'+name)?.classList.add('active');
   document.querySelectorAll('.nav-link').forEach(n=>n.classList.toggle('active', n.dataset.page===name));
   toggleSidebar(false);
-  const renders = { dashboard:renderDashboard, employees:renderEmployees, departments:renderDepartments, shifts:renderShifts, reps:renderReps, drivers:renderDrivers, settings:renderSettings, daily:renderDaily, dailymark:renderDailyMarkPage, overtime:renderOvertime, monthly:renderMonthly, evaluation:renderEvaluation, profile:renderProfile, reports:renderReports, leaves:renderLeaves, penalties:renderPenalties, holidays:renderHolidays, expenses:renderExpenses, users:renderUsers };
+  const renders = { dashboard:renderDashboard, employees:renderEmployees, departments:renderDepartments, shifts:renderShifts, reps:renderReps, drivers:renderDrivers, settings:renderSettings, daily:renderDaily, dailymark:renderDailyMarkPage, overtime:renderOvertime, monthly:renderMonthly, evaluation:renderEvaluation, profile:renderProfile, reports:renderReports, leaves:renderLeaves, penalties:renderPenalties, holidays:renderHolidays, advances:renderAdvances, users:renderUsers };
   renders[name]?.();
 };
 
@@ -2349,6 +2070,41 @@ function computeOvertimeAmount(emp, sheet, periodStr) {
   const hourlyRate = ((cfg.salary||0)/30/8)*1.7;
   return Math.round(sheet.overtimeHours*hourlyRate*100)/100;
 }
+
+// ══════════════════════════════════════════════
+// ADVANCES: السلف
+// ══════════════════════════════════════════════
+// إضافة/طرح شهور من دورة بصيغة 'YYYY-MM'
+function addMonthsToPeriod(periodStr, n) {
+  const [y,m] = periodStr.split('-').map(Number);
+  const total = (y*12 + (m-1)) + n;
+  const ny = Math.floor(total/12), nm = (total%12)+1;
+  return `${ny}-${String(nm).padStart(2,'0')}`;
+}
+// آخر دورة هيتخصم فيها قسط من السلفة دي
+function advanceEndPeriod(adv) { return addMonthsToPeriod(adv.startPeriod, adv.months-1); }
+// قيمة القسط في دورة معيّنة (0 لو الدورة برّه مدة السلفة) — آخر دورة بتاخد فرق التقريب
+function advanceDeductionForPeriod(adv, periodStr) {
+  if (adv.status !== 'active') return 0;
+  const end = advanceEndPeriod(adv);
+  if (periodStr < adv.startPeriod || periodStr > end) return 0;
+  return periodStr === end ? adv.lastMonthAmount : adv.monthlyAmount;
+}
+// إجمالي المسدد من السلفة لحد (وشامل) دورة معيّنة
+function advancePaidUpTo(adv, uptoPeriodStr) {
+  if (uptoPeriodStr < adv.startPeriod) return 0;
+  const end = advanceEndPeriod(adv);
+  const lastCounted = uptoPeriodStr < end ? uptoPeriodStr : end;
+  let monthsPassed = 0, p = adv.startPeriod;
+  while (p <= lastCounted) { monthsPassed++; p = addMonthsToPeriod(p, 1); }
+  const paid = monthsPassed>=adv.months ? adv.amount : monthsPassed*adv.monthlyAmount;
+  return Math.round(Math.min(paid, adv.amount)*100)/100;
+}
+// إجمالي خصم كل السلف النشطة لموظف في دورة معيّنة
+function computeAdvanceDeductionForPeriod(advancesList, periodStr) {
+  return advancesList.filter(a=>a.status==='active').reduce((sum,a)=> sum + advanceDeductionForPeriod(a, periodStr), 0);
+}
+
 window.updateSalaryPreview = () => {
   const emp = {
     salary: parseFloat(document.getElementById('emp-salary').value)||0,
@@ -2359,7 +2115,7 @@ window.updateSalaryPreview = () => {
   };
   const net = computeNetSalary(emp);
   document.getElementById('emp-salary-preview').textContent =
-    `الراتب الأساسي: ${net} ج.م — الحافز الأساسي: ${emp.incentiveBase} ج.م لو التقييم 100% (الراتب بيتصرف يوم 1، والحافز يوم 15)`;
+    `صافي الراتب الأساسي: ${net} ج.م — الحافز الأساسي: ${emp.incentiveBase} ج.م لو التقييم 100% (الراتب بيتصرف يوم 1، والحافز يوم 15)`;
 };
 
 // ══════════════════════════════════════════════
@@ -2973,10 +2729,12 @@ async function kioskRenderProfileBody() {
   const body = document.getElementById('kiosk-body');
   body.innerHTML = '<div class="empty"><i class="fas fa-spinner fa-spin"></i><p>جاري التحميل...</p></div>';
   try {
-    const [sheetsSnap, evalsSnap] = await Promise.all([
+    const [sheetsSnap, evalsSnap, advancesSnap] = await Promise.all([
       getDocs(query(collection(secDb,'monthlySheets'), where('employeeId','==',emp.id))),
-      getDocs(query(collection(secDb,'evaluations'), where('employeeId','==',emp.id)))
+      getDocs(query(collection(secDb,'evaluations'), where('employeeId','==',emp.id))),
+      getDocs(query(collection(secDb,'advances'), where('employeeId','==',emp.id)))
     ]);
+    const empAdvances = advancesSnap.docs.map(d=>({id:d.id,...d.data()}));
     const sheets = {}; sheetsSnap.docs.forEach(d=>{ const v=d.data(); if (v.period && v.period.startsWith(year+'-')) sheets[v.period]=v; });
     const evals = {}; evalsSnap.docs.forEach(d=>{ const v=d.data(); if (v.period && v.period.startsWith(year+'-')) evals[v.period]=v; });
 
@@ -3001,22 +2759,79 @@ async function kioskRenderProfileBody() {
     const extraAmount = computeExtraDaysAmount(emp, curSheet, curPeriod);
     const otAmount = computeOvertimeAmount(emp, curSheet, curPeriod);
     const rewardAmount = computeMonthlyRewardAmount(emp, curSheet, curPeriod);
+    const advanceDeduction = computeAdvanceDeductionForPeriod(empAdvances, curPeriod);
+    const activeAdvances = empAdvances.filter(a=>a.status==='active');
+    const advancesHtml = activeAdvances.length ? `
+      <div style="text-align:right;margin-top:14px">
+        <div style="font-weight:700;font-size:13px;margin-bottom:8px">السلف عليك</div>
+        ${activeAdvances.map(a=>{
+          const end = advanceEndPeriod(a);
+          const paid = advancePaidUpTo(a, curPeriod>end?end:curPeriod);
+          const remaining = Math.round((a.amount-paid)*100)/100;
+          return `<div style="border:1px solid var(--slate-200);border-radius:8px;padding:8px 10px;margin-bottom:6px;font-size:12.5px">
+            <div>عليك سلفة بمبلغ <b>${a.amount} ج.م</b></div>
+            <div>سددت: <b style="color:var(--ok-600)">${paid} ج.م</b> — فاضل: <b style="color:var(--danger-600)">${remaining>0?remaining:0} ج.م</b></div>
+          </div>`;
+        }).join('')}
+      </div>` : '';
+
+    // رصيد الإذن الشخصي لدورة اليوم الحالية (26-25، مش الشهر الميلادي العادي)
+    const ppPeriod = periodForDate(todayStr());
+    const ppRemaining = await ppRemainingMinutes(secDb, emp.id, ppPeriod);
+    const ppUsed = PERSONAL_PERMISSION_CYCLE_MINUTES - ppRemaining;
+
+    // سجل تعديلات الراتب — مقارنة قبل/بعد لكل تعديل فعلي (أول قيد "0000-01-01" هو القيم الأصلية قبل أول تعديل)
+    const salaryHistorySorted = Array.isArray(emp.salaryHistory) ? [...emp.salaryHistory].sort((a,b)=> a.effectiveFrom < b.effectiveFrom ? -1 : 1) : [];
+    const SALARY_FIELD_LABELS = { salary:'الراتب الأساسي', incomeTax:'ضريبة كسب العمل', incentiveBase:'الحافز الأساسي', socialInsurance:'التأمين الاجتماعي', medicalInsurance:'التأمين الطبي' };
+    let salaryChangeRows = [];
+    for (let i=1;i<salaryHistorySorted.length;i++) {
+      const prev = salaryHistorySorted[i-1], cur = salaryHistorySorted[i];
+      const changedFields = Object.keys(SALARY_FIELD_LABELS).filter(f => (prev[f]||0) !== (cur[f]||0));
+      if (!changedFields.length) continue;
+      const changesHtml = changedFields.map(f =>
+        `<div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0"><span>${SALARY_FIELD_LABELS[f]}</span><span>${prev[f]||0} ← <b>${cur[f]||0}</b> ج.م</span></div>`
+      ).join('');
+      salaryChangeRows.push(`<div style="border:1px solid var(--slate-200);border-radius:8px;padding:8px 10px;margin-bottom:6px">
+        <div style="font-weight:700;font-size:12px;margin-bottom:4px">ساري من ${esc(cur.effectiveFrom)}</div>
+        ${changesHtml}
+      </div>`);
+    }
+    salaryChangeRows.reverse(); // الأحدث فوق
+    const salaryHistoryHtml = salaryChangeRows.length ? `
+      <div style="text-align:right;margin-top:14px">
+        <div style="font-weight:700;font-size:13px;margin-bottom:8px">تاريخ تعديلات راتبك</div>
+        ${salaryChangeRows.join('')}
+      </div>` : '';
+
+    // إجمالي/مستهلك/متبقي كل نوع إجازة — الإجمالي ثابت معروف من نظام الإجازات (بيتصفر بيه الرصيد عند التجديد السنوي)
+    const leaveRow = (type, label) => {
+      const total = LEAVE_TYPES[type].defaultBalance;
+      const remaining = leaveBalanceOf(emp, type);
+      const used = Math.max(0, total - remaining);
+      return `<div style="display:flex;justify-content:space-between;font-size:13px"><span>${label}</span><span style="font-weight:800">${remaining} من ${total} يوم</span></div>
+        <div style="font-size:10.5px;color:var(--slate-500);margin-top:-4px;margin-bottom:2px">استهلكت ${used} يوم من رصيدك</div>`;
+    };
 
     body.innerHTML = `
       <div style="text-align:right;background:var(--slate-100);border-radius:10px;padding:14px 16px;margin:16px 0;display:flex;flex-direction:column;gap:6px">
         <div style="font-size:11px;color:var(--slate-500);margin-bottom:2px">الراتب الأساسي بيتصرف يوم 1 من الشهر، والحافز يوم 15</div>
-        <div style="display:flex;justify-content:space-between;font-size:13px"><span>رصيد الإجازة الاعتيادية</span><span style="font-weight:800">${leaveBalanceOf(emp,'regular')} يوم</span></div>
-        <div style="display:flex;justify-content:space-between;font-size:13px"><span>رصيد الإجازة العارضة</span><span style="font-weight:800">${leaveBalanceOf(emp,'casual')} يوم</span></div>
-        <div style="display:flex;justify-content:space-between;font-size:13px"><span>رصيد إجازة الجواز</span><span style="font-weight:800">${leaveBalanceOf(emp,'marriage')} يوم</span></div>
-        <div style="display:flex;justify-content:space-between;font-size:13px"><span>الراتب الأساسي</span><span style="font-weight:800">${netSalary} ج.م</span></div>
+        ${leaveRow('regular','رصيد الإجازة الاعتيادية')}
+        ${leaveRow('casual','رصيد الإجازة العارضة')}
+        ${leaveRow('marriage','رصيد إجازة الجواز')}
+        <div style="display:flex;justify-content:space-between;font-size:13px"><span>رصيد الإذن الشخصي (دورة ${esc(ppPeriod)})</span><span style="font-weight:800">${minutesToHoursLabel(ppRemaining)} من ${minutesToHoursLabel(PERSONAL_PERMISSION_CYCLE_MINUTES)}</span></div>
+        <div style="font-size:10.5px;color:var(--slate-500);margin-top:-4px;margin-bottom:2px">استهلكت ${minutesToHoursLabel(ppUsed)} من رصيد الإذن هذه الدورة</div>
+        <div style="display:flex;justify-content:space-between;font-size:13px"><span>صافي الراتب الأساسي</span><span style="font-weight:800">${netSalary} ج.م</span></div>
         <div style="display:flex;justify-content:space-between;font-size:13px"><span>+ قيمة الأيام والساعات الإضافية هذا الشهر</span><span style="font-weight:800;color:var(--ok-600)">${extraAmount+otAmount} ج.م</span></div>
         <div style="display:flex;justify-content:space-between;font-size:13px"><span>+ قيمة المكافآت هذا الشهر</span><span style="font-weight:800;color:var(--ok-600)">${rewardAmount} ج.م</span></div>
         <div style="display:flex;justify-content:space-between;font-size:13px"><span>- خصم الغياب والجزاءات هذا الشهر</span><span style="font-weight:800;color:var(--danger-600)">${deduction} ج.م</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:13px"><span>- خصم قسط السلفة هذا الشهر</span><span style="font-weight:800;color:var(--danger-600)">${advanceDeduction} ج.م</span></div>
         <div style="display:flex;justify-content:space-between;font-size:13px"><span>الحافز المستحق هذا الشهر</span><span style="font-weight:800">${curEval?.finalScore!=null ? computeIncentive(emp,curEval.finalScore,curPeriod)+' ج.م' : 'محتاج تقييم الشهر الأول'}</span></div>
         <div style="display:flex;justify-content:space-between;font-size:13px"><span>تقييم/حافز الشهر الحالي</span><span style="font-weight:800">${curEval?.finalScore!=null ? curEval.finalScore+'%' : 'لم يُحدَّد بعد'}</span></div>
       </div>
       <div style="text-align:right;margin-top:6px;font-weight:700;font-size:13px">تفاصيل سنة ${year}</div>
       <div style="text-align:right">${rows || '<div class="empty"><p>لا توجد بيانات شهرية مسجّلة بعد</p></div>'}</div>
+      ${advancesHtml}
+      ${salaryHistoryHtml}
       <div style="margin-top:14px"><a href="javascript:void(0)" onclick="kioskLoadStatus()" style="font-size:11.5px;color:var(--slate-500)">→ رجوع</a></div>`;
   } catch(e) {
     body.innerHTML = `<div class="auth-err">خطأ: ${e.message}</div><div style="margin-top:10px"><a href="javascript:void(0)" onclick="kioskLoadStatus()" style="font-size:11.5px">رجوع</a></div>`;
@@ -3223,6 +3038,14 @@ window.kioskInstantPermissionCheckin = async (lateMins) => {
 // فورم طلب إذن شخصي "مستقبلي" (قبل ما الحدث يحصل فعليًا) — محتاج موافقة مزدوجة
 window.kioskShowPersonalPermissionForm = async () => {
   const emp = window._kioskEmp;
+  const body = document.getElementById('kiosk-body');
+  if (!(emp.passkeys||[]).length) {
+    body.innerHTML = `<div class="auth-err">لازم تسجل بصمتك الأول — سجّل حضور أو انصراف عادي مرة، وبعدها هتقدر تطلب إذن شخصي ببصمتك.</div><div style="margin-top:10px"><a href="javascript:void(0)" onclick="kioskLoadStatus()" style="font-size:11.5px">→ رجوع</a></div>`;
+    return;
+  }
+  body.innerHTML = '<div class="empty"><i class="fas fa-fingerprint fa-spin"></i><p>ضع بصمتك للتأكد من هويتك...</p></div>';
+  try { await webauthnVerify(emp); }
+  catch(e) { body.innerHTML = `<div class="auth-err">فشل التحقق من البصمة: ${e.message}</div><div style="margin-top:10px"><a href="javascript:void(0)" onclick="kioskLoadStatus()" style="font-size:11.5px">→ رجوع</a></div>`; return; }
   const today = todayStr();
   const period = periodForDate(today);
   document.getElementById('kiosk-body').innerHTML = '<div class="empty"><i class="fas fa-spinner fa-spin"></i><p>جاري التحميل...</p></div>';
@@ -3308,6 +3131,14 @@ window.kioskSubmitPersonalPermission = async () => {
 
 window.kioskShowMyPersonalPermissionRequests = async () => {
   const emp = window._kioskEmp;
+  const body = document.getElementById('kiosk-body');
+  if (!(emp.passkeys||[]).length) {
+    body.innerHTML = `<div class="auth-err">لازم تسجل بصمتك الأول — سجّل حضور أو انصراف عادي مرة، وبعدها هتقدر تشوف حالة طلباتك ببصمتك.</div><div style="margin-top:10px"><a href="javascript:void(0)" onclick="kioskLoadStatus()" style="font-size:11.5px">→ رجوع</a></div>`;
+    return;
+  }
+  body.innerHTML = '<div class="empty"><i class="fas fa-fingerprint fa-spin"></i><p>ضع بصمتك للتأكد من هويتك...</p></div>';
+  try { await webauthnVerify(emp); }
+  catch(e) { body.innerHTML = `<div class="auth-err">فشل التحقق من البصمة: ${e.message}</div><div style="margin-top:10px"><a href="javascript:void(0)" onclick="kioskLoadStatus()" style="font-size:11.5px">→ رجوع</a></div>`; return; }
   document.getElementById('kiosk-body').innerHTML = '<div class="empty"><i class="fas fa-spinner fa-spin"></i><p>جاري التحميل...</p></div>';
   const snap = await getDocs(query(collection(secDb,'personalPermissionRequests'), where('employeeId','==',emp.id)));
   const reqs = snap.docs.map(d=>d.data()).sort((a,b)=>(b.requestedAt||0)-(a.requestedAt||0));
@@ -4003,14 +3834,16 @@ window.exportMonthlyToExcel = async () => {
   const activeEmps = _employees.filter(e=>e.category!=='rep' && e.category!=='driver' && employeeInPeriod(e,period));
   if (!activeEmps.length) { toast('لا يوجد موظفون لهذا الشهر', 'error'); return; }
 
-  let sheets = {}, evals = {};
+  let sheets = {}, evals = {}, advancesByEmp = {};
   try {
-    const [sheetSnap, evalSnap] = await Promise.all([
+    const [sheetSnap, evalSnap, advancesSnap] = await Promise.all([
       getDocs(query(collection(db,'monthlySheets'), where('period','==',period))),
-      getDocs(query(collection(db,'evaluations'), where('period','==',period)))
+      getDocs(query(collection(db,'evaluations'), where('period','==',period))),
+      getDocs(collection(db,'advances'))
     ]);
     sheetSnap.docs.forEach(d=>{ sheets[d.data().employeeId] = d.data(); });
     evalSnap.docs.forEach(d=>{ evals[d.data().employeeId] = d.data(); });
+    advancesSnap.docs.forEach(d=>{ const a=d.data(); (advancesByEmp[a.employeeId] ||= []).push(a); });
   } catch(e) { toast('خطأ: '+e.message, 'error'); return; }
 
   const headers = ['كود الموظف','اسم الموظف','المسمى الوظيفي','القسم',
@@ -4018,7 +3851,7 @@ window.exportMonthlyToExcel = async () => {
     'نسبة التقييم %','جزاءات (أيام)','مكافآت (أيام)',
     'الراتب الأساسي الإجمالي (ج.م)','صافي الراتب بعد الاستقطاعات (ج.م)','الحافز الأساسي المستهدف (ج.م)',
     'خصم الغياب والجزاءات (ج.م)','قيمة الأيام الإضافية (ج.م)','قيمة الساعات الإضافية (ج.م)','قيمة المكافآت (ج.م)',
-    'الحافز المستحق (ج.م)','الصافي التقديري لهذا الشهر (ج.م)','ملاحظات'];
+    'الحافز المستحق (ج.م)','الصافي التقديري لهذا الشهر (ج.م)','خصم قسط السلفة (ج.م)','ملاحظات'];
 
   const aoa = [headers];
   activeEmps.forEach(e=>{
@@ -4026,6 +3859,7 @@ window.exportMonthlyToExcel = async () => {
     const ev = evals[e.id];
     const dept = _departments.find(d=>d.id===e.departmentId);
     const cfg = getSalaryConfigForDate(e, cycleRangeForPeriod(period).endDate);
+    const advanceDeduction = computeAdvanceDeductionForPeriod(advancesByEmp[e.id]||[], period);
     aoa.push([
       e.code||'', e.name, e.jobTitle||'', dept?dept.name:'',
       s.overtimeHours ?? 0, s.extraDays ?? 0, s.leaveFromBalance ?? 0, s.sickLeave ?? 0,
@@ -4033,6 +3867,7 @@ window.exportMonthlyToExcel = async () => {
       ev?.finalScore ?? '', s.penaltyDays ?? 0, s.rewardDays ?? 0,
       cfg.salary||0, computeNetSalaryForPeriod(e,period), cfg.incentiveBase||0,
       0,0,0,0,0,0, // R..W: أعمدة معادلات، بتتحط تحتها فورًا
+      advanceDeduction,
       s.notes||''
     ]);
   });
@@ -4050,7 +3885,7 @@ window.exportMonthlyToExcel = async () => {
     ws[`T${r}`] = { t:'n', f:`E${r}*(O${r}/30/8)*1.7` };         // قيمة الساعات الإضافية (الساعة × 1.7)
     ws[`U${r}`] = { t:'n', f:`N${r}*O${r}/30` };                 // قيمة المكافآت
     ws[`V${r}`] = { t:'n', f:`Q${r}*L${r}/100` };                // الحافز المستحق = الحافز الأساسي × نسبة التقييم
-    ws[`W${r}`] = { t:'n', f:`P${r}-R${r}+S${r}+T${r}+U${r}` };  // الصافي التقديري لهذا الشهر
+    ws[`W${r}`] = { t:'n', f:`P${r}-R${r}-X${r}+S${r}+T${r}+U${r}` };  // الصافي التقديري لهذا الشهر (بعد خصم قسط السلفة)
   }
 
   ws['!cols'] = [
@@ -4059,7 +3894,7 @@ window.exportMonthlyToExcel = async () => {
     {wch:10},{wch:10},{wch:10},
     {wch:16},{wch:16},{wch:16},
     {wch:14},{wch:14},{wch:14},{wch:13},
-    {wch:14},{wch:16},{wch:26}
+    {wch:14},{wch:16},{wch:14},{wch:26}
   ];
 
   XLSX.utils.book_append_sheet(wb, ws, 'الكشف الشهري');
@@ -4301,10 +4136,12 @@ async function renderProfile() {
   const emp = _employees.find(e=>e.id===empId);
   body.innerHTML = '<div class="empty"><i class="fas fa-spinner fa-spin"></i><p>جاري التحميل...</p></div>';
 
-  const [sheetsSnap, evalsSnap] = await Promise.all([
+  const [sheetsSnap, evalsSnap, advancesSnap] = await Promise.all([
     getDocs(query(collection(db,'monthlySheets'), where('employeeId','==',empId))),
-    getDocs(query(collection(db,'evaluations'), where('employeeId','==',empId)))
+    getDocs(query(collection(db,'evaluations'), where('employeeId','==',empId))),
+    getDocs(query(collection(db,'advances'), where('employeeId','==',empId)))
   ]);
+  const empAdvances = advancesSnap.docs.map(d=>({id:d.id,...d.data()}));
   const sheets = {}; sheetsSnap.docs.forEach(d=>{ const v=d.data(); if (v.period && v.period.startsWith(year+'-')) sheets[v.period]=v; });
   const evals = {}; evalsSnap.docs.forEach(d=>{ const v=d.data(); if (v.period && v.period.startsWith(year+'-')) evals[v.period]=v; });
 
@@ -4343,7 +4180,22 @@ async function renderProfile() {
   const otAmount = computeOvertimeAmount(emp, curSheet, curPeriod);
   const rewardAmount = computeMonthlyRewardAmount(emp, curSheet, curPeriod);
   const incentive = computeIncentive(emp, curEvalScore, curPeriod);
-  const estimatedTotal = Math.round((netSalary - deduction + extraAmount + otAmount + rewardAmount)*100)/100;
+  const advanceDeduction = computeAdvanceDeductionForPeriod(empAdvances, curPeriod);
+  const estimatedTotal = Math.round((netSalary - deduction - advanceDeduction + extraAmount + otAmount + rewardAmount)*100)/100;
+  const activeAdvances = empAdvances.filter(a=>a.status==='active');
+  const advancesHtml = activeAdvances.length ? `
+    <div style="margin-top:14px">
+      <div style="font-weight:700;font-size:13px;margin-bottom:6px">السلف النشطة</div>
+      ${activeAdvances.map(a=>{
+        const end = advanceEndPeriod(a);
+        const paid = advancePaidUpTo(a, curPeriod>end?end:curPeriod);
+        const remaining = Math.round((a.amount-paid)*100)/100;
+        return `<div style="font-size:12.5px;border:1px solid var(--slate-200);border-radius:8px;padding:8px 10px;margin-bottom:6px">
+          إجمالي السلفة: <b>${a.amount} ج.م</b> — القسط: <b>${a.monthlyAmount} ج.م</b> من ${a.startPeriod} لحد ${end} —
+          سددت: <b style="color:var(--ok-600)">${paid} ج.م</b> — متبقي: <b style="color:var(--danger-600)">${remaining>0?remaining:0} ج.م</b>
+        </div>`;
+      }).join('')}
+    </div>` : '';
 
   body.innerHTML = `
     <div class="card"><div class="card-body">
@@ -4354,14 +4206,16 @@ async function renderProfile() {
         <div>رصيد الاعتيادية: <b>${leaveBalanceOf(emp,'regular')} يوم</b></div>
         <div>رصيد العارضة: <b>${leaveBalanceOf(emp,'casual')} يوم</b></div>
         <div>رصيد الجواز: <b>${leaveBalanceOf(emp,'marriage')} يوم</b></div>
-        <div>الراتب الأساسي: <b>${netSalary} ج.م</b></div>
+        <div>صافي الراتب الأساسي: <b>${netSalary} ج.م</b></div>
         <div>+ قيمة أيام إضافية: <b style="color:var(--ok-600)">${extraAmount} ج.م</b></div>
         <div>+ قيمة ساعات إضافية معتمدة: <b style="color:var(--ok-600)">${otAmount} ج.م</b></div>
         <div>+ قيمة المكافآت: <b style="color:var(--ok-600)">${rewardAmount} ج.م</b></div>
         <div>- خصم الغياب والإجازة بالخصم والجزاءات: <b style="color:var(--danger-600)">${deduction} ج.م</b></div>
+        <div>- خصم قسط السلفة هذا الشهر: <b style="color:var(--danger-600)">${advanceDeduction} ج.م</b></div>
         <div>الصافي التقديري لهذا الشهر: <b>${estimatedTotal} ج.م</b></div>
         <div>الحافز المستحق هذا الشهر: <b>${incentive!=null ? incentive+' ج.م' : 'لا يوجد تقييم لهذا الشهر بعد'}</b></div>
       </div>
+      ${advancesHtml}
     </div></div>
     <div class="card" style="overflow-x:auto"><table class="tbl">
       <thead><tr><th>الشهر</th><th>ساعات إضافية</th><th>أيام إضافية</th><th>إجازة من الرصيد</th><th>إجازة مرضية</th><th>إجازة بالخصم</th><th>غياب</th><th>إذن شخصي</th><th>الحافز %</th><th>جزاءات (أيام)</th><th>مكافآت (أيام)</th><th>ملاحظات</th></tr></thead>
@@ -5056,6 +4910,110 @@ window.deleteHoliday = async (id) => {
   try { await deleteDoc(doc(db,'officialHolidays',id)); toast('تم الحذف', 'success'); renderHolidays(); }
   catch(e) { toast('خطأ: '+e.message, 'error'); }
 };
+
+// ══════════════════════════════════════════════
+// ADVANCES: السلف
+// ══════════════════════════════════════════════
+let _advancesCache = [];
+
+async function renderAdvances() {
+  const body = document.getElementById('advances-body');
+  body.innerHTML = `<tr><td colspan="9"><div class="empty"><i class="fas fa-spinner fa-spin"></i><p>جاري التحميل...</p></div></td></tr>`;
+  try {
+    const snap = await getDocs(collection(db,'advances'));
+    _advancesCache = snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=> (b.createdAt||0)-(a.createdAt||0));
+  } catch(e) { body.innerHTML = `<tr><td colspan="9"><div class="empty"><p>خطأ: ${e.message}</p></div></td></tr>`; return; }
+  if (!_advancesCache.length) { body.innerHTML = `<tr><td colspan="9"><div class="empty"><p>لا توجد سلف مسجّلة بعد</p></div></td></tr>`; return; }
+  const curPeriod = currentPeriodStr();
+  const canDel = hasPerm('data_delete');
+  body.innerHTML = _advancesCache.map(a=>{
+    const emp = _employees.find(e=>e.id===a.employeeId);
+    const paid = advancePaidUpTo(a, curPeriod > advanceEndPeriod(a) ? advanceEndPeriod(a) : curPeriod);
+    const remaining = Math.round((a.amount - paid)*100)/100;
+    const statusLabel = a.status==='cancelled' ? '<span style="color:var(--danger-600);font-weight:700">ملغاة</span>'
+      : remaining<=0 ? '<span style="color:var(--ok-600);font-weight:700">مسدّدة بالكامل</span>'
+      : '<span style="color:var(--ac-700);font-weight:700">جارية</span>';
+    return `<tr>
+      <td style="font-weight:700">${emp?esc(emp.name):'موظف محذوف'}</td>
+      <td>${a.amount} ج.م</td>
+      <td>${a.monthlyAmount} ج.م</td>
+      <td>${a.startPeriod}</td>
+      <td>${advanceEndPeriod(a)}</td>
+      <td style="color:var(--ok-600)">${paid} ج.م</td>
+      <td style="color:var(--danger-600)">${remaining>0?remaining:0} ج.م</td>
+      <td>${statusLabel}</td>
+      <td>
+        ${a.status==='active' ? `<button class="btn btn-ghost btn-ic btn-xs" title="إلغاء السلفة" onclick="cancelAdvance('${a.id}')"><i class="fas fa-ban"></i></button>` : ''}
+        ${canDel ? `<button class="btn btn-red btn-ic btn-xs" title="حذف نهائي" onclick="deleteAdvance('${a.id}')"><i class="fas fa-trash"></i></button>` : ''}
+      </td>
+    </tr>`;
+  }).join('');
+}
+window.renderAdvances = renderAdvances;
+
+window.openAdvanceModal = () => {
+  const activeEmps = _employees.filter(e=>e.status!=='resigned');
+  document.getElementById('adv-emp').innerHTML = activeEmps.map(e=>`<option value="${e.id}">${esc(e.name)}</option>`).join('');
+  document.getElementById('adv-amount').value = '';
+  document.getElementById('adv-months').value = 1;
+  document.getElementById('adv-start').value = currentPeriodStr();
+  document.getElementById('adv-note').value = '';
+  updateAdvanceCalc();
+  openM('mo-advance');
+};
+
+window.updateAdvanceCalc = () => {
+  const amount = parseFloat(document.getElementById('adv-amount').value)||0;
+  const months = parseInt(document.getElementById('adv-months').value)||1;
+  const note = document.getElementById('adv-calc-note');
+  if (amount<=0 || months<=0) { note.textContent=''; return; }
+  const monthlyAmount = Math.floor((amount/months)*100)/100;
+  const lastMonthAmount = Math.round((amount - monthlyAmount*(months-1))*100)/100;
+  note.textContent = months===1
+    ? `هيتخصم ${amount} ج.م كاملة دورة واحدة`
+    : `هيتخصم ${monthlyAmount} ج.م كل دورة لمدة ${months-1} دورة، وآخر دورة ${lastMonthAmount} ج.م`;
+};
+
+window.saveAdvance = async () => {
+  const employeeId = document.getElementById('adv-emp').value;
+  const amount = parseFloat(document.getElementById('adv-amount').value);
+  const months = parseInt(document.getElementById('adv-months').value);
+  const startPeriod = document.getElementById('adv-start').value;
+  const note = document.getElementById('adv-note').value.trim();
+  if (!employeeId) { toast('اختار الموظف', 'error'); return; }
+  if (!amount || amount<=0) { toast('اكتب مبلغ السلفة', 'error'); return; }
+  if (!months || months<=0) { toast('اكتب عدد الشهور', 'error'); return; }
+  if (!startPeriod) { toast('حدد دورة البداية', 'error'); return; }
+  const monthlyAmount = Math.floor((amount/months)*100)/100;
+  const lastMonthAmount = Math.round((amount - monthlyAmount*(months-1))*100)/100;
+  const existingActive = _advancesCache.filter(a=>a.employeeId===employeeId && a.status==='active');
+  if (existingActive.length && !confirm('الموظف ده عنده سلفة نشطة بالفعل — عايز تضيف سلفة تانية فوقها؟')) return;
+  const btn = document.getElementById('adv-save-btn');
+  btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الحفظ...';
+  try {
+    await addDoc(collection(db,'advances'), {
+      employeeId, amount, months, monthlyAmount, lastMonthAmount, startPeriod, note,
+      status:'active', createdAt:Date.now(), createdBy: CU.email
+    });
+    toast('تم تسجيل السلفة', 'success');
+    closeM('mo-advance');
+    renderAdvances();
+  } catch(e) { toast('خطأ: '+e.message, 'error'); }
+  finally { btn.disabled=false; btn.innerHTML='<i class="fas fa-save"></i>حفظ'; }
+};
+
+window.cancelAdvance = async (id) => {
+  if (!confirm('متأكد من إلغاء السلفة دي؟ مش هيتخصم منها أي حاجة تانية بعد كده، والأقساط اللي اتخصمت لحد دلوقتي هتفضل زي ما هي.')) return;
+  try { await updateDoc(doc(db,'advances',id), { status:'cancelled' }); toast('تم إلغاء السلفة', 'success'); renderAdvances(); }
+  catch(e) { toast('خطأ: '+e.message, 'error'); }
+};
+
+window.deleteAdvance = async (id) => {
+  if (!confirm('حذف نهائي للسلفة دي من غير رجعة — متأكد؟')) return;
+  try { await deleteDoc(doc(db,'advances',id)); toast('تم الحذف', 'success'); renderAdvances(); }
+  catch(e) { toast('خطأ: '+e.message, 'error'); }
+};
+
 // بيرجع الإجازة الرسمية ليوم معين لو موجودة (تُستخدم في الدخول اليومي والكيوسك)
 async function getHolidayForDate(dateStr, dbInst) {
   try {
@@ -5064,118 +5022,6 @@ async function getHolidayForDate(dateStr, dbInst) {
     return { id: snap.docs[0].id, ...snap.docs[0].data() };
   } catch(e) { return null; }
 }
-
-// ══════════════════════════════════════════════
-// EXPENSES: الكهرباء
-// ══════════════════════════════════════════════
-async function uploadToImgBB(file) {
-  const fd = new FormData(); fd.append('image', file);
-  const res = await fetch('https://api.imgbb.com/1/upload?key=ebead1c8c951a2d3cfebfe8c9445bf9e', { method:'POST', body:fd });
-  const data = await res.json();
-  if (!data.success) throw new Error('فشل رفع صورة الفاتورة');
-  return data.data.url;
-}
-
-async function renderExpenses() {
-  const body = document.getElementById('expenses-body');
-  body.innerHTML = `<tr><td colspan="8"><div class="empty"><i class="fas fa-spinner fa-spin"></i><p>جاري التحميل...</p></div></td></tr>`;
-  try {
-    const snap = await getDocs(query(collection(db,'expenses_electricity'), orderBy('date','desc')));
-    _expensesCache = snap.docs.map(d=>({id:d.id,...d.data()}));
-  } catch(e) { body.innerHTML = `<tr><td colspan="8"><div class="empty"><p>خطأ: ${e.message}</p></div></td></tr>`; return; }
-  if (!_expensesCache.length) { body.innerHTML = `<tr><td colspan="8"><div class="empty"><p>لا توجد سجلات بعد</p></div></td></tr>`; return; }
-  body.innerHTML = _expensesCache.map(r=>{
-    const consumption = r.currentReading - r.previousReading;
-    const price = consumption>0 ? (r.billAmount/consumption) : 0;
-    return `<tr>
-      <td>${r.date}</td><td>${r.previousReading}</td><td>${r.currentReading}</td><td>${consumption}</td>
-      <td>${r.billAmount} ج.م</td><td>${price.toFixed(2)} ج.م</td>
-      <td style="font-size:12px;color:var(--slate-500)">${esc(r.description)||'—'}${r.invoiceUrl?` <a href="${r.invoiceUrl}" target="_blank">(الفاتورة)</a>`:''}</td>
-      <td>
-        <button class="btn btn-ghost btn-ic btn-xs" onclick="openExpenseModal('${r.id}')"><i class="fas fa-edit"></i></button>
-        <button class="btn btn-red btn-ic btn-xs" onclick="deleteExpense('${r.id}')"><i class="fas fa-trash"></i></button>
-      </td>
-    </tr>`;
-  }).join('');
-}
-window.renderExpenses = renderExpenses;
-
-window.openExpenseModal = (id=null) => {
-  window._editExpId = id;
-  const r = id ? _expensesCache.find(x=>x.id===id) : null;
-  document.getElementById('exp-modal-title').textContent = id ? 'تعديل السجل' : 'سجل كهرباء جديد';
-  document.getElementById('exp-date').value = r?.date || todayStr();
-  document.getElementById('exp-prev').value = r?.previousReading ?? '';
-  document.getElementById('exp-curr').value = r?.currentReading ?? '';
-  document.getElementById('exp-bill').value = r?.billAmount ?? '';
-  document.getElementById('exp-desc').value = r?.description || '';
-  document.getElementById('exp-img').value = '';
-  updateExpenseCalc();
-  openM('mo-expense');
-};
-
-window.updateExpenseCalc = () => {
-  const prev = parseFloat(document.getElementById('exp-prev').value)||0;
-  const curr = parseFloat(document.getElementById('exp-curr').value)||0;
-  const bill = parseFloat(document.getElementById('exp-bill').value)||0;
-  const consumption = curr-prev;
-  const note = document.getElementById('exp-calc-note');
-  note.textContent = (consumption>0 && bill>0) ? `الاستهلاك: ${consumption} ك.و — سعر الكيلو وات: ${(bill/consumption).toFixed(2)} ج.م` : '';
-};
-
-window.saveExpense = async () => {
-  const date = document.getElementById('exp-date').value;
-  const previousReading = parseFloat(document.getElementById('exp-prev').value);
-  const currentReading = parseFloat(document.getElementById('exp-curr').value);
-  const billAmount = parseFloat(document.getElementById('exp-bill').value);
-  const description = document.getElementById('exp-desc').value.trim();
-  const file = document.getElementById('exp-img').files[0];
-  if (!date || isNaN(previousReading) || isNaN(currentReading) || isNaN(billAmount)) { toast('املأ التاريخ والقراءتين وقيمة الفاتورة', 'error'); return; }
-  if (currentReading < previousReading) { toast('القراءة الحالية لازم تكون أكبر من أو تساوي السابقة', 'error'); return; }
-  const btn = document.getElementById('exp-save-btn');
-  btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الحفظ...';
-  try {
-    let invoiceUrl = null;
-    if (file) invoiceUrl = await uploadToImgBB(file);
-    const data = { date, previousReading, currentReading, billAmount, description, updatedAt:Date.now() };
-    if (invoiceUrl) data.invoiceUrl = invoiceUrl;
-    if (window._editExpId) await updateDoc(doc(db,'expenses_electricity',window._editExpId), data);
-    else await addDoc(collection(db,'expenses_electricity'), { ...data, createdAt:Date.now() });
-    toast('تم الحفظ', 'success');
-    closeM('mo-expense');
-    renderExpenses();
-  } catch(e) { toast('خطأ: '+e.message, 'error'); }
-  finally { btn.disabled=false; btn.innerHTML='<i class="fas fa-save"></i>حفظ'; }
-};
-
-window.deleteExpense = async (id) => {
-  if (!confirm('متأكد من حذف السجل ده؟')) return;
-  try { await deleteDoc(doc(db,'expenses_electricity',id)); toast('تم الحذف', 'success'); renderExpenses(); }
-  catch(e) { toast('خطأ: '+e.message, 'error'); }
-};
-
-window.printElectricityReport = () => {
-  if (!_expensesCache.length) { toast('لا توجد بيانات لطباعتها', 'error'); return; }
-  const byMonth = {};
-  _expensesCache.forEach(r=>{
-    const period = r.date.slice(0,7);
-    if (!byMonth[period]) byMonth[period] = { consumption:0, amount:0 };
-    byMonth[period].consumption += (r.currentReading - r.previousReading);
-    byMonth[period].amount += r.billAmount;
-  });
-  const periods = Object.keys(byMonth).sort();
-  let totalC=0, totalA=0;
-  const rows = periods.map(p=>{ totalC+=byMonth[p].consumption; totalA+=byMonth[p].amount; return `<tr><td>${p}</td><td>${byMonth[p].consumption}</td><td>${byMonth[p].amount.toFixed(2)}</td></tr>`; }).join('');
-  const w = window.open('', '_blank');
-  w.document.write(`<html dir="rtl"><head><title>تقرير مصاريف الكهرباء</title>
-    <style>body{font-family:Arial;padding:30px}table{width:100%;border-collapse:collapse;margin-top:20px}th,td{border:1px solid #ccc;padding:8px;text-align:center}th{background:#f0f0f0}</style>
-    </head><body><h2>تقرير مصاريف الكهرباء — شركة الساقية</h2>
-    <table><thead><tr><th>الشهر</th><th>الاستهلاك (ك.و)</th><th>المبلغ (ج.م)</th></tr></thead>
-    <tbody>${rows}<tr style="font-weight:bold"><td>الإجمالي</td><td>${totalC}</td><td>${totalA.toFixed(2)}</td></tr></tbody></table>
-    </body></html>`);
-  w.document.close();
-  setTimeout(()=>w.print(), 400);
-};
 
 // ══════════════════════════════════════════════
 // USERS & PERMISSIONS
