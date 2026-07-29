@@ -563,8 +563,12 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
         <div class="fg"><label class="fl">الحافز الأساسي (ج.م) <span style="color:var(--slate-500);font-weight:400">— بيتاخد يوم 15، منفصل عن المرتب</span></label><input class="fc" type="number" id="emp-incentive" placeholder="0" oninput="updateSalaryPreview()"></div>
       </div>
       <div id="emp-salary-preview" style="font-size:12.5px;color:var(--ac-700);font-weight:700;margin:-4px 0 10px"></div>
+      <div id="emp-salary-history-btn-wrap" style="margin:-4px 0 12px"></div>
       <div class="frow c2">
-        <div class="fg"><label class="fl">الحالة</label><select class="fc" id="emp-status"><option value="active">شغال</option><option value="resigned">مستقيل</option></select></div>
+        <div class="fg"><label class="fl">الحالة</label><select class="fc" id="emp-status" onchange="document.getElementById('emp-resign-wrap').style.display = this.value==='resigned' ? '' : 'none'"><option value="active">شغال</option><option value="resigned">مستقيل</option></select></div>
+        <div class="fg" id="emp-resign-wrap" style="display:none"><label class="fl">تاريخ الاستقالة</label><input class="fc" type="date" id="emp-resign-date"></div>
+      </div>
+      <div class="frow c2">
         <div class="fg" style="display:flex;align-items:flex-end;padding-bottom:9px">
           <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--navy-900);cursor:pointer">
             <input type="checkbox" id="emp-ismanager" style="width:16px;height:16px;cursor:pointer">
@@ -900,6 +904,13 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
   </div>
 </div>
 
+<div class="overlay" id="mo-salary-history">
+  <div class="modal" style="max-width:640px">
+    <div class="mh"><span class="mh-title">السجل التاريخي لتفاصيل الراتب</span><button class="mclose" onclick="closeM('mo-salary-history')">×</button></div>
+    <div class="mb" id="salary-history-body"></div>
+  </div>
+</div>
+
 <div class="overlay" id="mo-import-monthly">
   <div class="modal" style="max-width:680px">
     <div class="mh"><span class="mh-title">مراجعة استيراد الكشف الشهري قبل الحفظ</span><button class="mclose" onclick="closeM('mo-import-monthly')">×</button></div>
@@ -1147,8 +1158,28 @@ function startListeners() {
           const hrNeedsAction = canHrApprove && r.hrApproved==null;
           return managerNeedsAction || hrNeedsAction;
         });
-        updateLeavesBadge(actionable.length);
+        _leavesActionableCount = actionable.length;
+        refreshCombinedLeavesBadge();
         if (_page==='leaves') renderLeaves();
+      })
+    );
+    _unsubs.push(
+      onSnapshot(query(collection(db,'personalPermissionRequests'), where('status','in',['pending','pending_hr_decision'])), s=>{
+        const canDeptApprove = hasPerm('leaves_dept_approve');
+        const canHrApprove = hasPerm('leaves_manage');
+        let reqs = s.docs.map(d=>d.data());
+        if (CU.role!=='admin' && CU.departmentId) reqs = reqs.filter(r=>r.departmentId===CU.departmentId);
+        const actionablePlanned = reqs.filter(r=>{
+          if (!(r.kind==='permission' && r.mode==='planned' && r.status==='pending')) return false;
+          const isManagerFor = canDeptApprove && (CU.role==='admin' || CU.departmentId===r.departmentId);
+          const managerNeedsAction = isManagerFor && r.managerApproved==null;
+          const hrNeedsAction = canHrApprove && r.hrApproved==null;
+          return managerNeedsAction || hrNeedsAction;
+        });
+        const actionableLeaveCut = canHrApprove ? reqs.filter(r=>r.kind==='leaveCut' && r.status==='pending_hr_decision') : [];
+        _ppActionableCount = actionablePlanned.length + actionableLeaveCut.length;
+        refreshCombinedLeavesBadge();
+        if (_page==='leaves') renderPersonalPermissionAdmin();
       })
     );
   }
@@ -1168,6 +1199,10 @@ function updateLeavesBadge(count) {
   }
   badge.textContent = count;
 }
+// الشارة موحّدة بين طلبات الإجازة العادية وطلبات الإذن الشخصي (مستقبلي + قرارات قطع إجازة) —
+// عشان المدير/الشؤون ميفوّتوش أي طلب من الاتنين وهو بس بيبص على القائمة الجانبية
+let _leavesActionableCount = 0, _ppActionableCount = 0;
+function refreshCombinedLeavesBadge() { updateLeavesBadge(_leavesActionableCount + _ppActionableCount); }
 
 // ══════════════════════════════════════════════
 // NAVIGATION
@@ -1635,7 +1670,7 @@ window.savePenalty = async () => {
   if (!days || days <= 0) { toast('اكتب عدد أيام صحيح (0.5 أو أكتر)', 'error'); return; }
   const date = document.getElementById('pen-date').value || todayStr();
   const reason = document.getElementById('pen-reason').value.trim();
-  const dailyRate = (emp.salary||0)/30;
+  const dailyRate = (getSalaryConfigForDate(emp, date).salary||0)/30;
   const amount = Math.round(dailyRate*days*100)/100;
   try {
     await addDoc(collection(db,'penaltyRewards'), {
@@ -1914,10 +1949,15 @@ window.openEmpModal = (id=null) => {
   document.getElementById('emp-insurance-start').value = e?.insuranceStartDate || '';
   document.getElementById('emp-tax').value = e?.incomeTax ?? '';
   document.getElementById('emp-incentive').value = e?.incentiveBase ?? '';
+  document.getElementById('emp-salary-history-btn-wrap').innerHTML = id
+    ? `<button type="button" class="btn btn-ghost btn-sm" onclick="openSalaryHistoryModal('${id}')"><i class="fas fa-history"></i>تعديل تفاصيل الراتب بتاريخ سريان (سجل تاريخي)</button>`
+    : `<div style="font-size:11.5px;color:var(--slate-500)">السجل التاريخي للراتب هيبقى متاح بعد ما تحفظ الموظف أول مرة</div>`;
   updateSalaryPreview();
   document.getElementById('emp-phone').value = e?.phone || '';
   document.getElementById('emp-nid').value = e?.nationalId || '';
   document.getElementById('emp-status').value = e?.status || 'active';
+  document.getElementById('emp-resign-date').value = e?.resignDate || '';
+  document.getElementById('emp-resign-wrap').style.display = (e?.status==='resigned') ? '' : 'none';
   document.getElementById('emp-ismanager').checked = !!e?.isManager;
   const pkWrap = document.getElementById('emp-passkeys-wrap');
   if (id) {
@@ -1958,42 +1998,81 @@ function computeNetSalary(emp) {
   return (emp.salary||0) - (emp.socialInsurance||0) - (emp.medicalInsurance||0) - (emp.incomeTax||0);
 }
 // الراتب الصافي لشهر/دورة معينة — بيراعي ان التأمينات ممكن تبدأ بعد تاريخ التعيين بفترة (تاريخ بداية التأمين)
+// بيرجّع إعدادات الراتب اللي كانت سارية فعليًا في تاريخ معيّن — من سجل التعديلات التاريخي لو موجود،
+// وإلا القيم الحالية في ملف الموظف (نفس سلوك النظام قبل ما ميزة السجل التاريخي تتضاف)
+function getSalaryConfigForDate(emp, dateStr) {
+  const history = emp.salaryHistory;
+  if (Array.isArray(history) && history.length) {
+    let best = null;
+    for (const h of history) { if (h.effectiveFrom <= dateStr && (!best || h.effectiveFrom > best.effectiveFrom)) best = h; }
+    if (best) return best;
+  }
+  return { salary: emp.salary||0, incomeTax: emp.incomeTax||0, incentiveBase: emp.incentiveBase||0, socialInsurance: emp.socialInsurance||0, medicalInsurance: emp.medicalInsurance||0 };
+}
+// بيحوّل أي تاريخ حقيقي لرقمه الافتراضي (1-30) جوه الدورة الشهرية اللي هو واقع فيها —
+// نظام "الشهر دايمًا 30 يوم": يوم 26 من الشهر = افتراضي 1 ... يوم 30 = افتراضي 5، ويوم 31 بيتكبح على افتراضي 5 برضو (زي يوم 30 بالظبط)
+// وبعدين يوم 1 من الشهر اللي بعده = افتراضي 6 ... يوم 25 = افتراضي 30
+function virtualCycleDayOf(dateStr) {
+  const day = parseInt(dateStr.split('-')[2], 10);
+  if (day >= 26) return Math.min(day, 30) - 25; // 26..31 -> 1..5 (31 بيتكبح على 5)
+  return 5 + day; // 1..25 -> 6..30
+}
+// نسبة الأيام اللي الموظف اشتغلها فعليًا جوه دورة معيّنة (من 30) — بتفرق بس لو اتعيّن أو استقال جوه نفس الدورة،
+// أي موظف كامل الدورة (اتعيّن قبلها ومستقالش فيها) نسبته 1.0 (30/30) يعني صفر تأثير على الحسابات العادية
+function daysWorkedRatioInCycle(emp, periodStr) {
+  const { startDate, endDate } = cycleRangeForPeriod(periodStr);
+  let startDay = 1;
+  if (emp.hireDate && emp.hireDate >= startDate && emp.hireDate <= endDate) startDay = virtualCycleDayOf(emp.hireDate);
+  let endDay = 30;
+  if (emp.status==='resigned' && emp.resignDate && emp.resignDate >= startDate && emp.resignDate <= endDate) endDay = virtualCycleDayOf(emp.resignDate);
+  const daysWorked = Math.max(0, endDay - startDay + 1);
+  return daysWorked / 30;
+}
 function computeNetSalaryForPeriod(emp, periodStr) {
   const { endDate } = cycleRangeForPeriod(periodStr);
+  const cfg = getSalaryConfigForDate(emp, endDate);
+  const ratio = daysWorkedRatioInCycle(emp, periodStr);
+  const proratedSalary = Math.round((cfg.salary||0) * ratio * 100)/100;
   const insured = !emp.insuranceStartDate || emp.insuranceStartDate <= endDate;
-  const social = insured ? (emp.socialInsurance||0) : 0;
-  const medical = insured ? (emp.medicalInsurance||0) : 0;
-  return (emp.salary||0) - social - medical - (emp.incomeTax||0);
+  const social = insured ? (cfg.socialInsurance||0) : 0;
+  const medical = insured ? (cfg.medicalInsurance||0) : 0;
+  return proratedSalary - social - medical - (cfg.incomeTax||0);
 }
-// الحافز المستحق — حسب نسبة تقييم الشهر (بيتصرف يوم 15)
-function computeIncentive(emp, evalScorePercent) {
+// الحافز المستحق — حسب نسبة تقييم الشهر (بيتصرف يوم 15) — periodStr اختياري للتوافق الرجعي، لو مبعوتش بيستخدم آخر قيمة حالية من غير تناسب أيام
+function computeIncentive(emp, evalScorePercent, periodStr) {
   if (evalScorePercent == null) return null;
-  return Math.round((emp.incentiveBase||0) * (evalScorePercent/100) * 100)/100;
+  const cfg = periodStr ? getSalaryConfigForDate(emp, cycleRangeForPeriod(periodStr).endDate) : emp;
+  const ratio = periodStr ? daysWorkedRatioInCycle(emp, periodStr) : 1;
+  return Math.round((cfg.incentiveBase||0) * ratio * (evalScorePercent/100) * 100)/100;
 }
 // خصم الشهر من الراتب الأساسي (غياب + إجازة بالخصم + جزاءات) — يوم واحد = الراتب الأساسي/30 (قبل خصم التأمينات والضرائب)
-function computeMonthlyDeduction(emp, sheet) {
+function computeMonthlyDeduction(emp, sheet, periodStr) {
   if (!sheet) return 0;
   const days = (sheet.absence||0) + (sheet.leaveUnpaid||0) + (sheet.penaltyDays||0);
   if (!days) return 0;
-  const dailyRate = (emp.salary||0)/30;
+  const cfg = periodStr ? getSalaryConfigForDate(emp, cycleRangeForPeriod(periodStr).endDate) : emp;
+  const dailyRate = (cfg.salary||0)/30;
   return Math.round(days*dailyRate*100)/100;
 }
 // قيمة الأيام الإضافية — يوم إضافي = ضعف الراتب اليومي الأساسي (الراتب/30 × 2)
-function computeExtraDaysAmount(emp, sheet) {
+function computeExtraDaysAmount(emp, sheet, periodStr) {
   if (!sheet || !sheet.extraDays) return 0;
-  const dailyRate = (emp.salary||0)/30;
+  const cfg = periodStr ? getSalaryConfigForDate(emp, cycleRangeForPeriod(periodStr).endDate) : emp;
+  const dailyRate = (cfg.salary||0)/30;
   return Math.round(sheet.extraDays*dailyRate*2*100)/100;
 }
 // قيمة المكافآت المسجّلة من صفحة الجزاءات والمكافآت — يوم واحد = الراتب الأساسي/30 (تُضاف للصافي)
-function computeMonthlyRewardAmount(emp, sheet) {
+function computeMonthlyRewardAmount(emp, sheet, periodStr) {
   if (!sheet || !sheet.rewardDays) return 0;
-  const dailyRate = (emp.salary||0)/30;
+  const cfg = periodStr ? getSalaryConfigForDate(emp, cycleRangeForPeriod(periodStr).endDate) : emp;
+  const dailyRate = (cfg.salary||0)/30;
   return Math.round(sheet.rewardDays*dailyRate*100)/100;
 }
 // قيمة الساعات الإضافية المعتمدة — الساعة = (الراتب/30/8) × 1.7
-function computeOvertimeAmount(emp, sheet) {
+function computeOvertimeAmount(emp, sheet, periodStr) {
   if (!sheet || !sheet.overtimeHours) return 0;
-  const hourlyRate = ((emp.salary||0)/30/8)*1.7;
+  const cfg = periodStr ? getSalaryConfigForDate(emp, cycleRangeForPeriod(periodStr).endDate) : emp;
+  const hourlyRate = ((cfg.salary||0)/30/8)*1.7;
   return Math.round(sheet.overtimeHours*hourlyRate*100)/100;
 }
 window.updateSalaryPreview = () => {
@@ -2007,6 +2086,108 @@ window.updateSalaryPreview = () => {
   const net = computeNetSalary(emp);
   document.getElementById('emp-salary-preview').textContent =
     `الراتب الأساسي: ${net} ج.م — الحافز الأساسي: ${emp.incentiveBase} ج.م لو التقييم 100% (الراتب بيتصرف يوم 1، والحافز يوم 15)`;
+};
+
+// ══════════════════════════════════════════════
+// السجل التاريخي لتفاصيل الراتب — كل تعديل بتاريخ سريان، والحسابات القديمة بتفضل زي ما هي
+// ══════════════════════════════════════════════
+window.openSalaryHistoryModal = (empId) => {
+  renderSalaryHistoryModal(empId);
+  openM('mo-salary-history');
+};
+function renderSalaryHistoryModal(empId) {
+  const emp = _employees.find(x=>x.id===empId);
+  if (!emp) return;
+  const history = Array.isArray(emp.salaryHistory) ? [...emp.salaryHistory] : [];
+  history.sort((a,b)=> a.effectiveFrom < b.effectiveFrom ? 1 : -1); // الأحدث فوق
+  const canDelete = hasPerm('data_delete');
+
+  let rowsHtml = '';
+  if (!history.length) {
+    rowsHtml = `<div class="empty" style="padding:14px"><p>مفيش تعديلات مسجّلة لسه — القيم الحالية في ملف الموظف هي اللي بتتطبّق على كل الفترات</p></div>`;
+  } else {
+    rowsHtml = `<div style="max-height:220px;overflow-y:auto;margin-bottom:14px">` + history.map((h,i)=>`
+      <div style="border:1px solid var(--slate-200);border-radius:8px;padding:10px 12px;margin-bottom:6px;font-size:12px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-weight:800">${esc(h.effectiveFrom==='0000-01-01' ? 'من الأول (قبل أول تعديل)' : 'ساري من '+h.effectiveFrom)}</span>
+          ${canDelete ? `<button class="btn btn-red btn-ic btn-xs" onclick="deleteSalaryHistoryEntry('${empId}',${i})"><i class="fas fa-trash"></i></button>` : ''}
+        </div>
+        <div style="color:var(--slate-600);margin-top:4px">
+          الأساسي: ${h.salary||0} ج.م · ضريبة: ${h.incomeTax||0} · حافز: ${h.incentiveBase||0} · تأمين اجتماعي: ${h.socialInsurance||0} · تأمين طبي: ${h.medicalInsurance||0}
+        </div>
+        ${h.note?`<div style="color:var(--slate-500);margin-top:2px">${esc(h.note)}</div>`:''}
+        <div style="color:var(--slate-400);font-size:10.5px;margin-top:2px">${h.changedBy?esc(h.changedBy)+' — ':''}${h.changedAt?new Date(h.changedAt).toLocaleString('ar-EG'):''}</div>
+      </div>`).join('') + `</div>`;
+  }
+
+  const body = document.getElementById('salary-history-body');
+  body.innerHTML = `
+    <div style="font-weight:700;font-size:12.5px;margin-bottom:8px">${esc(emp.name)} — سجل التعديلات</div>
+    ${rowsHtml}
+    <div style="border-top:1px solid var(--slate-200);padding-top:12px;margin-top:4px">
+      <div style="font-weight:800;font-size:13px;margin-bottom:8px">تعديل جديد</div>
+      <div class="frow c2">
+        <div class="fg"><label class="fl">تاريخ السريان</label><input class="fc" type="date" id="sh-effective"></div>
+        <div class="fg"><label class="fl">المرتب الأساسي (ج.م)</label><input class="fc" type="number" id="sh-salary" value="${emp.salary||0}"></div>
+      </div>
+      <div class="frow c2">
+        <div class="fg"><label class="fl">ضريبة كسب العمل (ج.م)</label><input class="fc" type="number" id="sh-tax" value="${emp.incomeTax||0}"></div>
+        <div class="fg"><label class="fl">الحافز الأساسي (ج.م)</label><input class="fc" type="number" id="sh-incentive" value="${emp.incentiveBase||0}"></div>
+      </div>
+      <div class="frow c2">
+        <div class="fg"><label class="fl">التأمين الاجتماعي (ج.م)</label><input class="fc" type="number" id="sh-socins" value="${emp.socialInsurance||0}"></div>
+        <div class="fg"><label class="fl">التأمين الطبي (ج.م)</label><input class="fc" type="number" id="sh-medins" value="${emp.medicalInsurance||0}"></div>
+      </div>
+      <div class="fg"><label class="fl">سبب التعديل (اختياري)</label><input class="fc" type="text" id="sh-note" placeholder="مثلاً: علاوة سنوية"></div>
+      <button class="btn btn-ac btn-sm" style="margin-top:8px" onclick="saveSalaryHistoryEntry('${empId}')"><i class="fas fa-save"></i>حفظ التعديل</button>
+      <div style="font-size:11px;color:var(--slate-500);margin-top:6px">كل حساب راتب لفترة قبل تاريخ السريان ده هيفضل يستخدم الأرقام القديمة زي ما هي — مفيش أي تأثير رجعي</div>
+    </div>`;
+}
+window.saveSalaryHistoryEntry = async (empId) => {
+  const emp = _employees.find(x=>x.id===empId);
+  if (!emp) return;
+  const effectiveFrom = document.getElementById('sh-effective').value;
+  if (!effectiveFrom) { toast('اختر تاريخ السريان', 'error'); return; }
+  const newCfg = {
+    salary: parseFloat(document.getElementById('sh-salary').value)||0,
+    incomeTax: parseFloat(document.getElementById('sh-tax').value)||0,
+    incentiveBase: parseFloat(document.getElementById('sh-incentive').value)||0,
+    socialInsurance: parseFloat(document.getElementById('sh-socins').value)||0,
+    medicalInsurance: parseFloat(document.getElementById('sh-medins').value)||0,
+  };
+  const note = document.getElementById('sh-note').value.trim();
+  let history = Array.isArray(emp.salaryHistory) ? [...emp.salaryHistory] : [];
+  if (!history.length) {
+    // أول تعديل على الإطلاق — نحفظ القيم القديمة (اللي كانت في ملفه لحد دلوقتي) كسجل "من الأول"
+    // قبل ما نغيّرها، عشان حسابات أي فترة قديمة تفضل صحيحة زي ما كانت
+    history.push({
+      effectiveFrom: '0000-01-01',
+      salary: emp.salary||0, incomeTax: emp.incomeTax||0, incentiveBase: emp.incentiveBase||0,
+      socialInsurance: emp.socialInsurance||0, medicalInsurance: emp.medicalInsurance||0,
+      note: 'القيم الأصلية قبل أول تعديل مسجّل', changedBy: CU.displayName||CU.email, changedAt: Date.now()
+    });
+  }
+  history.push({ effectiveFrom, ...newCfg, note, changedBy: CU.displayName||CU.email, changedAt: Date.now() });
+  try {
+    await updateDoc(doc(db,'employees', empId), { salaryHistory: history, ...newCfg });
+    emp.salaryHistory = history; Object.assign(emp, newCfg); // تحديث فوري محليًا، مش هننتظر الـ listener عشان الشاشة تتحدث فورًا
+    toast('تم حفظ تعديل الراتب — الحسابات القديمة فضلت زي ما هي', 'success');
+    renderSalaryHistoryModal(empId);
+  } catch(e) { toast('خطأ: '+e.message, 'error'); }
+};
+window.deleteSalaryHistoryEntry = async (empId, index) => {
+  const emp = _employees.find(x=>x.id===empId);
+  if (!emp || !Array.isArray(emp.salaryHistory)) return;
+  if (!confirm('متأكد من حذف التعديل ده من السجل التاريخي؟ ده هيأثر على حسابات أي فترة كانت بتعتمد عليه')) return;
+  const historySorted = [...emp.salaryHistory].sort((a,b)=> a.effectiveFrom < b.effectiveFrom ? 1 : -1);
+  const toRemove = historySorted[index];
+  const newHistory = emp.salaryHistory.filter(h => h !== toRemove);
+  try {
+    await updateDoc(doc(db,'employees', empId), { salaryHistory: newHistory });
+    emp.salaryHistory = newHistory;
+    toast('تم الحذف', 'success');
+    renderSalaryHistoryModal(empId);
+  } catch(e) { toast('خطأ: '+e.message, 'error'); }
 };
 
 window.saveEmployee = async () => {
@@ -2039,6 +2220,7 @@ window.saveEmployee = async () => {
     phone: document.getElementById('emp-phone').value.trim(),
     nationalId: document.getElementById('emp-nid').value.trim(),
     status: document.getElementById('emp-status').value,
+    resignDate: document.getElementById('emp-status').value==='resigned' ? (document.getElementById('emp-resign-date').value || null) : null,
     isManager
   };
   try {
@@ -2109,9 +2291,16 @@ function leaveBalanceOf(emp, type) {
   const t = LEAVE_TYPES[type] || LEAVE_TYPES.regular;
   return emp?.[t.field] ?? t.defaultBalance;
 }
-// هل كان الموظف معيّناً بالفعل في هذا التاريخ؟ (في حال عدم وجود تاريخ تعيين مسجّل، يُعتبر موجوداً دائماً توافقاً مع البيانات القديمة)
+// هل كان الموظف معيّناً وشغال بالفعل في هذا التاريخ؟ (بيراعي تاريخ التعيين وتاريخ الاستقالة لو موجودين)
+// - من غير تاريخ تعيين مسجّل: يُعتبر موجوداً دائماً (توافقاً مع البيانات القديمة)
+// - مستقيل من غير تاريخ استقالة مسجّل: يُستبعد دائمًا (نفس السلوك القديم قبل إضافة الحقل، لحد ما يتسجل تاريخه)
 function employeeHiredBy(emp, dateStr) {
-  return !emp.hireDate || emp.hireDate <= dateStr;
+  if (emp.hireDate && emp.hireDate > dateStr) return false;
+  if (emp.status==='resigned') {
+    if (!emp.resignDate) return false;
+    if (emp.resignDate < dateStr) return false;
+  }
+  return true;
 }
 // هل الموظف أكمل 6 شهور خدمة في تاريخ معيّن؟ (شرط استحقاق الإجازة من الرصيد — الاعتيادية والعارضة والجواز)
 function hasSixMonthsService(emp, dateStr) {
@@ -2376,6 +2565,11 @@ async function kioskLoadStatus() {
       bodyHtml += `<button class="auth-btn" onclick="kioskLeaveCutCheckin()"><i class="fas fa-briefcase"></i>عايز أشتغل النهاردة وأقطع إجازتي</button>`;
     }
     bodyHtml += `<div style="margin-top:12px;display:flex;flex-direction:column;gap:8px">
+      <a href="javascript:void(0)" onclick="kioskShowProfile()" style="font-size:12px;color:var(--ac-600);font-weight:700">عرض سجلي السنوي</a>
+      <a href="javascript:void(0)" onclick="kioskShowLeaveForm()" style="font-size:12px;color:var(--ac-600);font-weight:700">طلب إجازة</a>
+      <a href="javascript:void(0)" onclick="kioskShowMyLeaveRequests()" style="font-size:12px;color:var(--ac-600);font-weight:700">حالة طلبات إجازتي</a>
+      <a href="javascript:void(0)" onclick="kioskShowPersonalPermissionForm()" style="font-size:12px;color:var(--ac-600);font-weight:700">طلب إذن شخصي (مستقبلي)</a>
+      <a href="javascript:void(0)" onclick="kioskShowMyPersonalPermissionRequests()" style="font-size:12px;color:var(--ac-600);font-weight:700">حالة طلبات إذني الشخصي</a>
       <a href="javascript:void(0)" onclick="kioskRenderCodeEntry()" style="font-size:11.5px;color:var(--slate-500)">مش أنا؟ رجوع</a>
     </div>`;
     document.getElementById('kiosk-body').innerHTML = bodyHtml;
@@ -2445,12 +2639,17 @@ async function kioskLoadStatus() {
         <button class="auth-btn" id="kiosk-act-btn" onclick="kioskDoAction('checkin')"><i class="fas fa-fingerprint"></i>تسجيل حضور</button>`;
     } else if (now>to) {
       const lateMins = roundUpToHalfHour(now - hmToMin(shift.start));
-      const remaining = await ppRemainingMinutes(secDb, emp.id, period);
-      if (remaining >= lateMins) {
-        bodyHtml += `<div style="font-size:12px;color:var(--slate-600);margin-bottom:8px">اتأخرت عن معاد وردية، تقدر تسجل حضورك دلوقتي باستخدام ${minutesToHoursLabel(lateMins)} من رصيد إذنك الشخصي (المتبقي: ${minutesToHoursLabel(remaining)})</div>
-          <button class="auth-btn" onclick="kioskInstantPermissionCheckin(${lateMins})"><i class="fas fa-fingerprint"></i>تسجيل حضور بإذن شخصي</button>`;
+      const alreadyUsedToday = await hasActivePersonalPermissionToday(secDb, emp.id, today);
+      if (alreadyUsedToday) {
+        bodyHtml += `<div class="auth-err">استخدمت طلب الإذن الشخصي بتاعك النهاردة بالفعل — مينفعش أكتر من طلب واحد في اليوم</div>`;
       } else {
-        bodyHtml += `<div class="auth-err">نأسف، لقد تأخرت في الحضور وانتهى رصيد الإذن الشخصي لديك</div>`;
+        const remaining = await ppRemainingMinutes(secDb, emp.id, period);
+        if (remaining >= lateMins) {
+          bodyHtml += `<div style="font-size:12px;color:var(--slate-600);margin-bottom:8px">اتأخرت عن معاد وردية، تقدر تسجل حضورك دلوقتي باستخدام ${minutesToHoursLabel(lateMins)} من رصيد إذنك الشخصي (المتبقي: ${minutesToHoursLabel(remaining)})</div>
+          <button class="auth-btn" onclick="kioskInstantPermissionCheckin(${lateMins})"><i class="fas fa-fingerprint"></i>تسجيل حضور بإذن شخصي</button>`;
+        } else {
+          bodyHtml += `<div class="auth-err">نأسف، لقد تأخرت في الحضور وانتهى رصيد الإذن الشخصي لديك</div>`;
+        }
       }
     } else {
       bodyHtml += `<div class="auth-err">ليس وقت الحضور الآن — مسموح فقط من ${shift.checkinFrom} حتى ${shift.checkinTo}</div>`;
@@ -2524,10 +2723,10 @@ async function kioskRenderProfileBody() {
 
     const curSheet = sheets[curPeriod];
     const netSalary = computeNetSalaryForPeriod(emp, curPeriod);
-    const deduction = computeMonthlyDeduction(emp, curSheet);
-    const extraAmount = computeExtraDaysAmount(emp, curSheet);
-    const otAmount = computeOvertimeAmount(emp, curSheet);
-    const rewardAmount = computeMonthlyRewardAmount(emp, curSheet);
+    const deduction = computeMonthlyDeduction(emp, curSheet, curPeriod);
+    const extraAmount = computeExtraDaysAmount(emp, curSheet, curPeriod);
+    const otAmount = computeOvertimeAmount(emp, curSheet, curPeriod);
+    const rewardAmount = computeMonthlyRewardAmount(emp, curSheet, curPeriod);
 
     body.innerHTML = `
       <div style="text-align:right;background:var(--slate-100);border-radius:10px;padding:14px 16px;margin:16px 0;display:flex;flex-direction:column;gap:6px">
@@ -2539,7 +2738,7 @@ async function kioskRenderProfileBody() {
         <div style="display:flex;justify-content:space-between;font-size:13px"><span>+ قيمة الأيام والساعات الإضافية هذا الشهر</span><span style="font-weight:800;color:var(--ok-600)">${extraAmount+otAmount} ج.م</span></div>
         <div style="display:flex;justify-content:space-between;font-size:13px"><span>+ قيمة المكافآت هذا الشهر</span><span style="font-weight:800;color:var(--ok-600)">${rewardAmount} ج.م</span></div>
         <div style="display:flex;justify-content:space-between;font-size:13px"><span>- خصم الغياب والجزاءات هذا الشهر</span><span style="font-weight:800;color:var(--danger-600)">${deduction} ج.م</span></div>
-        <div style="display:flex;justify-content:space-between;font-size:13px"><span>الحافز المستحق هذا الشهر</span><span style="font-weight:800">${curEval?.finalScore!=null ? computeIncentive(emp,curEval.finalScore)+' ج.م' : 'محتاج تقييم الشهر الأول'}</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:13px"><span>الحافز المستحق هذا الشهر</span><span style="font-weight:800">${curEval?.finalScore!=null ? computeIncentive(emp,curEval.finalScore,curPeriod)+' ج.م' : 'محتاج تقييم الشهر الأول'}</span></div>
         <div style="display:flex;justify-content:space-between;font-size:13px"><span>تقييم/حافز الشهر الحالي</span><span style="font-weight:800">${curEval?.finalScore!=null ? curEval.finalScore+'%' : 'لم يُحدَّد بعد'}</span></div>
       </div>
       <div style="text-align:right;margin-top:6px;font-weight:700;font-size:13px">تفاصيل سنة ${year}</div>
@@ -2752,6 +2951,14 @@ window.kioskShowPersonalPermissionForm = async () => {
   const emp = window._kioskEmp;
   const today = todayStr();
   const period = periodForDate(today);
+  document.getElementById('kiosk-body').innerHTML = '<div class="empty"><i class="fas fa-spinner fa-spin"></i><p>جاري التحميل...</p></div>';
+  const alreadyUsedToday = await hasActivePersonalPermissionToday(secDb, emp.id, today);
+  if (alreadyUsedToday) {
+    document.getElementById('kiosk-body').innerHTML = `
+      <div class="auth-err">استخدمت طلب الإذن الشخصي بتاعك النهاردة بالفعل — مينفعش أكتر من طلب واحد في اليوم</div>
+      <div style="margin-top:12px"><a href="javascript:void(0)" onclick="kioskLoadStatus()" style="font-size:12px;color:var(--slate-500)">رجوع</a></div>`;
+    return;
+  }
   const remaining = await ppRemainingMinutes(secDb, emp.id, period);
   const maxHalfHours = Math.floor(remaining/30);
   let optionsHtml = '';
@@ -2792,6 +2999,13 @@ window.kioskSubmitPersonalPermission = async () => {
   const btn = document.getElementById('pp-submit-btn');
   btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الإرسال...';
   try {
+    const alreadyUsedToday = await hasActivePersonalPermissionToday(secDb, emp.id, today);
+    if (alreadyUsedToday) {
+      err.textContent = 'استخدمت طلب الإذن الشخصي بتاعك النهاردة بالفعل — مينفعش أكتر من طلب واحد في اليوم';
+      err.style.display = '';
+      btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i>إرسال الطلب';
+      return;
+    }
     const remaining = await ppRemainingMinutes(secDb, emp.id, period);
     if (minutes > remaining) {
       err.textContent = `رصيدك المتبقي (${minutesToHoursLabel(remaining)}) أقل من المدة المطلوبة`;
@@ -3022,7 +3236,7 @@ async function renderDaily() {
   });
   const marks = {}; markSnap.docs.forEach(d=>{ const v=d.data(); marks[v.employeeId]={id:d.id,...v}; });
 
-  let activeEmps = _employees.filter(e=>e.status!=='resigned' && e.shiftId && employeeHiredBy(e,date));
+  let activeEmps = _employees.filter(e=>e.shiftId && employeeHiredBy(e,date));
   // في يوم إجازة رسمية، غير الموظفين المستثنين (اللي هيشتغلوا) محدش مطلوب منه يبصم — بنشيلهم من المتابعة
   if (holiday) activeEmps = activeEmps.filter(e=>exemptIds.includes(e.id));
 
@@ -3243,7 +3457,7 @@ async function renderDailyMarkPage() {
   const checkins = {}; attSnap.docs.forEach(d=>{ const v=d.data(); if (v.type==='checkin') checkins[v.employeeId]={id:d.id,...v}; });
   const marks = {}; markSnap.docs.forEach(d=>{ const v=d.data(); marks[v.employeeId]={id:d.id,...v}; });
 
-  const activeEmps = _employees.filter(e=>e.status!=='resigned' && e.category!=='rep' && e.category!=='driver' && employeeHiredBy(e,date))
+  const activeEmps = _employees.filter(e=>e.category!=='rep' && e.category!=='driver' && employeeHiredBy(e,date))
     .sort((a,b)=>a.name.localeCompare(b.name,'ar'));
 
   if (!activeEmps.length) { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--slate-500)">لا يوجد موظفون</td></tr>'; return; }
@@ -3307,7 +3521,7 @@ async function renderOvertime() {
   body.innerHTML = pending.map(r=>{
     const emp = _employees.find(e=>e.id===r.employeeId);
     const hours = Math.round(r.pendingOvertimeMinutes/60*100)/100;
-    const rate = emp ? (emp.salary/30/8)*1.7 : 0;
+    const rate = emp ? ((getSalaryConfigForDate(emp, r.date).salary||0)/30/8)*1.7 : 0;
     const amount = Math.round(rate*hours*100)/100;
     return `<div class="card" style="margin-bottom:12px"><div class="card-body" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
       <div>
@@ -3350,11 +3564,16 @@ function cycleRangeForPeriod(periodStr) {
   const startDate = `${py}-${String(pm).padStart(2,'0')}-26`;
   return { startDate, endDate };
 }
-// الموظف يظهر في دورة الشهر دي لو كان متعين قبل أو أثناء الدورة (حتى لو اتعين قبل ما النظام يشتغل أصلاً)
+// الموظف يظهر في دورة الشهر دي لو كان متعين قبل أو أثناء الدورة، ولو استقال يظهر لحد آخر دورة كان شغال فيها فعليًا
+// (بيراعي تاريخ الاستقالة لو مسجّل؛ مستقيل من غير تاريخ مسجّل بيتشال زي السلوك القديم بالظبط)
 function employeeInPeriod(emp, periodStr) {
-  if (!emp.hireDate) return true;
-  const { endDate } = cycleRangeForPeriod(periodStr);
-  return emp.hireDate <= endDate;
+  const { startDate, endDate } = cycleRangeForPeriod(periodStr);
+  if (emp.hireDate && emp.hireDate > endDate) return false;
+  if (emp.status==='resigned') {
+    if (!emp.resignDate) return false;
+    if (emp.resignDate < startDate) return false;
+  }
+  return true;
 }
 
 async function renderMonthly() {
@@ -3364,7 +3583,7 @@ async function renderMonthly() {
   const body = document.getElementById('monthly-body');
   body.innerHTML = `<tr><td colspan="14"><div class="empty"><i class="fas fa-spinner fa-spin"></i><p>جاري التحميل...</p></div></td></tr>`;
 
-  const activeEmps = _employees.filter(e=>e.status!=='resigned' && e.category!=='rep' && e.category!=='driver' && employeeInPeriod(e,period));
+  const activeEmps = _employees.filter(e=>e.category!=='rep' && e.category!=='driver' && employeeInPeriod(e,period));
   if (!activeEmps.length) { body.innerHTML = `<tr><td colspan="14"><div class="empty"><p>لا يوجد موظفون لهذا الشهر</p></div></td></tr>`; return; }
 
   let sheets = {}, evals = {}, penaltySum = {}, rewardSum = {};
@@ -3466,7 +3685,7 @@ window.autoFillMonthly = async () => {
       const v = d.data();
       if (v.overtimeApproved && v.pendingOvertimeMinutes) otHours[v.employeeId] = (otHours[v.employeeId]||0) + v.pendingOvertimeMinutes/60;
     });
-    const targets = _employees.filter(e=>e.status!=='resigned' && employeeInPeriod(e,period));
+    const targets = _employees.filter(e=>employeeInPeriod(e,period));
     const wouldOverwrite = targets.some(e=>{
       const leaveEl = document.getElementById(`ms-leave-${e.id}`);
       return leaveEl && parseFloat(leaveEl.value||0) > 0 && (leaveCount[e.id]||0) !== parseFloat(leaveEl.value||0);
@@ -3507,7 +3726,7 @@ const MONTHLY_IMPORT_FIELDS = [
 window.exportMonthlyToExcel = async () => {
   const period = document.getElementById('monthly-period').value || currentPeriodStr();
   document.getElementById('monthly-period').value = period;
-  const activeEmps = _employees.filter(e=>e.status!=='resigned' && e.category!=='rep' && e.category!=='driver' && employeeInPeriod(e,period));
+  const activeEmps = _employees.filter(e=>e.category!=='rep' && e.category!=='driver' && employeeInPeriod(e,period));
   if (!activeEmps.length) { toast('لا يوجد موظفون لهذا الشهر', 'error'); return; }
 
   let sheets = {}, evals = {};
@@ -3532,12 +3751,13 @@ window.exportMonthlyToExcel = async () => {
     const s = sheets[e.id] || {};
     const ev = evals[e.id];
     const dept = _departments.find(d=>d.id===e.departmentId);
+    const cfg = getSalaryConfigForDate(e, cycleRangeForPeriod(period).endDate);
     aoa.push([
       e.code||'', e.name, e.jobTitle||'', dept?dept.name:'',
       s.overtimeHours ?? 0, s.extraDays ?? 0, s.leaveFromBalance ?? 0, s.sickLeave ?? 0,
       s.leaveUnpaid ?? 0, s.absence ?? 0, s.personalPermission ?? 0,
       ev?.finalScore ?? '', s.penaltyDays ?? 0, s.rewardDays ?? 0,
-      e.salary||0, computeNetSalaryForPeriod(e,period), e.incentiveBase||0,
+      cfg.salary||0, computeNetSalaryForPeriod(e,period), cfg.incentiveBase||0,
       0,0,0,0,0,0, // R..W: أعمدة معادلات، بتتحط تحتها فورًا
       s.notes||''
     ]);
@@ -3711,7 +3931,7 @@ async function renderEvaluation() {
   body.innerHTML = `<tr><td colspan="6"><div class="empty"><i class="fas fa-spinner fa-spin"></i><p>جاري التحميل...</p></div></td></tr>`;
 
   const canMgr = hasPerm('eval_manager'), canHr = hasPerm('eval_hr'), canFactory = hasPerm('eval_factory');
-  let activeEmps = _employees.filter(e=>e.status!=='resigned' && e.category!=='rep' && e.category!=='driver' && employeeInPeriod(e,period));
+  let activeEmps = _employees.filter(e=>e.category!=='rep' && e.category!=='driver' && employeeInPeriod(e,period));
   // مدير قسم بصلاحية eval_manager بس (مش أدمن ومش عنده الصلاحيات التانية) يشوف موظفين قسمه فقط
   if (CU.role!=='admin' && canMgr && !canHr && !canFactory && CU.departmentId) {
     activeEmps = activeEmps.filter(e=>e.departmentId===CU.departmentId);
@@ -3844,11 +4064,11 @@ async function renderProfile() {
   const curSheet = sheets[curPeriod];
   const curEvalScore = evals[curPeriod]?.finalScore ?? null;
   const netSalary = computeNetSalaryForPeriod(emp, curPeriod);
-  const deduction = computeMonthlyDeduction(emp, curSheet);
-  const extraAmount = computeExtraDaysAmount(emp, curSheet);
-  const otAmount = computeOvertimeAmount(emp, curSheet);
-  const rewardAmount = computeMonthlyRewardAmount(emp, curSheet);
-  const incentive = computeIncentive(emp, curEvalScore);
+  const deduction = computeMonthlyDeduction(emp, curSheet, curPeriod);
+  const extraAmount = computeExtraDaysAmount(emp, curSheet, curPeriod);
+  const otAmount = computeOvertimeAmount(emp, curSheet, curPeriod);
+  const rewardAmount = computeMonthlyRewardAmount(emp, curSheet, curPeriod);
+  const incentive = computeIncentive(emp, curEvalScore, curPeriod);
   const estimatedTotal = Math.round((netSalary - deduction + extraAmount + otAmount + rewardAmount)*100)/100;
 
   body.innerHTML = `
@@ -4111,6 +4331,13 @@ async function ppRemainingMinutes(dbRef, employeeId, period) {
     .filter(r=>r.status==='auto'||r.status==='approved')
     .reduce((s,r)=>s+(r.minutes||0),0);
   return Math.max(0, PERSONAL_PERMISSION_CYCLE_MINUTES - used);
+}
+// الموظف مسموحله بس بطلب إذن شخصي واحد فعّال في اليوم (فوري أو مستقبلي — مهما كان النوع)،
+// المرفوض بس مبيتحسبش عشان منمنعوش من إعادة المحاولة لو طلبه اتقفل
+async function hasActivePersonalPermissionToday(dbRef, employeeId, date) {
+  const snap = await getDocs(query(collection(dbRef,'personalPermissionRequests'),
+    where('employeeId','==',employeeId), where('kind','==','permission'), where('date','==',date)));
+  return snap.docs.map(d=>d.data()).some(r=>r.status==='auto'||r.status==='approved'||r.status==='pending');
 }
 
 async function bumpMonthlySheet(employeeId, period, deltas, noteAppend) {
