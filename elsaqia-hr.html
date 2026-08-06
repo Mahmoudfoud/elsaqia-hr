@@ -2311,6 +2311,43 @@ function isWeeklyOffDate(dateStr, workDays) {
 }
 const DAY_LABELS = ['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
 
+// بيرجع كل الإجازات الرسمية اللي بتقع بين تاريخين (شاملين الطرفين) — بتُستخدم في حساب أيام الإجازة الفعلية
+async function getHolidaysInRange(dateFrom, dateTo, dbInst) {
+  const snap = await getDocs(query(collection(dbInst,'officialHolidays'), where('date','>=',dateFrom), where('date','<=',dateTo)));
+  return snap.docs.map(d=>({id:d.id,...d.data()}));
+}
+// بيحسب الأيام "الفعلية" اللي المفروض تتخصم من رصيد الموظف بين تاريخين — بيستثني إجازته الأسبوعية (حسب
+// وردية موظفه) وأي إجازة رسمية مسجّلة (إلا لو هو مستثنى منها بالاسم). النتيجة مرتبة زمنيًا.
+function computeBillableDates(dateFrom, dateTo, workDays, holidays, employeeId) {
+  const holidayDates = new Set((holidays||[]).filter(h => !(h.exemptEmployeeIds||[]).includes(employeeId)).map(h=>h.date));
+  const out = [];
+  let d = new Date(dateFrom+'T00:00:00');
+  const end = new Date(dateTo+'T00:00:00');
+  while (d <= end) {
+    const ds = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    if (!isWeeklyOffDate(ds, workDays) && !holidayDates.has(ds)) out.push(ds);
+    d.setDate(d.getDate()+1);
+  }
+  return out;
+}
+// كل التواريخ التقويمية بين تاريخين (شاملين الطرفين) من غير أي استثناء — تُستخدم كـ fallback للطلبات
+// القديمة اللي اتسجّلت قبل تفعيل استثناء الويكند/الإجازات الرسمية (مفيش عندها billableDates محفوظة)
+function calendarDatesBetween(dateFrom, dateTo) {
+  const out = [];
+  let d = new Date(dateFrom+'T00:00:00');
+  const end = new Date(dateTo+'T00:00:00');
+  while (d <= end) {
+    out.push(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'));
+    d.setDate(d.getDate()+1);
+  }
+  return out;
+}
+// بيرجع الأيام الفعلية المحسوبة لطلب إجازة — من billableDates المحفوظة لو موجودة (طلب حديث)، وإلا
+// بيرجع للسلوك القديم (كل الأيام التقويمية) عشان الطلبات اللي اتسجّلت قبل هذا التحديث تفضل شغالة صح
+function billableDatesOf(r) {
+  return (r.billableDates && r.billableDates.length) ? r.billableDates : calendarDatesBetween(r.dateFrom, r.dateTo);
+}
+
 // أنواع الإجازة: كل نوع رصيد مستقل تمامًا عن التاني
 const LEAVE_TYPES = {
   regular:  { label:'إجازة اعتيادية', field:'leaveBalanceRegular',  defaultBalance:14, monthlyCap:true,  advanceDays:1 },
@@ -2351,19 +2388,15 @@ function hasSixMonthsService(emp, dateStr) {
 // أول daysFromBalance يوم (بالترتيب من dateFrom) بيتحسبوا "من الرصيد"، والباقي بعد كده "بالخصم" —
 // بالظبط زي ما بيحصل فعليًا (الرصيد بيخلص في يوم معيّن ولسه فاضل أيام من الطلب). كده الأرقام لكل دورة
 // بتطلع أعداد صحيحة مظبوطة، من غير أي تقريب أو كسور عشرية.
-function allocateLeaveDaysAcrossPeriods(dateFrom, dateTo, daysFromBalance) {
+// بيوزّع أيام الإجازة "الفعلية" بس (billableDates — بعد استثناء الويكند/الإجازات الرسمية) على الدورات
+// المالية اللي بتقطعها، وبيحدد لكل يوم هل هو من الرصيد ولا بالخصم حسب ترتيبه الزمني
+function allocateLeaveDaysAcrossPeriods(billableDates, daysFromBalance) {
   const result = {};
-  let d = new Date(dateFrom+'T00:00:00');
-  const end = new Date(dateTo+'T00:00:00');
-  let i = 0;
-  while (d <= end) {
-    const ds = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  billableDates.forEach((ds, i) => {
     const p = periodForDate(ds);
     if (!result[p]) result[p] = { fromBalance:0, unpaid:0 };
     if (i < daysFromBalance) result[p].fromBalance++; else result[p].unpaid++;
-    i++;
-    d.setDate(d.getDate()+1);
-  }
+  });
   return result;
 }
 function todayStr() { const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
@@ -2932,10 +2965,22 @@ window.kioskSubmitLeaveRequest = async () => {
     }
   }
 
-  const daysCount = Math.round((new Date(dateTo)-new Date(dateFrom))/86400000)+1;
   const btn = document.getElementById('kiosk-leave-btn');
   btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التحقق...';
   try {
+    // نجيب وردية الموظف (لأيام الويكند بتاعتها) وأي إجازات رسمية واقعة في مدى التاريخ المطلوب،
+    // عشان الأيام دي ميتحسبوش من رصيده أصلاً — هو أساسًا مش هيشتغل فيهم
+    const shiftSnap = emp.shiftId ? await getDoc(doc(secDb,'shifts',emp.shiftId)) : null;
+    const workDays = shiftSnap && shiftSnap.exists() ? shiftSnap.data().workDays : DEFAULT_WORK_DAYS;
+    const holidaysInRange = await getHolidaysInRange(dateFrom, dateTo, secDb);
+    const billableDates = computeBillableDates(dateFrom, dateTo, workDays, holidaysInRange, emp.id);
+    if (!billableDates.length) {
+      err.textContent = 'التواريخ دي كلها إجازة أسبوعية أو رسمية أصلاً — مفيش داعي تطلب إجازة عليها.';
+      btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i>إرسال الطلب';
+      return;
+    }
+    const daysCount = billableDates.length;
+
     // اجلب كل طلبات الموظف ده عشان نتحقق من الحدود المختلفة
     const mySnap = await getDocs(query(collection(secDb,'leaveRequests'), where('employeeId','==',emp.id)));
     const myReqs = mySnap.docs.map(d=>d.data());
@@ -2979,7 +3024,7 @@ window.kioskSubmitLeaveRequest = async () => {
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الإرسال...';
     await addDoc(collection(secDb,'leaveRequests'), {
       employeeId: emp.id, employeeName: emp.name, departmentId: emp.departmentId||null,
-      leaveType, dateFrom, dateTo, daysCount, note, status:'pending', source:'kiosk',
+      leaveType, dateFrom, dateTo, daysCount, billableDates, note, status:'pending', source:'kiosk',
       managerApproved: null, hrApproved: null,
       requestedAt: Date.now(), requestedBy: 'kiosk:'+(emp.code||emp.id)
     });
@@ -4811,11 +4856,17 @@ window.saveLeaveRequest = async () => {
   if (!employeeId || !dateFrom || !dateTo) { toast('املأ الموظف والتواريخ', 'error'); return; }
   if (dateTo < dateFrom) { toast('تاريخ النهاية لازم يكون بعد تاريخ البداية', 'error'); return; }
   const emp = _employees.find(e=>e.id===employeeId);
-  const daysCount = Math.round((new Date(dateTo)-new Date(dateFrom))/86400000)+1;
   try {
+    // نفس منطق الكيوسك بالظبط: نستثني أيام الويكند بتاعت وردية الموظف وأي إجازة رسمية من العدّ الفعلي
+    const shift = _shifts.find(s=>s.id===emp.shiftId);
+    const workDays = shift ? shift.workDays : DEFAULT_WORK_DAYS;
+    const holidaysInRange = await getHolidaysInRange(dateFrom, dateTo, db);
+    const billableDates = computeBillableDates(dateFrom, dateTo, workDays, holidaysInRange, emp.id);
+    if (!billableDates.length) { toast('التواريخ دي كلها إجازة أسبوعية أو رسمية أصلاً — مفيش داعي تسجّل إجازة عليها', 'error'); return; }
+    const daysCount = billableDates.length;
     await addDoc(collection(db,'leaveRequests'), {
       employeeId, employeeName: emp.name, departmentId: emp.departmentId||null,
-      leaveType, dateFrom, dateTo, daysCount, note, status:'pending',
+      leaveType, dateFrom, dateTo, daysCount, billableDates, note, status:'pending',
       managerApproved: null, hrApproved: null,
       requestedAt: Date.now(), requestedBy: CU.email
     });
@@ -4841,8 +4892,8 @@ window.rejectLeaveRequestStage = async (id, stage) => {
 };
 
 // بيوزّع daysFromBalance و daysUnpaid على الدورات المالية اللي الطلب بيقطعها (حسب تاريخ كل يوم فعليًا)، وبيبعت التحديث لكل دورة على حدة
-async function applySplitAcrossPeriods(employeeId, dateFrom, dateTo, totalDaysFromBalance, totalDaysUnpaid, leaveTypeLabel) {
-  const perPeriod = allocateLeaveDaysAcrossPeriods(dateFrom, dateTo, totalDaysFromBalance);
+async function applySplitAcrossPeriods(employeeId, billableDates, totalDaysFromBalance, totalDaysUnpaid, leaveTypeLabel, dateFrom, dateTo) {
+  const perPeriod = allocateLeaveDaysAcrossPeriods(billableDates, totalDaysFromBalance);
   for (const period in perPeriod) {
     const { fromBalance, unpaid } = perPeriod[period];
     await bumpMonthlySheet(employeeId, period, { leaveFromBalance: fromBalance, leaveUnpaid: unpaid },
@@ -4884,7 +4935,7 @@ async function settleLeaveStage(id, stage, approved, override=false) {
       await updateDoc(doc(db,'employees',r.employeeId), { [field]: balance - daysFromBalance });
     }
     await updateDoc(doc(db,'leaveRequests',id), { ...patch, status:'approved', daysFromBalance, daysUnpaid, sixMonthOverride: !!override, sixMonthEligible: eligible });
-    await applySplitAcrossPeriods(r.employeeId, r.dateFrom, r.dateTo, daysFromBalance, daysUnpaid, LEAVE_TYPES[leaveType].label);
+    await applySplitAcrossPeriods(r.employeeId, billableDatesOf(r), daysFromBalance, daysUnpaid, LEAVE_TYPES[leaveType].label, r.dateFrom, r.dateTo);
   } else {
     // لسه مستني موافقة المرحلة التانية
     await updateDoc(doc(db,'leaveRequests',id), patch);
@@ -4915,7 +4966,7 @@ window.approveLeaveRequest = async (id, override) => {
       await updateDoc(doc(db,'employees',r.employeeId), { [field]: balance - daysFromBalance });
     }
     await updateDoc(doc(db,'leaveRequests',id), { status:'approved', managerApproved:true, hrApproved:true, daysFromBalance, daysUnpaid, approvedBy: CU.email, approvedAt: Date.now(), sixMonthOverride: !!override, sixMonthEligible: eligible });
-    await applySplitAcrossPeriods(r.employeeId, r.dateFrom, r.dateTo, daysFromBalance, daysUnpaid, LEAVE_TYPES[leaveType].label);
+    await applySplitAcrossPeriods(r.employeeId, billableDatesOf(r), daysFromBalance, daysUnpaid, LEAVE_TYPES[leaveType].label, r.dateFrom, r.dateTo);
     toast('تمت الموافقة على الإجازة', 'success');
     renderLeaves();
   } catch(e) { toast('خطأ: '+e.message, 'error'); }
@@ -4981,6 +5032,51 @@ window.openHolidayModal = (id=null) => {
   openM('mo-holiday');
 };
 
+// لما إجازة رسمية تتضاف/تتعدّل، أي طلب إجازة (معلّق أو معتمد) شامل نفس اليوم لازم يترفع منه اليوم ده —
+// مش منطقي يتخصم يوم من رصيد الموظف الشخصي في يوم أصلاً إجازة رسمية للكل. الدالة دي بتتنفّذ تلقائيًا:
+// - لو الطلب لسه معلّق: بترفع اليوم ده من daysCount/billableDates بس (لسه مفيش رصيد اتخصم أصلاً)
+// - لو الطلب معتمد فعلاً (والرصيد اتخصم بالفعل وقتها): بترجّع اليوم ده لرصيد الموظف وتصحّح الكشف الشهري
+// ملحوظة: الموظفين المستثنيين بالاسم من الإجازة الرسمية دي (exemptEmployeeIds) مش بيتأثروا خالص.
+async function reconcileHolidayImpact(holidayDate, exemptEmployeeIds, holidayTitle) {
+  const snap = await getDocs(query(collection(db,'leaveRequests'), where('dateFrom','<=',holidayDate)));
+  const candidates = snap.docs
+    .map(d=>({ id:d.id, ref:d.ref, ...d.data() }))
+    .filter(r => r.status !== 'rejected' && r.dateTo >= holidayDate);
+  let affected = 0;
+  for (const r of candidates) {
+    if ((exemptEmployeeIds||[]).includes(r.employeeId)) continue;
+    const dates = billableDatesOf(r);
+    const idx = dates.indexOf(holidayDate);
+    if (idx === -1) continue; // اليوم ده أصلاً مش محسوب على الموظف ده (كان ويكند بتاعته أصلاً مثلاً)
+    const newDates = dates.filter(d=>d!==holidayDate);
+    const patch = {
+      billableDates: newDates, daysCount: newDates.length,
+      holidayAdjustments: [...(r.holidayAdjustments||[]), { date: holidayDate, title: holidayTitle, adjustedAt: Date.now() }]
+    };
+    if (r.status === 'approved') {
+      const wasFromBalance = idx < (r.daysFromBalance||0);
+      const period = periodForDate(holidayDate);
+      if (wasFromBalance) {
+        patch.daysFromBalance = Math.max(0, (r.daysFromBalance||0) - 1);
+        const emp = _employees.find(e=>e.id===r.employeeId);
+        if (emp) {
+          const field = LEAVE_TYPES[r.leaveType||'regular'].field;
+          await updateDoc(doc(db,'employees',r.employeeId), { [field]: leaveBalanceOf(emp, r.leaveType||'regular') + 1 });
+        }
+        await bumpMonthlySheet(r.employeeId, period, { leaveFromBalance: -1 },
+          `تصحيح تلقائي: يوم ${holidayDate} بقى إجازة رسمية (${holidayTitle}) — اترجع لرصيد الموظف`);
+      } else {
+        patch.daysUnpaid = Math.max(0, (r.daysUnpaid||0) - 1);
+        await bumpMonthlySheet(r.employeeId, period, { leaveUnpaid: -1 },
+          `تصحيح تلقائي: يوم ${holidayDate} بقى إجازة رسمية (${holidayTitle})`);
+      }
+    }
+    await updateDoc(r.ref, patch);
+    affected++;
+  }
+  return affected;
+}
+
 window.saveHoliday = async () => {
   const date = document.getElementById('hol-date').value;
   const title = document.getElementById('hol-title').value.trim();
@@ -4996,9 +5092,14 @@ window.saveHoliday = async () => {
     }
     closeM('mo-holiday');
     renderHolidays();
+    // نراجع طلبات الإجازة اللي كانت شاملة اليوم ده ونصحح أي تعارض تلقائيًا (رصيد + كشف شهري)
+    const affected = await reconcileHolidayImpact(date, exemptEmployeeIds, title);
+    if (affected > 0) toast(`تم تصحيح ${affected} طلب إجازة كان شامل اليوم ده تلقائيًا`, 'success');
   } catch(e) { toast('خطأ: '+e.message, 'error'); }
 };
 
+// ملحوظة: حذف إجازة رسمية مش بيرجّع تلقائيًا أي تصحيح كان حصل بسببها لطلبات الإجازة (نادر الحدوث،
+// وأي تصحيح رجعي هيحتاج مراجعة يدوية عشان نتأكد إنه مش هيتعارض مع تعديلات تانية حصلت في الوقت ده)
 window.deleteHoliday = async (id) => {
   if (!confirm('متأكد من حذف الإجازة الرسمية دي؟')) return;
   try { await deleteDoc(doc(db,'officialHolidays',id)); toast('تم الحذف', 'success'); renderHolidays(); }
