@@ -396,11 +396,11 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
     <!-- MONTHLY EVALUATION -->
     <div class="page" id="page-evaluation">
       <div class="ph">
-        <div><div class="ph-title">التقييم الشهري</div><div class="ph-sub">المدير 30% + الشؤون الإدارية 30% + مدير المصنع 40%</div></div>
+        <div><div class="ph-title">التقييم الشهري</div><div class="ph-sub">كل مقيّم يكتب درجته مباشرة من الحد الأقصى لقسمه (مدير القسم من 30 + الشؤون من 30 + مدير المصنع من 40) والمجموع = النسبة النهائية من 100</div></div>
         <div class="ph-acts"><input class="fc" type="month" id="eval-period" style="width:160px" onchange="renderEvaluation()"></div>
       </div>
       <div class="card"><table class="tbl">
-        <thead><tr><th>الاسم</th><th>تقييم المدير %</th><th>تقييم الشؤون %</th><th>تقييم مدير المصنع %</th><th>النسبة النهائية</th><th></th></tr></thead>
+        <thead><tr><th>الاسم</th><th>تقييم المدير (من 30)</th><th>تقييم الشؤون (من 30)</th><th>تقييم مدير المصنع (من 40)</th><th>النسبة النهائية</th><th></th></tr></thead>
         <tbody id="eval-body"></tbody>
       </table></div>
     </div>
@@ -2729,12 +2729,14 @@ async function kioskRenderProfileBody() {
   const body = document.getElementById('kiosk-body');
   body.innerHTML = '<div class="empty"><i class="fas fa-spinner fa-spin"></i><p>جاري التحميل...</p></div>';
   try {
-    const [sheetsSnap, evalsSnap, advancesSnap] = await Promise.all([
+    const [sheetsSnap, evalsSnap, advancesSnap, penaltyRewardsSnap] = await Promise.all([
       getDocs(query(collection(secDb,'monthlySheets'), where('employeeId','==',emp.id))),
       getDocs(query(collection(secDb,'evaluations'), where('employeeId','==',emp.id))),
-      getDocs(query(collection(secDb,'advances'), where('employeeId','==',emp.id)))
+      getDocs(query(collection(secDb,'advances'), where('employeeId','==',emp.id))),
+      getDocs(query(collection(secDb,'penaltyRewards'), where('employeeId','==',emp.id)))
     ]);
     const empAdvances = advancesSnap.docs.map(d=>({id:d.id,...d.data()}));
+    const empPenaltyRewards = penaltyRewardsSnap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
     const sheets = {}; sheetsSnap.docs.forEach(d=>{ const v=d.data(); if (v.period && v.period.startsWith(year+'-')) sheets[v.period]=v; });
     const evals = {}; evalsSnap.docs.forEach(d=>{ const v=d.data(); if (v.period && v.period.startsWith(year+'-')) evals[v.period]=v; });
 
@@ -2803,6 +2805,16 @@ async function kioskRenderProfileBody() {
         ${salaryChangeRows.join('')}
       </div>` : '';
 
+    // تاريخ كامل للجزاءات والمكافآت (كل السجلات، مش بس اللي لسه ما اتشافتش)
+    const penaltyRewardsHtml = empPenaltyRewards.length ? `
+      <div style="text-align:right;margin-top:14px">
+        <div style="font-weight:700;font-size:13px;margin-bottom:8px">تاريخ الجزاءات والمكافآت</div>
+        ${empPenaltyRewards.map(r=>`<div style="border:1px solid var(--slate-200);border-radius:8px;padding:8px 10px;margin-bottom:6px;font-size:12.5px">
+          <div style="display:flex;justify-content:space-between"><span>${r.type==='reward'?'مكافأة':'جزاء'} — ${r.days} يوم (${r.amount} ج.م)</span><span style="color:var(--slate-500)">${r.date||'—'}</span></div>
+          ${r.reason ? `<div style="color:var(--slate-500);margin-top:2px">${esc(r.reason)}</div>` : ''}
+        </div>`).join('')}
+      </div>` : '';
+
     // إجمالي/مستهلك/متبقي كل نوع إجازة — الإجمالي ثابت معروف من نظام الإجازات (بيتصفر بيه الرصيد عند التجديد السنوي)
     const leaveRow = (type, label) => {
       const total = LEAVE_TYPES[type].defaultBalance;
@@ -2832,6 +2844,7 @@ async function kioskRenderProfileBody() {
       <div style="text-align:right">${rows || '<div class="empty"><p>لا توجد بيانات شهرية مسجّلة بعد</p></div>'}</div>
       ${advancesHtml}
       ${salaryHistoryHtml}
+      ${penaltyRewardsHtml}
       <div style="margin-top:14px"><a href="javascript:void(0)" onclick="kioskLoadStatus()" style="font-size:11.5px;color:var(--slate-500)">→ رجوع</a></div>`;
   } catch(e) {
     body.innerHTML = `<div class="auth-err">خطأ: ${e.message}</div><div style="margin-top:10px"><a href="javascript:void(0)" onclick="kioskLoadStatus()" style="font-size:11.5px">رجوع</a></div>`;
@@ -3717,7 +3730,14 @@ async function renderMonthly() {
       <td>${esc(e.jobTitle)||'—'}</td>
       <td><input class="fc" style="width:80px;padding:6px" type="number" min="0" step="0.5" id="ms-ot-${e.id}" value="${s.overtimeHours ?? 0}"></td>
       <td><input class="fc" style="width:70px;padding:6px" type="number" min="0" id="ms-extra-${e.id}" value="${s.extraDays ?? 0}"></td>
-      <td><input class="fc" style="width:70px;padding:6px" type="number" min="0" id="ms-leave-${e.id}" value="${s.leaveFromBalance ?? 0}"></td>
+      <td>
+        <input class="fc" style="width:70px;padding:6px" type="number" min="0" id="ms-leave-${e.id}" value="${s.leaveFromBalance ?? 0}">
+        <select class="fc" style="width:76px;padding:4px;margin-top:4px;font-size:10.5px" id="ms-leave-type-${e.id}" title="نوع الإجازة — هيتحدد بيه رصيد أي نوع هيتعدّل">
+          <option value="regular"${(s.leaveFromBalanceType||'regular')==='regular'?' selected':''}>اعتيادية</option>
+          <option value="casual"${s.leaveFromBalanceType==='casual'?' selected':''}>عارضة</option>
+          <option value="marriage"${s.leaveFromBalanceType==='marriage'?' selected':''}>جواز</option>
+        </select>
+      </td>
       <td><input class="fc" style="width:70px;padding:6px" type="number" min="0" step="0.5" id="ms-sick-${e.id}" value="${s.sickLeave ?? 0}"></td>
       <td><input class="fc" style="width:70px;padding:6px" type="number" min="0" step="0.5" id="ms-leaveunpaid-${e.id}" value="${s.leaveUnpaid ?? 0}"></td>
       <td><input class="fc" style="width:70px;padding:6px" type="number" min="0" step="0.5" id="ms-absence-${e.id}" value="${s.absence ?? 0}"></td>
@@ -3743,17 +3763,33 @@ window.renderMonthly = renderMonthly;
 
 window.deleteMonthlyRow = async (docId) => {
   if (!confirm('متأكد من حذف بيانات الكشف الشهري للموظف ده الشهر ده؟')) return;
-  try { await deleteDoc(doc(db,'monthlySheets',docId)); toast('تم الحذف', 'success'); renderMonthly(); }
-  catch(e) { toast('خطأ: '+e.message, 'error'); }
+  try {
+    // لو الصف ده كان فيه إجازة من الرصيد متزامنة فعليًا مع رصيد الموظف (leaveFromBalanceType موجودة)،
+    // لازم نرجّع القيمة دي لرصيده قبل ما نمسح السجل، وإلا هتضيع من غير رجوع.
+    const snap = await getDoc(doc(db,'monthlySheets',docId));
+    const s = snap.exists() ? snap.data() : null;
+    if (s && s.leaveFromBalanceType && s.leaveFromBalance) {
+      const emp = _employees.find(e=>e.id===s.employeeId);
+      if (emp) {
+        const field = LEAVE_TYPES[s.leaveFromBalanceType]?.field;
+        if (field) await updateDoc(doc(db,'employees',s.employeeId), { [field]: leaveBalanceOf(emp, s.leaveFromBalanceType) + s.leaveFromBalance });
+      }
+    }
+    await deleteDoc(doc(db,'monthlySheets',docId));
+    toast('تم الحذف', 'success'); renderMonthly();
+  } catch(e) { toast('خطأ: '+e.message, 'error'); }
 };
 
 window.saveMonthlyRow = async (empId) => {
   const period = document.getElementById('monthly-period').value;
+  const newLeave = parseFloat(document.getElementById(`ms-leave-${empId}`).value)||0;
+  const newLeaveType = document.getElementById(`ms-leave-type-${empId}`)?.value || 'regular';
   const data = {
     employeeId: empId, period,
     overtimeHours: parseFloat(document.getElementById(`ms-ot-${empId}`).value)||0,
     extraDays: parseFloat(document.getElementById(`ms-extra-${empId}`).value)||0,
-    leaveFromBalance: parseFloat(document.getElementById(`ms-leave-${empId}`).value)||0,
+    leaveFromBalance: newLeave,
+    leaveFromBalanceType: newLeaveType,
     sickLeave: parseFloat(document.getElementById(`ms-sick-${empId}`).value)||0,
     leaveUnpaid: parseFloat(document.getElementById(`ms-leaveunpaid-${empId}`).value)||0,
     absence: parseFloat(document.getElementById(`ms-absence-${empId}`).value)||0,
@@ -3764,9 +3800,45 @@ window.saveMonthlyRow = async (empId) => {
     updatedAt: Date.now()
   };
   try {
-    const existing = await getDocs(query(collection(db,'monthlySheets'), where('employeeId','==',empId), where('period','==',period)));
-    if (!existing.empty) await updateDoc(doc(db,'monthlySheets',existing.docs[0].id), data);
+    const existingSnap = await getDocs(query(collection(db,'monthlySheets'), where('employeeId','==',empId), where('period','==',period)));
+    const existing = existingSnap.empty ? null : existingSnap.docs[0].data();
+    // hadSynced = الصف ده اتحفظ قبل كده بالنظام الجديد (يعني قيمته القديمة كانت فعلاً متطبّقة على رصيد الموظف)
+    const hadSynced = !!existing && existing.leaveFromBalanceType != null;
+    const oldLeave = existing?.leaveFromBalance || 0;
+    const oldType = existing?.leaveFromBalanceType || null;
+
+    // حساب تعديل رصيد الإجازة الناتج عن هذا الحفظ (بالفرق مش بالقيمة الكاملة، إلا لو أول مرة تتزامن)
+    const emp = _employees.find(x=>x.id===empId);
+    const empUpdates = {};
+    if (emp) {
+      if (hadSynced && oldType === newLeaveType) {
+        const delta = newLeave - oldLeave; // موجب = خصم إضافي من الرصيد، سالب = رجوع للرصيد
+        if (delta !== 0) {
+          const field = LEAVE_TYPES[newLeaveType].field;
+          empUpdates[field] = leaveBalanceOf(emp, newLeaveType) - delta;
+        }
+      } else if (hadSynced && oldType !== newLeaveType) {
+        // النوع اتغيّر: رجّع القيمة القديمة كاملة لنوعها القديم، واخصم القيمة الجديدة كاملة من نوعها الجديد
+        const oldField = LEAVE_TYPES[oldType].field;
+        const newField = LEAVE_TYPES[newLeaveType].field;
+        empUpdates[oldField] = leaveBalanceOf(emp, oldType) + oldLeave;
+        empUpdates[newField] = leaveBalanceOf(emp, newLeaveType) - newLeave;
+      } else if (!hadSynced && newLeave !== 0) {
+        // أول تزامن للصف ده — القيمة القديمة (لو موجودة) مكانتش متطبّقة على أي رصيد، فنطبّق القيمة الحالية كاملة
+        const field = LEAVE_TYPES[newLeaveType].field;
+        empUpdates[field] = leaveBalanceOf(emp, newLeaveType) - newLeave;
+      }
+    }
+
+    const wouldGoNegative = Object.values(empUpdates).some(v => v < 0);
+    if (wouldGoNegative && !confirm('التعديل ده هيخلي رصيد إجازة الموظف يبقى بالسالب — متأكد إنك عايز تكمل؟')) return;
+
+    const existingDocId = existingSnap.empty ? null : existingSnap.docs[0].id;
+    if (existingDocId) await updateDoc(doc(db,'monthlySheets',existingDocId), data);
     else await addDoc(collection(db,'monthlySheets'), { ...data, createdAt:Date.now() });
+
+    if (Object.keys(empUpdates).length) await updateDoc(doc(db,'employees',empId), empUpdates);
+
     toast('تم الحفظ', 'success');
   } catch(e) { toast('خطأ: '+e.message, 'error'); }
 };
@@ -4060,9 +4132,9 @@ async function renderEvaluation() {
     const final = ev.finalScore != null ? ev.finalScore+'%' : (hasAnyScore ? 'بانتظار الباقي' : '—');
     return `<tr>
       <td style="font-weight:700">${esc(e.name)}</td>
-      <td><input class="fc" style="width:80px;padding:6px" type="number" min="0" max="100" id="ev-mgr-${e.id}" value="${ev.managerScore ?? ''}"${canMgr?'':dis}></td>
-      <td><input class="fc" style="width:80px;padding:6px" type="number" min="0" max="100" id="ev-hr-${e.id}" value="${ev.hrScore ?? ''}"${canHr?'':dis}></td>
-      <td><input class="fc" style="width:80px;padding:6px" type="number" min="0" max="100" id="ev-factory-${e.id}" value="${ev.factoryScore ?? ''}"${canFactory?'':dis}></td>
+      <td><input class="fc" style="width:80px;padding:6px" type="number" min="0" max="30" step="1" id="ev-mgr-${e.id}" value="${ev.managerScore ?? ''}"${canMgr?'':dis}></td>
+      <td><input class="fc" style="width:80px;padding:6px" type="number" min="0" max="30" step="1" id="ev-hr-${e.id}" value="${ev.hrScore ?? ''}"${canHr?'':dis}></td>
+      <td><input class="fc" style="width:80px;padding:6px" type="number" min="0" max="40" step="1" id="ev-factory-${e.id}" value="${ev.factoryScore ?? ''}"${canFactory?'':dis}></td>
       <td style="font-weight:800" id="ev-final-${e.id}">${final}</td>
       <td style="display:flex;gap:4px">
         <button class="btn btn-ac btn-xs" onclick="saveEvalRow('${e.id}')"><i class="fas fa-save"></i></button>
@@ -4098,11 +4170,17 @@ window.saveEvalRow = async (empId) => {
   for (const [label, val] of required) {
     if (val==null || isNaN(val)) { toast(`من فضلك أدخل درجة "${label}" الأول`, 'error'); return; }
   }
-  for (const val of [mgr,hr,factory]) {
-    if (val!=null && (isNaN(val) || val<0 || val>100)) { toast('الدرجة لازم تكون رقم من 0 لـ100', 'error'); return; }
+  // كل خانة بمقياسها الصح (مدير من 30، شؤون من 30، مصنع من 40) وأرقام صحيحة بس (من غير كسور)
+  const SCORE_MAX = { 'تقييم مدير القسم':30, 'تقييم الشؤون الإدارية':30, 'تقييم مدير المصنع':40 };
+  const scoreChecks = [['تقييم مدير القسم', mgr], ['تقييم الشؤون الإدارية', hr], ['تقييم مدير المصنع', factory]];
+  for (const [label, val] of scoreChecks) {
+    if (val==null) continue;
+    if (isNaN(val) || !Number.isInteger(val)) { toast(`"${label}" لازم يكون رقم صحيح من غير كسور`, 'error'); return; }
+    if (val<0 || val>SCORE_MAX[label]) { toast(`"${label}" لازم يكون من 0 لـ${SCORE_MAX[label]}`, 'error'); return; }
   }
   const allPresent = mgr!=null && hr!=null && factory!=null;
-  const finalScore = allPresent ? Math.round((mgr*0.3 + hr*0.3 + factory*0.4)*100)/100 : null;
+  // كل درجة مُدخلة أصلاً بمقياسها الصح، فالنسبة النهائية = مجموعها المباشر (من غير ضرب في نسبة)
+  const finalScore = allPresent ? Math.round((mgr + hr + factory)*100)/100 : null;
   const data = { employeeId:empId, period, managerScore:mgr, hrScore:hr, factoryScore:factory, finalScore, updatedAt:Date.now() };
   try {
     const existing = await getDocs(query(collection(db,'evaluations'), where('employeeId','==',empId), where('period','==',period)));
@@ -4136,12 +4214,14 @@ async function renderProfile() {
   const emp = _employees.find(e=>e.id===empId);
   body.innerHTML = '<div class="empty"><i class="fas fa-spinner fa-spin"></i><p>جاري التحميل...</p></div>';
 
-  const [sheetsSnap, evalsSnap, advancesSnap] = await Promise.all([
+  const [sheetsSnap, evalsSnap, advancesSnap, penaltyRewardsSnap] = await Promise.all([
     getDocs(query(collection(db,'monthlySheets'), where('employeeId','==',empId))),
     getDocs(query(collection(db,'evaluations'), where('employeeId','==',empId))),
-    getDocs(query(collection(db,'advances'), where('employeeId','==',empId)))
+    getDocs(query(collection(db,'advances'), where('employeeId','==',empId))),
+    getDocs(query(collection(db,'penaltyRewards'), where('employeeId','==',empId)))
   ]);
   const empAdvances = advancesSnap.docs.map(d=>({id:d.id,...d.data()}));
+  const empPenaltyRewards = penaltyRewardsSnap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
   const sheets = {}; sheetsSnap.docs.forEach(d=>{ const v=d.data(); if (v.period && v.period.startsWith(year+'-')) sheets[v.period]=v; });
   const evals = {}; evalsSnap.docs.forEach(d=>{ const v=d.data(); if (v.period && v.period.startsWith(year+'-')) evals[v.period]=v; });
 
@@ -4197,6 +4277,19 @@ async function renderProfile() {
       }).join('')}
     </div>` : '';
 
+  const penaltyRewardsHtml = empPenaltyRewards.length ? `
+    <div class="card" style="overflow-x:auto"><div class="card-body">
+      <div style="font-weight:700;font-size:13px;margin-bottom:8px">تاريخ الجزاءات والمكافآت الكامل</div>
+      <table class="tbl"><thead><tr><th>التاريخ</th><th>النوع</th><th>الأيام</th><th>القيمة</th><th>السبب</th></tr></thead>
+      <tbody>${empPenaltyRewards.map(r=>`<tr>
+        <td>${r.date||'—'}</td>
+        <td>${r.type==='reward' ? '<span class="badge bg-ok">مكافأة</span>' : '<span class="badge bg-danger">جزاء</span>'}</td>
+        <td>${r.days} يوم</td>
+        <td style="font-weight:700">${r.amount} ج.م</td>
+        <td style="font-size:12.5px;color:var(--slate-500)">${esc(r.reason)||'—'}</td>
+      </tr>`).join('')}</tbody></table>
+    </div></div>` : '';
+
   body.innerHTML = `
     <div class="card"><div class="card-body">
       <div style="font-weight:800;font-size:16px">${esc(emp.name)}</div>
@@ -4220,7 +4313,8 @@ async function renderProfile() {
     <div class="card" style="overflow-x:auto"><table class="tbl">
       <thead><tr><th>الشهر</th><th>ساعات إضافية</th><th>أيام إضافية</th><th>إجازة من الرصيد</th><th>إجازة مرضية</th><th>إجازة بالخصم</th><th>غياب</th><th>إذن شخصي</th><th>الحافز %</th><th>جزاءات (أيام)</th><th>مكافآت (أيام)</th><th>ملاحظات</th></tr></thead>
       <tbody>${rows}</tbody>
-    </table></div>`;
+    </table></div>
+    ${penaltyRewardsHtml}`;
 }
 window.renderProfile = renderProfile;
 
