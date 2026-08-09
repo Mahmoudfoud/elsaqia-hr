@@ -4122,16 +4122,17 @@ window.confirmMonthlyImport = async () => {
   btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الحفظ...';
   let saved = false;
   try {
-    for (const c of pending.changes) {
+    // كتابة متوازية (Promise.all) بدل صف بعد التاني — بتقلل زمن حفظ الاستيراد بشكل ملموس مع أعداد كبيرة
+    await Promise.all(pending.changes.map(c => {
       const patch = { updatedAt: Date.now() };
       c.fields.forEach(f=>{ patch[f.key] = f.newVal; });
       if (c.existingId) {
-        await updateDoc(doc(db,'monthlySheets', c.existingId), patch);
+        return updateDoc(doc(db,'monthlySheets', c.existingId), patch);
       } else {
         const base = { employeeId:c.emp.id, period:pending.period, leaveFromBalance:0, leaveUnpaid:0, sickLeave:0, absence:0, personalPermission:0, penaltyDays:0, rewardDays:0, overtimeHours:0, extraDays:0, notes:'', createdAt:Date.now() };
-        await addDoc(collection(db,'monthlySheets'), { ...base, ...patch });
+        return addDoc(collection(db,'monthlySheets'), { ...base, ...patch });
       }
-    }
+    }));
     saved = true;
     toast(`تم تحديث بيانات ${pending.changes.length} موظف من الملف بنجاح`, 'success');
     closeM('mo-import-monthly');
@@ -4622,23 +4623,48 @@ async function bumpMonthlySheet(employeeId, period, deltas, noteAppend) {
   }
 }
 
+let _leavesShowAll = false; // افتراضيًا نحمّل نطاق محدود بس — المستخدم يقدر يطلب كل التاريخ بزرار في آخر الصفحة
+window.toggleLeavesShowAll = () => { _leavesShowAll = true; renderLeaves(); };
+
 async function renderLeaves() {
   const renewBtn = document.getElementById('btn-renew-balances');
   if (renewBtn) renewBtn.style.display = hasPerm('leaves_manage') ? '' : 'none';
   const body = document.getElementById('leaves-body');
   body.innerHTML = '<div class="empty"><i class="fas fa-spinner fa-spin"></i><p>جاري التحميل...</p></div>';
-  let snap;
-  try { snap = await getDocs(query(collection(db,'leaveRequests'), orderBy('requestedAt','desc'))); }
-  catch(e) { body.innerHTML = `<div class="empty"><p>خطأ: ${e.message}</p></div>`; return; }
-  let reqs = snap.docs.map(d=>({id:d.id,...d.data()}));
+  let reqs;
+  try {
+    if (_leavesShowAll) {
+      const snap = await getDocs(query(collection(db,'leaveRequests'), orderBy('requestedAt','desc')));
+      reqs = snap.docs.map(d=>({id:d.id,...d.data()}));
+    } else {
+      // النطاق الافتراضي: آخر 6 شهور + أي طلب لسه قيد المراجعة (مهما كان قديم) — بدل تحميل كل التاريخ
+      // من غير حد كل مرة، اللي بيبقى أبطأ وأتقل كل ما البيانات التاريخية تكبر
+      const cutoff = Date.now() - (180*24*60*60*1000);
+      const [recentSnap, pendingSnap] = await Promise.all([
+        getDocs(query(collection(db,'leaveRequests'), where('requestedAt','>=',cutoff), orderBy('requestedAt','desc'))),
+        getDocs(query(collection(db,'leaveRequests'), where('status','==','pending')))
+      ]);
+      const byId = new Map();
+      recentSnap.docs.forEach(d=>byId.set(d.id, {id:d.id,...d.data()}));
+      pendingSnap.docs.forEach(d=>byId.set(d.id, {id:d.id,...d.data()}));
+      reqs = Array.from(byId.values()).sort((a,b)=>(b.requestedAt||0)-(a.requestedAt||0));
+    }
+  } catch(e) { body.innerHTML = `<div class="empty"><p>حدث خطأ: ${e.message}</p></div>`; return; }
   if (CU.role!=='admin' && CU.departmentId) reqs = reqs.filter(r=>r.departmentId===CU.departmentId);
-  if (!reqs.length) { body.innerHTML = '<div class="empty"><i class="fas fa-calendar-minus"></i><p>لا توجد طلبات إجازة بعد</p></div>'; return; }
+  if (!reqs.length) {
+    body.innerHTML = _leavesShowAll
+      ? '<div class="empty"><i class="fas fa-calendar-minus"></i><p>لا توجد طلبات إجازة بعد</p></div>'
+      : '<div class="empty"><i class="fas fa-calendar-minus"></i><p>لا توجد طلبات إجازة في آخر 6 شهور</p><button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="toggleLeavesShowAll()">عرض كل التاريخ</button></div>';
+    return;
+  }
 
   const canDeptApprove = hasPerm('leaves_dept_approve');
   const canHrApprove = hasPerm('leaves_manage');
+  // قاموس وصول فوري لبيانات الموظف بدل بحث خطي (.find) داخل حلقة العرض لكل طلب
+  const empById = new Map(_employees.map(e=>[e.id, e]));
 
   body.innerHTML = reqs.map(r=>{
-    const emp = _employees.find(e=>e.id===r.employeeId);
+    const emp = empById.get(r.employeeId);
     const leaveType = r.leaveType || 'regular';
     const typeLabel = (LEAVE_TYPES[leaveType]||LEAVE_TYPES.regular).label;
     const balance = emp ? leaveBalanceOf(emp, leaveType) : '—';
@@ -4695,7 +4721,7 @@ async function renderLeaves() {
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">${actions}${delBtn}</div>
     </div></div>`;
-  }).join('');
+  }).join('') + (_leavesShowAll ? '' : `<div style="text-align:center;margin-top:10px"><button class="btn btn-ghost btn-sm" onclick="toggleLeavesShowAll()"><i class="fas fa-history"></i> عرض كل التاريخ (قبل آخر 6 شهور)</button></div>`);
   renderPersonalPermissionAdmin();
 }
 window.renderLeaves = renderLeaves;
@@ -4985,7 +5011,8 @@ window.renewAllBalances = async () => {
   if (!confirm('سيتم تجديد رصيد الإجازة الاعتيادية والعارضة لجميع الموظفين العاملين إلى 14 و7 أيام على التوالي (رصيد إجازة الجواز لا يُجدَّد تلقائيًا — في حال حدوث حالة زواج أخرى، يمكن إضافة رصيدها يدويًا من ملف الموظف). يُنصح بتنفيذ هذا الإجراء في بداية كل عام فقط. هل أنت متأكد؟')) return;
   try {
     const actives = _employees.filter(e=>e.status!=='resigned');
-    for (const e of actives) { await updateDoc(doc(db,'employees',e.id), { leaveBalanceRegular:14, leaveBalanceCasual:7 }); }
+    // تحديث متوازي (Promise.all) بدل موظف بعد التاني — بيقلّل زمن التنفيذ لعشرات الموظفين من دقايق لثواني
+    await Promise.all(actives.map(e => updateDoc(doc(db,'employees',e.id), { leaveBalanceRegular:14, leaveBalanceCasual:7 })));
     toast(`تم تجديد رصيد الإجازات لـ ${actives.length} موظف بنجاح`, 'success');
   } catch(e) { toast('حدث خطأ: '+e.message, 'error'); }
 };
