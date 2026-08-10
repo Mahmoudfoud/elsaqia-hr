@@ -219,6 +219,7 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
       <div class="nav-group-lbl">النظام</div>
       <div class="nav-link" data-page="settings" data-perm="settings_manage" onclick="goPage('settings')"><i class="fas fa-cog"></i>الإعدادات</div>
       <div class="nav-link" data-page="users" data-adminonly onclick="goPage('users')"><i class="fas fa-user-shield"></i>المستخدمون والصلاحيات</div>
+      <div class="nav-link" data-page="auditlog" data-adminonly onclick="goPage('auditlog')"><i class="fas fa-history"></i>سجل التدقيق</div>
     </div>
     <div class="sb-user">
       <div class="sb-user-row">
@@ -511,6 +512,24 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
         <thead><tr><th>الاسم</th><th>الإيميل</th><th>الدور</th><th>القسم (لو مدير)</th><th></th></tr></thead>
         <tbody id="users-body"></tbody>
       </table></div>
+      <div class="card" style="margin-top:16px"><div class="card-body">
+        <div style="font-weight:700;font-size:13px;margin-bottom:6px"><i class="fas fa-database"></i> النسخة الاحتياطية</div>
+        <div style="font-size:12px;color:var(--slate-500);margin-bottom:10px">بيصدّر كل بيانات النظام (الموظفين، الرواتب، الحضور، الإجازات، السلف... كل حاجة) في ملف واحد تقدر تنزّله وتحتفظ بيه. النسخة يدوية — يُنصح بعملها بشكل دوري (أسبوعيًا مثلًا) والاحتفاظ بأكتر من نسخة بتواريخ مختلفة.</div>
+        <button class="btn btn-ghost btn-sm" id="btn-backup-now" onclick="backupNow()"><i class="fas fa-download"></i>نسخة احتياطية الآن</button>
+      </div></div>
+    </div>
+
+    <!-- AUDIT LOG -->
+    <div class="page" id="page-auditlog">
+      <div class="ph">
+        <div><div class="ph-title">سجل التدقيق</div><div class="ph-sub">كل تعديل مالي أو حسّاس في النظام — مين عمله وإمتى وقيمته قبل وبعد. السجل دائم ومايتعدلش (حتى من الأدمن)</div></div>
+      </div>
+      <div class="card" style="margin-bottom:14px"><div class="card-body" style="display:flex;gap:10px;align-items:end;flex-wrap:wrap">
+        <div class="fg" style="margin:0"><label class="fl">من تاريخ</label><input class="fc" type="date" id="audit-from" style="width:160px"></div>
+        <div class="fg" style="margin:0"><label class="fl">إلى تاريخ</label><input class="fc" type="date" id="audit-to" style="width:160px"></div>
+        <button class="btn btn-ac btn-sm" onclick="renderAuditLog()"><i class="fas fa-search"></i>بحث</button>
+      </div></div>
+      <div id="auditlog-body"></div>
     </div>
   </div>
 </div>
@@ -1208,13 +1227,14 @@ window.goPage = (name) => {
   const evalAlt = name==='evaluation' && (hasPerm('eval_hr')||hasPerm('eval_factory'));
   const leavesAlt = name==='leaves' && hasPerm('leaves_dept_approve');
   if (name==='users' && CU.role!=='admin') { toast('هذه الصفحة مخصصة للمسؤول (Admin) فقط', 'error'); return; }
+  if (name==='auditlog' && CU.role!=='admin') { toast('هذه الصفحة مخصصة للمسؤول (Admin) فقط', 'error'); return; }
   if (perm && !hasPerm(perm) && !evalAlt && !leavesAlt) { toast('ليس لديك صلاحية الوصول إلى هذه الصفحة', 'error'); return; }
   _page = name;
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('page-'+name)?.classList.add('active');
   document.querySelectorAll('.nav-link').forEach(n=>n.classList.toggle('active', n.dataset.page===name));
   toggleSidebar(false);
-  const renders = { dashboard:renderDashboard, employees:renderEmployees, departments:renderDepartments, shifts:renderShifts, reps:renderReps, drivers:renderDrivers, settings:renderSettings, daily:renderDaily, dailymark:renderDailyMarkPage, overtime:renderOvertime, monthly:renderMonthly, evaluation:renderEvaluation, profile:renderProfile, reports:renderReports, leaves:renderLeaves, penalties:renderPenalties, holidays:renderHolidays, advances:renderAdvances, users:renderUsers };
+  const renders = { dashboard:renderDashboard, employees:renderEmployees, departments:renderDepartments, shifts:renderShifts, reps:renderReps, drivers:renderDrivers, settings:renderSettings, daily:renderDaily, dailymark:renderDailyMarkPage, overtime:renderOvertime, monthly:renderMonthly, evaluation:renderEvaluation, profile:renderProfile, reports:renderReports, leaves:renderLeaves, penalties:renderPenalties, holidays:renderHolidays, advances:renderAdvances, users:renderUsers, auditlog:renderAuditLog };
   renders[name]?.();
 };
 
@@ -1672,6 +1692,7 @@ window.savePenalty = async () => {
       employeeId: empId, employeeName: emp.name, type, days, amount, reason, date,
       createdBy: CU.displayName||CU.email, createdAt: Date.now(), seen: false,
     });
+    await logAudit(type==='reward'?'إضافة مكافأة':'إضافة جزاء', empId, emp.name, { days, amount, reason, date });
     toast('تم تسجيل الحالة بنجاح', 'success');
     closeM('mo-penalty');
     renderPenalties();
@@ -1680,7 +1701,13 @@ window.savePenalty = async () => {
 
 window.deletePenalty = async (id) => {
   if (!confirm('هل أنت متأكد من حذف هذا السجل نهائيًا؟')) return;
-  try { await deleteDoc(doc(db,'penaltyRewards',id)); toast('تم الحذف بنجاح', 'success'); renderPenalties(); }
+  try {
+    const snap = await getDoc(doc(db,'penaltyRewards',id));
+    const p = snap.exists() ? snap.data() : null;
+    await deleteDoc(doc(db,'penaltyRewards',id));
+    if (p) await logAudit(p.type==='reward'?'حذف مكافأة':'حذف جزاء', p.employeeId, p.employeeName, { days:p.days, amount:p.amount, reason:p.reason, date:p.date });
+    toast('تم الحذف بنجاح', 'success'); renderPenalties();
+  }
   catch(e) { toast('حدث خطأ: '+e.message, 'error'); }
 };
 
@@ -2199,8 +2226,10 @@ window.saveSalaryHistoryEntry = async (empId) => {
   }
   history.push({ effectiveFrom, ...newCfg, note, changedBy: CU.displayName||CU.email, changedAt: Date.now() });
   try {
+    const before = { salary: emp.salary||0, incomeTax: emp.incomeTax||0, incentiveBase: emp.incentiveBase||0, socialInsurance: emp.socialInsurance||0, medicalInsurance: emp.medicalInsurance||0 };
     await updateDoc(doc(db,'employees', empId), { salaryHistory: history, ...newCfg });
     emp.salaryHistory = history; Object.assign(emp, newCfg); // تحديث فوري محليًا، مش هننتظر الـ listener عشان الشاشة تتحدث فورًا
+    await logAudit('تعديل راتب', empId, emp.name, { effectiveFrom, before, after: newCfg, note });
     toast('تم حفظ تعديل الراتب بنجاح — الحسابات السابقة لم تتأثر وبقيت كما هي', 'success');
     renderSalaryHistoryModal(empId);
   } catch(e) { toast('حدث خطأ: '+e.message, 'error'); }
@@ -2215,6 +2244,7 @@ window.deleteSalaryHistoryEntry = async (empId, index) => {
   try {
     await updateDoc(doc(db,'employees', empId), { salaryHistory: newHistory });
     emp.salaryHistory = newHistory;
+    await logAudit('حذف سجل راتب تاريخي', empId, emp.name, { removed: toRemove });
     toast('تم الحذف بنجاح', 'success');
     renderSalaryHistoryModal(empId);
   } catch(e) { toast('حدث خطأ: '+e.message, 'error'); }
@@ -2421,6 +2451,18 @@ function todayStr() { const d=new Date(); return d.getFullYear()+'-'+String(d.ge
 function esc(s) {
   if (s == null) return '';
   return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+// سجل تدقيق (Audit Log) — بيسجّل كل تعديل مالي أو حسّاس: مين عمله، إمتى، وقيمته قبل وبعد.
+// السجل دايمًا read-only بعد الكتابة (مفيش update/delete مسموح حتى للأدمن) — تأمين ضد أي تلاعب لاحق.
+// فشل تسجيل السجل مايوقفش العملية الأساسية أبدًا (لو حصل مشكلة شبكة مثلاً وقت الكتابة).
+async function logAudit(action, employeeId, employeeName, details) {
+  try {
+    await addDoc(collection(db,'auditLog'), {
+      action, employeeId: employeeId||null, employeeName: employeeName||null,
+      details: details||{}, performedBy: CU.email||'', performedByName: CU.displayName||CU.email||'',
+      at: Date.now()
+    });
+  } catch(e) { console.error('تعذّر تسجيل سجل التدقيق:', e); }
 }
 function hmToMin(hm) { const [h,m]=hm.split(':').map(Number); return h*60+m; }
 function nowMin() { const d=new Date(); return d.getHours()*60+d.getMinutes(); }
@@ -3908,6 +3950,12 @@ window.saveMonthlyRow = async (empId) => {
 
     if (Object.keys(empUpdates).length) await updateDoc(doc(db,'employees',empId), empUpdates);
 
+    // نسجّل في التدقيق بس الحقول اللي فعلاً اتغيّرت عن القيمة القديمة (مش الصف كله)
+    const trackedFields = ['overtimeHours','extraDays','leaveFromBalance','sickLeave','leaveUnpaid','absence','personalPermission','penaltyDays','rewardDays'];
+    const changed = {};
+    trackedFields.forEach(f => { if ((existing?.[f]||0) !== (data[f]||0)) changed[f] = { before: existing?.[f]||0, after: data[f]||0 }; });
+    if (Object.keys(changed).length) await logAudit('تعديل كشف شهري', empId, emp?.name, { period, changed });
+
     toast('تم حفظ البيانات بنجاح', 'success');
   } catch(e) { toast('حدث خطأ: '+e.message, 'error'); }
 };
@@ -4257,6 +4305,10 @@ window.saveEvalRow = async (empId) => {
     if (!existing.empty) await updateDoc(doc(db,'evaluations',existing.docs[0].id), data);
     else await addDoc(collection(db,'evaluations'), { ...data, createdAt:Date.now() });
     document.getElementById(`ev-final-${empId}`).textContent = finalScore!=null ? finalScore+'%' : 'بانتظار باقي التقييمات';
+    if (allPresent) {
+      const emp = _employees.find(e=>e.id===empId);
+      await logAudit('اكتمال تقييم شهري (يؤثر على الحافز)', empId, emp?.name, { period, managerScore:mgr, hrScore:hr, factoryScore:factory, finalScore });
+    }
     toast(allPresent ? 'تم حفظ الدرجة واحتساب النسبة النهائية بنجاح' : 'تم حفظ درجتك بنجاح — وستُحتسب النسبة النهائية بعد إدخال باقي المقيّمين لدرجاتهم', 'success');
   } catch(e) { toast('حدث خطأ: '+e.message, 'error'); }
 };
@@ -4967,6 +5019,7 @@ async function settleLeaveStage(id, stage, approved, override=false) {
   if (approved===false) {
     // رفض من أي مرحلة يكفي لرفض الطلب نهائياً، مفيش داعي ننتظر المرحلة التانية
     await updateDoc(doc(db,'leaveRequests',id), { ...patch, status:'rejected' });
+    await logAudit('رفض طلب إجازة', r.employeeId, r.employeeName, { stage, dateFrom:r.dateFrom, dateTo:r.dateTo, daysCount:r.daysCount });
     return;
   }
 
@@ -4978,6 +5031,7 @@ async function settleLeaveStage(id, stage, approved, override=false) {
     const conflictDate = await findAttendanceConflictDate(r.employeeId, billableDatesOf(r), db);
     if (conflictDate) {
       await updateDoc(doc(db,'leaveRequests',id), { ...patch, status:'rejected', autoRejectedReason: `تم رفض الطلب تلقائيًا — الموظف سجّل حضورًا فعليًا في تاريخ ${conflictDate}` });
+      await logAudit('رفض تلقائي لطلب إجازة (تعارض حضور)', r.employeeId, r.employeeName, { conflictDate, dateFrom:r.dateFrom, dateTo:r.dateTo });
       throw new Error(`تعذّر اعتماد الطلب — الموظف سجّل حضورًا فعليًا في تاريخ ${conflictDate}. تم رفض الطلب تلقائيًا.`);
     }
     // اكتملت الموافقتين — دلوقتي بس يتخصم من الرصيد فعليًا
@@ -4998,6 +5052,7 @@ async function settleLeaveStage(id, stage, approved, override=false) {
     }
     await updateDoc(doc(db,'leaveRequests',id), { ...patch, status:'approved', daysFromBalance, daysUnpaid, sixMonthOverride: !!override, sixMonthEligible: eligible });
     await applySplitAcrossPeriods(r.employeeId, billableDatesOf(r), daysFromBalance, daysUnpaid, LEAVE_TYPES[leaveType].label, r.dateFrom, r.dateTo);
+    await logAudit('اعتماد طلب إجازة (خصم رصيد)', r.employeeId, r.employeeName, { leaveType, dateFrom:r.dateFrom, dateTo:r.dateTo, daysFromBalance, daysUnpaid, sixMonthOverride: !!override });
   } else {
     // لسه مستني موافقة المرحلة التانية
     await updateDoc(doc(db,'leaveRequests',id), patch);
@@ -5034,6 +5089,7 @@ window.approveLeaveRequest = async (id, override) => {
     }
     await updateDoc(doc(db,'leaveRequests',id), { status:'approved', managerApproved:true, hrApproved:true, daysFromBalance, daysUnpaid, approvedBy: CU.email, approvedAt: Date.now(), sixMonthOverride: !!override, sixMonthEligible: eligible });
     await applySplitAcrossPeriods(r.employeeId, billableDatesOf(r), daysFromBalance, daysUnpaid, LEAVE_TYPES[leaveType].label, r.dateFrom, r.dateTo);
+    await logAudit('اعتماد طلب إجازة (خصم رصيد)', r.employeeId, r.employeeName, { leaveType, dateFrom:r.dateFrom, dateTo:r.dateTo, daysFromBalance, daysUnpaid, sixMonthOverride: !!override });
     toast('تمت الموافقة على طلب الإجازة بنجاح', 'success');
     renderLeaves();
   } catch(e) { toast('حدث خطأ: '+e.message, 'error'); }
@@ -5042,7 +5098,10 @@ window.approveLeaveRequest = async (id, override) => {
 window.rejectLeaveRequest = async (id) => {
   if (!confirm('هل أنت متأكد من رفض طلب الإجازة هذا؟')) return;
   try {
+    const rdoc = await getDoc(doc(db,'leaveRequests',id));
+    const r = rdoc.exists() ? rdoc.data() : null;
     await updateDoc(doc(db,'leaveRequests',id), { status:'rejected', managerApproved:false, rejectedBy: CU.email, rejectedAt: Date.now() });
+    if (r) await logAudit('رفض طلب إجازة', r.employeeId, r.employeeName, { dateFrom:r.dateFrom, dateTo:r.dateTo, daysCount:r.daysCount });
     toast('تم تسجيل الرفض بنجاح', 'success');
     renderLeaves();
   } catch(e) { toast('حدث خطأ: '+e.message, 'error'); }
@@ -5254,10 +5313,12 @@ window.saveAdvance = async () => {
   const btn = document.getElementById('adv-save-btn');
   btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الحفظ...';
   try {
-    await addDoc(collection(db,'advances'), {
+    const ref = await addDoc(collection(db,'advances'), {
       employeeId, amount, months, monthlyAmount, lastMonthAmount, startPeriod, note,
       status:'active', createdAt:Date.now(), createdBy: CU.email
     });
+    const emp = _employees.find(e=>e.id===employeeId);
+    await logAudit('إضافة سلفة', employeeId, emp?.name, { amount, months, startPeriod });
     toast('تم تسجيل السلفة بنجاح', 'success');
     closeM('mo-advance');
     renderAdvances();
@@ -5267,13 +5328,23 @@ window.saveAdvance = async () => {
 
 window.cancelAdvance = async (id) => {
   if (!confirm('هل أنت متأكد من إلغاء هذه السلفة؟ لن يتم خصم أي أقساط إضافية بعد الآن، وستبقى الأقساط المخصومة حتى الآن كما هي.')) return;
-  try { await updateDoc(doc(db,'advances',id), { status:'cancelled' }); toast('تم إلغاء السلفة بنجاح', 'success'); renderAdvances(); }
+  try {
+    const a = _advancesCache.find(x=>x.id===id);
+    await updateDoc(doc(db,'advances',id), { status:'cancelled' });
+    if (a) await logAudit('إلغاء سلفة', a.employeeId, _employees.find(e=>e.id===a.employeeId)?.name, { amount:a.amount, remainingMonths: a.months });
+    toast('تم إلغاء السلفة بنجاح', 'success'); renderAdvances();
+  }
   catch(e) { toast('حدث خطأ: '+e.message, 'error'); }
 };
 
 window.deleteAdvance = async (id) => {
   if (!confirm('سيتم حذف هذه السلفة نهائيًا ولا يمكن التراجع عن هذا الإجراء. هل أنت متأكد؟')) return;
-  try { await deleteDoc(doc(db,'advances',id)); toast('تم الحذف بنجاح', 'success'); renderAdvances(); }
+  try {
+    const a = _advancesCache.find(x=>x.id===id);
+    await deleteDoc(doc(db,'advances',id));
+    if (a) await logAudit('حذف سلفة', a.employeeId, _employees.find(e=>e.id===a.employeeId)?.name, { amount:a.amount, months:a.months });
+    toast('تم الحذف بنجاح', 'success'); renderAdvances();
+  }
   catch(e) { toast('حدث خطأ: '+e.message, 'error'); }
 };
 
@@ -5312,6 +5383,73 @@ async function renderUsers() {
   }).join('');
 }
 window.renderUsers = renderUsers;
+
+// ══════════════════════════════════════════════
+// AUDIT LOG — سجل تدقيق كل تعديل مالي/حسّاس (Admin فقط)
+// ══════════════════════════════════════════════
+function auditDetailsHtml(details) {
+  if (!details || !Object.keys(details).length) return '';
+  return Object.entries(details).map(([k,v])=>{
+    if (v && typeof v === 'object') return `<div><b>${esc(k)}:</b> ${esc(JSON.stringify(v))}</div>`;
+    return `<div><b>${esc(k)}:</b> ${esc(v)}</div>`;
+  }).join('');
+}
+
+async function renderAuditLog() {
+  const body = document.getElementById('auditlog-body');
+  const fromEl = document.getElementById('audit-from');
+  const toEl = document.getElementById('audit-to');
+  // افتراضيًا: آخر 30 يوم بس (نفس مبدأ عدم تحميل كل التاريخ من غير حد)
+  if (!fromEl.value) { const d = new Date(); d.setDate(d.getDate()-30); fromEl.value = d.toISOString().slice(0,10); }
+  if (!toEl.value) { toEl.value = todayStr(); }
+  const fromTs = new Date(fromEl.value+'T00:00:00').getTime();
+  const toTs = new Date(toEl.value+'T23:59:59').getTime();
+  body.innerHTML = '<div class="empty"><i class="fas fa-spinner fa-spin"></i><p>جاري التحميل...</p></div>';
+  let entries;
+  try {
+    const snap = await getDocs(query(collection(db,'auditLog'), where('at','>=',fromTs), where('at','<=',toTs), orderBy('at','desc')));
+    entries = snap.docs.map(d=>({id:d.id,...d.data()}));
+  } catch(e) { body.innerHTML = `<div class="empty"><p>حدث خطأ: ${e.message}</p></div>`; return; }
+  if (!entries.length) { body.innerHTML = '<div class="empty"><i class="fas fa-history"></i><p>لا توجد تعديلات مسجّلة في هذه الفترة</p></div>'; return; }
+  body.innerHTML = `<div class="card" style="overflow-x:auto"><table class="tbl">
+    <thead><tr><th>التاريخ والوقت</th><th>الإجراء</th><th>الموظف المتأثر</th><th>بواسطة</th><th>التفاصيل</th></tr></thead>
+    <tbody>${entries.map(e=>`<tr>
+      <td style="white-space:nowrap;font-size:12px">${new Date(e.at).toLocaleString('ar-EG')}</td>
+      <td style="font-weight:700">${esc(e.action)}</td>
+      <td>${esc(e.employeeName)||'—'}</td>
+      <td style="font-size:12px;color:var(--slate-500)">${esc(e.performedByName||e.performedBy)}</td>
+      <td style="font-size:11.5px;color:var(--slate-500)">${auditDetailsHtml(e.details)}</td>
+    </tr>`).join('')}</tbody>
+  </table></div>`;
+}
+window.renderAuditLog = renderAuditLog;
+
+// ══════════════════════════════════════════════
+// النسخة الاحتياطية اليدوية — بتصدّر كل كولكشنات النظام في ملف JSON واحد قابل للتنزيل
+// ══════════════════════════════════════════════
+window.backupNow = async () => {
+  const btn = document.getElementById('btn-backup-now');
+  btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري تجهيز النسخة...';
+  const collections = ['employees','departments','shifts','shiftOverrides','attendance','dailyMarks',
+    'monthlySheets','evaluations','leaveRequests','personalPermissionRequests','penaltyRewards',
+    'officialHolidays','advances','users','locations','settings','auditLog'];
+  try {
+    const results = await Promise.all(collections.map(async name => {
+      const snap = await getDocs(collection(db,name));
+      return [name, snap.docs.map(d=>({ id:d.id, ...d.data() }))];
+    }));
+    const data = { exportedAt: new Date().toISOString(), exportedBy: CU.email, collections: Object.fromEntries(results) };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type:'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `elsaqia-hr-backup-${todayStr()}.json`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast('تم تجهيز النسخة الاحتياطية وتنزيلها بنجاح', 'success');
+  } catch(e) { toast('حدث خطأ أثناء إعداد النسخة الاحتياطية: '+e.message, 'error'); }
+  finally { btn.disabled = false; btn.innerHTML = '<i class="fas fa-download"></i>نسخة احتياطية الآن'; }
+};
 
 window.openUserModal = (id=null) => {
   window._editUserId = id;
