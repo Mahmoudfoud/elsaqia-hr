@@ -2348,6 +2348,22 @@ function billableDatesOf(r) {
   return (r.billableDates && r.billableDates.length) ? r.billableDates : calendarDatesBetween(r.dateFrom, r.dateTo);
 }
 
+// بيتأكد إن مفيش سجل حضور فعلي (بصمة دخول أو انصراف) للموظف في أي يوم من أيام الإجازة المطلوبة —
+// مايصحش يكون عنده حضور فعلي وإجازة معتمدة في نفس اليوم مع بعض. بيرجع أول تاريخ فيه تعارض، أو null
+async function findAttendanceConflictDate(employeeId, billableDates, dbInst) {
+  if (!billableDates.length) return null;
+  const sorted = [...billableDates].sort();
+  const minDate = sorted[0], maxDate = sorted[sorted.length-1];
+  const snap = await getDocs(query(collection(dbInst,'attendance'),
+    where('employeeId','==',employeeId), where('date','>=',minDate), where('date','<=',maxDate)));
+  const billableSet = new Set(billableDates);
+  for (const d of snap.docs) {
+    const date = d.data().date;
+    if (billableSet.has(date)) return date;
+  }
+  return null;
+}
+
 // أنواع الإجازة: كل نوع رصيد مستقل تمامًا عن التاني
 const LEAVE_TYPES = {
   regular:  { label:'إجازة اعتيادية', field:'leaveBalanceRegular',  defaultBalance:14, monthlyCap:true,  advanceDays:1 },
@@ -2980,6 +2996,14 @@ window.kioskSubmitLeaveRequest = async () => {
       return;
     }
     const daysCount = billableDates.length;
+
+    // مايصحش يكون عنده حضور فعلي مسجّل (بصمة دخول أو انصراف) وإجازة معتمدة في نفس اليوم مع بعض
+    const conflictDate = await findAttendanceConflictDate(emp.id, billableDates, secDb);
+    if (conflictDate) {
+      err.textContent = `عندك سجل حضور فعلي بالفعل في تاريخ ${conflictDate} — مايصحش تطلب إجازة على يوم اتسجّل فيه حضورك.`;
+      btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i>إرسال الطلب';
+      return;
+    }
 
     // اجلب كل طلبات الموظف ده عشان نتحقق من الحدود المختلفة
     const mySnap = await getDocs(query(collection(secDb,'leaveRequests'), where('employeeId','==',emp.id)));
@@ -4890,6 +4914,11 @@ window.saveLeaveRequest = async () => {
     const billableDates = computeBillableDates(dateFrom, dateTo, workDays, holidaysInRange, emp.id);
     if (!billableDates.length) { toast('هذه التواريخ إجازة أسبوعية أو رسمية أصلًا — لا داعي لتسجيل إجازة عليها', 'error'); return; }
     const daysCount = billableDates.length;
+
+    // مايصحش يكون عنده حضور فعلي مسجّل (بصمة دخول أو انصراف) وإجازة معتمدة في نفس اليوم مع بعض
+    const conflictDate = await findAttendanceConflictDate(employeeId, billableDates, db);
+    if (conflictDate) { toast(`الموظف عنده سجل حضور فعلي بالفعل في تاريخ ${conflictDate} — لا يمكن تسجيل إجازة على يوم اتسجّل فيه حضوره`, 'error'); return; }
+
     await addDoc(collection(db,'leaveRequests'), {
       employeeId, employeeName: emp.name, departmentId: emp.departmentId||null,
       leaveType, dateFrom, dateTo, daysCount, billableDates, note, status:'pending',
@@ -4944,6 +4973,13 @@ async function settleLeaveStage(id, stage, approved, override=false) {
   const needsManagerStage = !!r.departmentId;
   const effectiveManagerApproved = needsManagerStage ? merged.managerApproved : true;
   if (effectiveManagerApproved===true && merged.hrApproved===true) {
+    // قبل ما نخصم أي حاجة فعليًا، لازم نتأكد إن الموظف مسجّلش حضور فعلي في نفس أيام الإجازة —
+    // ممكن يكون سجّل حضور بعد ما قدّم الطلب وقبل ما حد يوافق عليه
+    const conflictDate = await findAttendanceConflictDate(r.employeeId, billableDatesOf(r), db);
+    if (conflictDate) {
+      await updateDoc(doc(db,'leaveRequests',id), { ...patch, status:'rejected', autoRejectedReason: `تم رفض الطلب تلقائيًا — الموظف سجّل حضورًا فعليًا في تاريخ ${conflictDate}` });
+      throw new Error(`تعذّر اعتماد الطلب — الموظف سجّل حضورًا فعليًا في تاريخ ${conflictDate}. تم رفض الطلب تلقائيًا.`);
+    }
     // اكتملت الموافقتين — دلوقتي بس يتخصم من الرصيد فعليًا
     const leaveType = r.leaveType || 'regular';
     const field = LEAVE_TYPES[leaveType].field;
@@ -4977,6 +5013,11 @@ window.approveLeaveRequest = async (id, override) => {
   try {
     const rdoc = await getDoc(doc(db,'leaveRequests',id));
     const r = rdoc.data();
+    const conflictDate = await findAttendanceConflictDate(r.employeeId, billableDatesOf(r), db);
+    if (conflictDate) {
+      await updateDoc(doc(db,'leaveRequests',id), { status:'rejected', autoRejectedReason: `تم رفض الطلب تلقائيًا — الموظف سجّل حضورًا فعليًا في تاريخ ${conflictDate}` });
+      throw new Error(`تعذّر اعتماد الطلب — الموظف سجّل حضورًا فعليًا في تاريخ ${conflictDate}. تم رفض الطلب تلقائيًا.`);
+    }
     const leaveType = r.leaveType || 'regular';
     const field = LEAVE_TYPES[leaveType].field;
     const emp = _employees.find(e=>e.id===r.employeeId);
