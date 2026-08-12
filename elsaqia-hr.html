@@ -773,8 +773,9 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
       <div id="dm-emp-name" style="font-weight:800;margin-bottom:10px"></div>
       <div class="fg"><label class="fl">الحالة</label>
         <select class="fc" id="dm-status">
-          <option value="absent">غياب بدون إذن</option>
-          <option value="leave">إجازة من الرصيد</option>
+          <option value="absent">غياب بدون إذن (يومين خصم)</option>
+          <option value="leave">إجازة من الرصيد (عارضة ثم اعتيادية)</option>
+          <option value="deduct">خصم يوم (جزاء)</option>
         </select>
       </div>
       <div class="fg"><label class="fl">ملاحظات</label><textarea class="fc" id="dm-note" rows="2"></textarea></div>
@@ -2396,8 +2397,8 @@ async function findAttendanceConflictDate(employeeId, billableDates, dbInst) {
 
 // أنواع الإجازة: كل نوع رصيد مستقل تمامًا عن التاني
 const LEAVE_TYPES = {
-  regular:  { label:'إجازة اعتيادية', field:'leaveBalanceRegular',  defaultBalance:14, monthlyCap:true,  advanceDays:1 },
-  casual:   { label:'إجازة عارضة',    field:'leaveBalanceCasual',   defaultBalance:7,  monthlyCap:true,  advanceDays:0 },
+  regular:  { label:'إجازة اعتيادية', field:'leaveBalanceRegular',  defaultBalance:14, monthlyCap:false, advanceDays:1 },
+  casual:   { label:'إجازة عارضة',    field:'leaveBalanceCasual',   defaultBalance:7,  monthlyCap:false, advanceDays:0 },
   marriage: { label:'إجازة جواز',     field:'leaveBalanceMarriage', defaultBalance:15, monthlyCap:false, advanceDays:1, oneTime:true }
 };
 function leaveBalanceOf(emp, type) {
@@ -2995,9 +2996,9 @@ window.kioskUpdateLeaveTypeNote = () => {
   const fromInput = document.getElementById('kv-from');
   fromInput.min = minDateStr;
   if (fromInput.value && fromInput.value < minDateStr) fromInput.value = '';
-  document.getElementById('kv-cap-note').innerHTML = (LEAVE_TYPES[type].monthlyCap
-    ? '<i class="fas fa-info-circle"></i> ملحوظة: مسموح بطلب واحد بس في اليوم، والحد الأقصى لهذا النوع عن طريق التطبيق يومين في الشهر — لو محتاج أكتر، ارجع لمدير الشؤون شخصياً'
-    : '<i class="fas fa-info-circle"></i> ملحوظة: مسموح بطلب واحد بس في اليوم. رصيد إجازة الجواز محدود ومُدار من الإدارة')
+  document.getElementById('kv-cap-note').innerHTML = (type==='marriage'
+    ? '<i class="fas fa-info-circle"></i> ملحوظة: مسموح بطلب واحد بس في اليوم. رصيد إجازة الجواز محدود ومُدار من الإدارة'
+    : '<i class="fas fa-info-circle"></i> ملحوظة: مسموح بطلب واحد بس في اليوم')
     + (advanceDays>0 ? `<br>لازم تتقدّم بطلب ${LEAVE_TYPES[type].label} قبل تاريخها بيوم على الأقل` : '<br>ممكن تتقدّم بطلب إجازة عارضة في نفس اليوم لو الموضوع طارئ');
 };
 
@@ -3563,8 +3564,8 @@ async function renderDaily() {
         }
       }
       if (mark) {
-        const label = mark.status==='leave' ? 'إجازة من الرصيد' : 'غياب بدون إذن';
-        const cls = mark.status==='leave' ? 'bg-ac' : 'bg-danger';
+        const label = mark.status==='leave' ? 'إجازة من الرصيد' : mark.status==='deduct' ? 'خصم يوم (جزاء)' : 'غياب بدون إذن';
+        const cls = mark.status==='leave' ? 'bg-ac' : mark.status==='deduct' ? 'bg-warn' : 'bg-danger';
         return `<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:6px">
           <span style="font-weight:700;color:var(--danger-600)">${esc(e.name)}</span>
           <span style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
@@ -3611,20 +3612,75 @@ window.openDailyMark = (empId, date) => {
   const emp = _employees.find(x=>x.id===empId);
   document.getElementById('dm-emp-name').textContent = emp?.name || '';
   window._dmEmpId = empId; window._dmDate = date;
-  document.getElementById('dm-status').value = 'absent';
+  const sel = document.getElementById('dm-status');
+  sel.querySelector('option[value="leave"]').style.display = hasPerm('leaves_manage') ? '' : 'none';
+  sel.querySelector('option[value="deduct"]').style.display = hasPerm('penalties_rewards_manage') ? '' : 'none';
+  sel.value = 'absent';
   document.getElementById('dm-note').value = '';
   openM('mo-dailymark');
 };
 
+// إجازة من الرصيد عن طريق "تسجيل حالة اليوم" — كاسكيد: عارضة الأول، ولو خلصت اعتيادية، والجواز ما تتلمسش خالص.
+// بتخصم فعليًا ولحظيًا (نفس آلية اعتماد طلب إجازة رسمي)، وبتظهر بعدين في صفحة "الإجازات" عادي.
+async function applyLeaveFromBalanceCascade(empId, dateStr) {
+  const emp = _employees.find(x=>x.id===empId);
+  if (!emp) throw new Error('الموظف غير موجود');
+  const casualBal = leaveBalanceOf(emp,'casual');
+  const regularBal = leaveBalanceOf(emp,'regular');
+  if (casualBal<=0 && regularBal<=0) {
+    throw new Error('لقد انتهى رصيد العارضة والاعتيادية لهذا الموظف');
+  }
+  const EPS = 1e-9; // تسامح بسيط لأخطاء التقريب العشري (floating point) في جافاسكريبت
+  const portions = [];
+  let remaining = 1;
+  if (casualBal>0) { const take = Math.min(remaining, casualBal); portions.push({ type:'casual', amount:take }); remaining -= take; }
+  if (remaining>EPS && regularBal>0) { const take = Math.min(remaining, regularBal); portions.push({ type:'regular', amount:take }); remaining -= take; }
+  if (remaining>EPS) throw new Error('لقد انتهى رصيد العارضة والاعتيادية لهذا الموظف');
+
+  for (const p of portions) {
+    const field = LEAVE_TYPES[p.type].field;
+    const curBal = p.type==='casual' ? casualBal : regularBal;
+    await updateDoc(doc(db,'employees',empId), { [field]: curBal - p.amount });
+    await addDoc(collection(db,'leaveRequests'), {
+      employeeId: empId, employeeName: emp.name, leaveType: p.type,
+      dateFrom: dateStr, dateTo: dateStr, daysCount: p.amount, billableDates: [dateStr],
+      status: 'approved', managerApproved: true, hrApproved: true,
+      daysFromBalance: p.amount, daysUnpaid: 0, sixMonthOverride: false, sixMonthEligible: true,
+      source: 'dailyMark', createdBy: CU?.displayName||CU?.email||'admin', createdAt: Date.now(),
+    });
+    await applySplitAcrossPeriods(empId, [dateStr], p.amount, 0, LEAVE_TYPES[p.type].label, dateStr, dateStr);
+    await logAudit('تسجيل إجازة من الرصيد (تسجيل حالة اليوم)', empId, emp.name, { leaveType:p.type, date:dateStr, days:p.amount });
+  }
+  return portions;
+}
+
 window.saveDailyMark = async () => {
   const status = document.getElementById('dm-status').value;
   const note = document.getElementById('dm-note').value.trim();
+  const empId = window._dmEmpId, dateStr = window._dmDate;
   try {
-    const existing = await getDocs(query(collection(db,'dailyMarks'), where('employeeId','==',window._dmEmpId), where('date','==',window._dmDate)));
+    if (status==='leave') {
+      if (!hasPerm('leaves_manage')) throw new Error('محتاج صلاحية "إدارة الإجازات" عشان تسجّل إجازة من الرصيد');
+      await applyLeaveFromBalanceCascade(empId, dateStr);
+    } else if (status==='deduct') {
+      if (!hasPerm('penalties_rewards_manage')) throw new Error('محتاج صلاحية "إدارة الجزاءات والمكافآت" عشان تسجّل خصم يوم');
+      const emp = _employees.find(x=>x.id===empId);
+      if (!emp) throw new Error('الموظف غير موجود');
+      const dailyRate = (getSalaryConfigForDate(emp, dateStr).salary||0)/30;
+      const amount = Math.round(dailyRate*100)/100;
+      await addDoc(collection(db,'penaltyRewards'), {
+        employeeId: empId, employeeName: emp.name, type:'penalty', days:1, amount,
+        reason: note || 'خصم يوم — تسجيل حالة اليوم', date: dateStr,
+        createdBy: CU?.displayName||CU?.email||'admin', createdAt: Date.now(), seen: false,
+      });
+      await logAudit('إضافة جزاء', empId, emp.name, { days:1, amount, reason: note||'خصم يوم — تسجيل حالة اليوم', date: dateStr });
+    }
+
+    const existing = await getDocs(query(collection(db,'dailyMarks'), where('employeeId','==',empId), where('date','==',dateStr)));
     if (!existing.empty) {
       await updateDoc(doc(db,'dailyMarks',existing.docs[0].id), { status, note, markedBy: CU?.email||'admin', markedAt: Date.now() });
     } else {
-      await addDoc(collection(db,'dailyMarks'), { employeeId:window._dmEmpId, date:window._dmDate, status, note, markedBy: CU?.email||'admin', markedAt: Date.now() });
+      await addDoc(collection(db,'dailyMarks'), { employeeId:empId, date:dateStr, status, note, markedBy: CU?.email||'admin', markedAt: Date.now() });
     }
     toast('تم حفظ البيانات بنجاح', 'success');
     closeM('mo-dailymark');
@@ -3700,8 +3756,8 @@ async function renderDailyMarkPage() {
     if (chk) {
       statusCell = `<span class="badge bg-ok"><i class="fas fa-sign-in-alt"></i> حضر الساعة ${chk.time}</span>`;
     } else if (mark) {
-      const label = mark.status==='leave' ? 'إجازة من الرصيد' : 'غياب بدون إذن';
-      const cls = mark.status==='leave' ? 'bg-ac' : 'bg-danger';
+      const label = mark.status==='leave' ? 'إجازة من الرصيد' : mark.status==='deduct' ? 'خصم يوم (جزاء)' : 'غياب بدون إذن';
+      const cls = mark.status==='leave' ? 'bg-ac' : mark.status==='deduct' ? 'bg-warn' : 'bg-danger';
       statusCell = `<span class="badge ${cls}" style="cursor:pointer" onclick="openDailyMark('${e.id}','${date}')">${label} <i class="fas fa-edit"></i></span>`;
     } else {
       statusCell = `<span class="badge bg-slate">لا يوجد سجل</span>`;
@@ -3972,7 +4028,7 @@ window.autoFillMonthly = async () => {
     const absenceCount = {}, leaveCount = {}, otHours = {};
     markSnap.docs.forEach(d=>{
       const v = d.data();
-      if (v.status==='absent') absenceCount[v.employeeId] = (absenceCount[v.employeeId]||0)+1;
+      if (v.status==='absent') absenceCount[v.employeeId] = (absenceCount[v.employeeId]||0)+2; // كل يوم غياب بدون إذن = يومين خصم من المرتب (عقوبة)
       if (v.status==='leave') leaveCount[v.employeeId] = (leaveCount[v.employeeId]||0)+1;
     });
     coSnap.docs.forEach(d=>{
@@ -4580,7 +4636,7 @@ function renderReportResults() {
         <div style="font-weight:800;margin-bottom:8px">تفاصيل الحضور يوم بيوم — ${esc(r.emp.name)}</div>
         <table class="tbl"><thead><tr><th>التاريخ</th><th>الحالة</th></tr></thead><tbody>
         ${r.attendanceDays.map(d=>{
-          const label = d.time ? `حضر الساعة ${d.time}` : (d.status==='leave' ? 'إجازة من الرصيد' : d.status==='absent' ? 'غياب بدون إذن' : 'لا يوجد سجل');
+          const label = d.time ? `حضر الساعة ${d.time}` : (d.status==='leave' ? 'إجازة من الرصيد' : d.status==='deduct' ? 'خصم يوم (جزاء)' : d.status==='absent' ? 'غياب بدون إذن' : 'لا يوجد سجل');
           return `<tr><td>${d.date}</td><td>${label}</td></tr>`;
         }).join('')}
         </tbody></table>
@@ -4633,7 +4689,7 @@ window.exportReportToExcel = () => {
     const attAoa = [['الموظف','التاريخ','الحالة']];
     results.forEach(r=>{
       r.attendanceDays.forEach(d=>{
-        const label = d.time ? `حضر الساعة ${d.time}` : (d.status==='leave' ? 'إجازة من الرصيد' : d.status==='absent' ? 'غياب بدون إذن' : 'لا يوجد سجل');
+        const label = d.time ? `حضر الساعة ${d.time}` : (d.status==='leave' ? 'إجازة من الرصيد' : d.status==='deduct' ? 'خصم يوم (جزاء)' : d.status==='absent' ? 'غياب بدون إذن' : 'لا يوجد سجل');
         attAoa.push([r.emp.name, d.date, label]);
       });
     });
