@@ -634,6 +634,11 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
         <div class="fg"><label class="fl">انصراف مسموح حتى</label><input class="fc" type="time" id="shift-checkout-to"></div>
       </div>
       <div class="fg">
+        <label class="fl">سماحية الوقت الإضافي (ساعات بعد انتهاء الوردية)</label>
+        <input class="fc" type="number" min="1" max="23" step="0.5" id="shift-ot-grace" placeholder="10">
+        <div style="font-size:11px;color:var(--slate-500);margin-top:3px">المدة اللي بصمة الانصراف تفضل مفتوحة خلالها بعد معاد انتهاء الوردية — لو الموظف قعد أكتر منها من غير ما يبصم، هيتطلب تدخل الأدمن يدويًا</div>
+      </div>
+      <div class="fg">
         <label class="fl">أيام العمل بالنسبة لهذه الوردية</label>
         <div id="shift-workdays" style="display:flex;flex-wrap:wrap;gap:10px;margin-top:4px"></div>
       </div>
@@ -974,8 +979,8 @@ let _usersCache = [];
 let _unsubs = [];
 const DEFAULT_DEPTS = ['المعمل','المخزن','الإنتاج','الإدارة'];
 const DEFAULT_SHIFTS = [
-  { name:'وردية أولى', start:'08:00', end:'15:00', checkinFrom:'07:45', checkinTo:'08:30', checkoutFrom:'14:50', checkoutTo:'15:30' },
-  { name:'وردية تانية', start:'15:00', end:'22:00', checkinFrom:'14:45', checkinTo:'15:30', checkoutFrom:'21:50', checkoutTo:'22:30' }
+  { name:'وردية أولى', start:'08:00', end:'15:00', checkinFrom:'07:45', checkinTo:'08:30', checkoutFrom:'14:50', checkoutTo:'15:30', overtimeGraceHours:10 },
+  { name:'وردية تانية', start:'15:00', end:'22:00', checkinFrom:'14:45', checkinTo:'15:30', checkoutFrom:'21:50', checkoutTo:'22:30', overtimeGraceHours:10 }
 ];
 
 // ══════════════════════════════════════════════
@@ -1340,6 +1345,7 @@ window.openShiftModal = (id=null) => {
   document.getElementById('shift-checkin-to').value = s?.checkinTo || '';
   document.getElementById('shift-checkout-from').value = s?.checkoutFrom || '';
   document.getElementById('shift-checkout-to').value = s?.checkoutTo || '';
+  document.getElementById('shift-ot-grace').value = (s?.overtimeGraceHours!=null ? s.overtimeGraceHours : 10);
   const workDays = (s?.workDays && s.workDays.length) ? s.workDays : DEFAULT_WORK_DAYS;
   document.getElementById('shift-workdays').innerHTML = DAY_LABELS.map((label,i)=>`
     <label style="display:flex;align-items:center;gap:5px;font-size:12.5px;font-weight:600;cursor:pointer">
@@ -1356,13 +1362,15 @@ window.saveShift = async () => {
   const checkinTo = document.getElementById('shift-checkin-to').value;
   const checkoutFrom = document.getElementById('shift-checkout-from').value;
   const checkoutTo = document.getElementById('shift-checkout-to').value;
+  const overtimeGraceHours = parseFloat(document.getElementById('shift-ot-grace').value) || 10;
   const workDays = Array.from(document.querySelectorAll('.shift-wd-cb:checked')).map(cb=>Number(cb.value));
   if (!name) { toast('يُرجى إدخال اسم الوردية', 'error'); return; }
   if (!start || !end || !checkinFrom || !checkinTo || !checkoutFrom || !checkoutTo) { toast('يُرجى استكمال جميع التوقيتات', 'error'); return; }
   if (!workDays.length) { toast('يُرجى تحديد يوم عمل واحد على الأقل', 'error'); return; }
   if (hmToMin(checkinFrom) >= hmToMin(checkinTo)) { toast('يجب أن يكون وقت "الحضور من" قبل وقت "الحضور حتى"', 'error'); return; }
   if (hmToMin(checkoutFrom) >= hmToMin(checkoutTo)) { toast('يجب أن يكون وقت "الانصراف من" قبل وقت "الانصراف حتى"', 'error'); return; }
-  const data = { name, start, end, checkinFrom, checkinTo, checkoutFrom, checkoutTo, workDays };
+  if (overtimeGraceHours<=0 || overtimeGraceHours>23) { toast('سماحية الوقت الإضافي لازم تكون بين 1 و23 ساعة', 'error'); return; }
+  const data = { name, start, end, checkinFrom, checkinTo, checkoutFrom, checkoutTo, workDays, overtimeGraceHours };
   try {
     if (window._editShiftId) {
       await updateDoc(doc(db,'shifts',window._editShiftId), data);
@@ -2469,6 +2477,7 @@ function hmToMin(hm) { const [h,m]=hm.split(':').map(Number); return h*60+m; }
 function nowMin() { const d=new Date(); return d.getHours()*60+d.getMinutes(); }
 function nowHM() { const d=new Date(); return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
 function minToHM(total) { total=((total%1440)+1440)%1440; const h=Math.floor(total/60), m=total%60; return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0'); }
+function addDaysToDateStr(dateStr, n) { const d=new Date(dateStr+'T00:00:00'); d.setDate(d.getDate()+n); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 
 function haversineMeters(lat1,lng1,lat2,lng2) {
   const R=6371000, toRad=x=>x*Math.PI/180;
@@ -2591,6 +2600,7 @@ window.kioskAckPenalties = async () => {
 async function kioskLoadStatus() {
   const emp = window._kioskEmp;
   const today = todayStr();
+  window._kioskCarryoverCheckin = null;
   const penaltyBanner = await kioskPenaltyBanner(emp);
 
   // المناديب: مفيش وردية ولا وقت محدد ولا تحقق من إجازة أسبوعية/رسمية — بس تسجيل وقت وموقع
@@ -2661,6 +2671,42 @@ async function kioskLoadStatus() {
   const shift = await getEffectiveShift(emp.shiftId, today, secDb);
   if (!shift) { kioskRenderCodeEntry('الوردية الخاصة بك غير موجودة، يُرجى التواصل مع الأدمن.'); return; }
   window._kioskShift = shift;
+
+  // فحص: هل عنده حضور "أمس" لسه من غير انصراف، ولسه داخل سماحية الوقت الإضافي بتاعة الوردية؟
+  // لو أيوه: نوريله زرار انصراف يقفل بيه حضور أمس ويحسب الوقت الإضافي صح، بغض النظر عن حالة النهاردة (إجازة/عطلة إلخ)
+  // لو الوقت عدّى السماحية: نسيبه معلّق للأدمن، ونكمل بشكل طبيعي كأن مفيش حاجة (يوم جديد عادي)
+  {
+    const yesterday = addDaysToDateStr(today, -1);
+    const ySnap = await getDocs(query(collection(secDb,'attendance'), where('employeeId','==',emp.id), where('date','==',yesterday)));
+    const yRecs = ySnap.docs.map(d=>({id:d.id,...d.data()}));
+    const yCheckin = yRecs.find(r=>r.type==='checkin');
+    const yCheckout = yRecs.find(r=>r.type==='checkout');
+    if (yCheckin && !yCheckout) {
+      const yShift = await getEffectiveShift(emp.shiftId, yesterday, secDb) || shift;
+      const graceHours = yShift.overtimeGraceHours!=null ? yShift.overtimeGraceHours : 10;
+      const shiftEndAbsMin = hmToMin(yShift.end); // بالنسبة لتاريخ أمس (يوم الحضور)
+      const graceEndAbsMin = shiftEndAbsMin + graceHours*60; // ممتد على اليوم التالي (النهاردة) طبيعي
+      const nowAbsMin = 1440 + nowMin(); // النهاردة = يوم أمس + 1
+      if (nowAbsMin <= graceEndAbsMin) {
+        window._kioskCarryoverCheckin = { ...yCheckin, shift: yShift };
+        window._kioskHasCheckin = true; window._kioskHasCheckout = false;
+        const graceEndHM = minToHM(graceEndAbsMin % 1440);
+        let bodyHtml = penaltyBanner + `
+          <div style="text-align:right;background:var(--slate-100);border-radius:10px;padding:14px 16px;margin:16px 0">
+            <div style="font-weight:800;font-size:15px">${esc(emp.name)}</div>
+            <div style="font-size:12px;color:var(--slate-500);margin-top:2px">${esc(emp.jobTitle)||'—'} · ${esc(yShift.name)}</div>
+          </div>
+          <div style="font-size:12px;color:var(--slate-600);margin-bottom:8px"><i class="fas fa-info-circle"></i> لسه مسجّل حضورك من ${esc(yesterday)} الساعة ${esc(yCheckin.time)} وما اتسجّلش انصرافك — مسموح تسجّله لحد الساعة ${graceEndHM}</div>
+          <button class="auth-btn" id="kiosk-act-btn" onclick="kioskDoAction('checkout')"><i class="fas fa-fingerprint"></i>تسجيل انصراف</button>
+          <div style="margin-top:12px;display:flex;flex-direction:column;gap:8px">
+            <a href="javascript:void(0)" onclick="kioskRenderCodeEntry()" style="font-size:11.5px;color:var(--slate-500)">مش أنا؟ رجوع</a>
+          </div>`;
+        document.getElementById('kiosk-body').innerHTML = bodyHtml;
+        return;
+      }
+      // عدّى نطاق السماحية: نسيبه معلّق للأدمن ونكمل عادي — الموظف يقدر يبدأ يوم جديد من غير بلوك
+    }
+  }
 
   // هل عنده إجازة اعتيادية/عارضة معتمدة تغطي النهاردة؟ لو أيوه، بنعرض عليه خيار "قطع الإجازة" بدل الشاشة العادية —
   // ده بيتفحص الأول قبل أي حاجة تانية لأنه أخص حالة من كل الحالات التانية
@@ -3351,11 +3397,26 @@ window.kioskDoAction = async (type) => {
 
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التسجيل...';
     let extra = {};
+    let recordDate = todayStr();
+    const carryover = window._kioskCarryoverCheckin;
     if (!isRep && !isDriver) {
-      const nowM = nowMin();
       if (type==='checkin') {
+        const nowM = nowMin();
         extra.lateMinutes = Math.max(0, nowM - hmToMin(shift.checkinTo));
+      } else if (carryover) {
+        // انصراف بيقفل حضور "أمس" — بنحسب الوقت المشتغول بفرق مطلق (تاريخ+وقت) عشان يعدّي نص الليل صح
+        const cShift = carryover.shift || shift;
+        const ciAbsMin = hmToMin(carryover.time);
+        const nowAbsMin = 1440 + nowMin(); // النهاردة = يوم الحضور + 1
+        const worked = Math.max(0, nowAbsMin - ciAbsMin);
+        const shiftMinutes = Math.max(1, hmToMin(cShift.end) - hmToMin(cShift.start));
+        extra.workedMinutes = worked;
+        extra.regularMinutes = Math.min(worked, shiftMinutes);
+        extra.pendingOvertimeMinutes = Math.max(0, worked - shiftMinutes);
+        extra.overtimeApproved = false;
+        recordDate = carryover.date; // نسجل الانصراف بنفس تاريخ الحضور عشان يترابطوا صح في المتابعة اليومية
       } else {
+        const nowM = nowMin();
         const shiftEndMin = hmToMin(shift.end);
         const checkoutToMin = hmToMin(shift.checkoutTo);
         if (nowM > checkoutToMin) {
@@ -3384,10 +3445,11 @@ window.kioskDoAction = async (type) => {
     }
     await addDoc(collection(secDb,'attendance'), {
       employeeId: emp.id, employeeName: emp.name, departmentId: emp.departmentId||null,
-      shiftId: shift?.id||null, type, date: todayStr(), time: nowHM(), isRep, isDriver,
+      shiftId: shift?.id||null, type, date: recordDate, time: nowHM(), isRep, isDriver,
       location: { lat: pos.coords.latitude, lng: pos.coords.longitude }, distanceMeters: Math.round(dist), locationName: best.loc.name||null,
       createdAt: Date.now(), ...extra
     });
+    window._kioskCarryoverCheckin = null;
 
     let extraMsgHtml = '';
     if (type==='checkin' && window._kioskLeaveCutContext && shift) {
