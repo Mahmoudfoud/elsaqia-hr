@@ -332,6 +332,14 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
         <div><div class="ph-title">الإعدادات</div><div class="ph-sub">فروع الشركة المسموح بتسجيل الحضور والانصراف منها</div></div>
         <div class="ph-acts"><button class="btn btn-ac btn-sm" onclick="openLocationModal()"><i class="fas fa-plus"></i>فرع جديد</button></div>
       </div>
+      <div class="card" style="border:1px solid var(--warn-300,#f0c96b)">
+        <div class="card-body" style="font-size:12.5px">
+          <div style="font-weight:800;margin-bottom:6px"><i class="fas fa-shield-halved"></i> تحديث أمان الكيوسك — مطلوب مرة واحدة فقط</div>
+          <div style="color:var(--slate-600);margin-bottom:10px">بعد تحديث أمان الكيوسك، لازم تشغّل المزامنة دي مرة واحدة عشان كل الموظفين الحاليين يقدروا يستخدموا الكيوسك بالكود بتاعهم زي الأول. الزرار آمن تمامًا لو اتضغط أكتر من مرة بالغلط.</div>
+          <button class="btn btn-primary btn-sm" onclick="migrateEmployeeCodes()" id="migrate-codes-btn"><i class="fas fa-rotate"></i> تشغيل مزامنة أكواد الموظفين الآن</button>
+          <div id="migrate-codes-result" style="margin-top:8px;font-size:12px"></div>
+        </div>
+      </div>
       <div class="card"><div class="card-body" style="font-size:12px;color:var(--slate-500)">
         كل موظف تقدر تحدد له فرع معيّن من "بيانات الموظف" فيتحقق النظام إنه داخل نطاق الفرع ده بس وقت تسجيل الحضور/الانصراف. لو مافيش فرع محدد لموظف، النظام هيقبل تسجيله من أي فرع من الفروع المسجّلة هنا.
       </div></div>
@@ -1481,20 +1489,24 @@ window.saveRep = async () => {
     shiftId: null,
   };
   try {
-    if (window._editRepId) {
-      await updateDoc(doc(db,'employees',window._editRepId), data);
+    const oldCode = window._editRepId ? (_employees.find(x=>x.id===window._editRepId)?.code || null) : null;
+    let empId = window._editRepId;
+    if (empId) {
+      await updateDoc(doc(db,'employees',empId), data);
       toast('تم تعديل بيانات المندوب بنجاح', 'success');
     } else {
-      await addDoc(collection(db,'employees'), { ...data, createdAt:Date.now(), passkeys:[] });
+      const ref = await addDoc(collection(db,'employees'), { ...data, createdAt:Date.now(), passkeys:[] });
+      empId = ref.id;
       toast('تمت إضافة المندوب بنجاح', 'success');
     }
+    await syncEmployeeCode(empId, oldCode, data.code);
     closeM('mo-rep');
   } catch(e) { toast('حدث خطأ: '+e.message, 'error'); }
 };
 
 window.deleteRep = async (id) => {
   if (!confirm('هل أنت متأكد من حذف هذا المندوب نهائيًا؟')) return;
-  try { await deleteDoc(doc(db,'employees',id)); toast('تم الحذف بنجاح', 'success'); }
+  try { const e=_employees.find(x=>x.id===id); await deleteDoc(doc(db,'employees',id)); await removeEmployeeCode(e?.code); toast('تم الحذف بنجاح', 'success'); }
   catch(e) { toast('حدث خطأ: '+e.message, 'error'); }
 };
 
@@ -1618,20 +1630,24 @@ window.saveDriver = async () => {
     shiftId: null,
   };
   try {
-    if (window._editDriverId) {
-      await updateDoc(doc(db,'employees',window._editDriverId), data);
+    const oldCode = window._editDriverId ? (_employees.find(x=>x.id===window._editDriverId)?.code || null) : null;
+    let empId = window._editDriverId;
+    if (empId) {
+      await updateDoc(doc(db,'employees',empId), data);
       toast('تم تعديل بيانات السائق بنجاح', 'success');
     } else {
-      await addDoc(collection(db,'employees'), { ...data, createdAt:Date.now(), passkeys:[] });
+      const ref = await addDoc(collection(db,'employees'), { ...data, createdAt:Date.now(), passkeys:[] });
+      empId = ref.id;
       toast('تمت إضافة السائق بنجاح', 'success');
     }
+    await syncEmployeeCode(empId, oldCode, data.code);
     closeM('mo-driver');
   } catch(e) { toast('حدث خطأ: '+e.message, 'error'); }
 };
 
 window.deleteDriver = async (id) => {
   if (!confirm('هل أنت متأكد من حذف هذا السائق نهائيًا؟')) return;
-  try { await deleteDoc(doc(db,'employees',id)); toast('تم الحذف بنجاح', 'success'); }
+  try { const e=_employees.find(x=>x.id===id); await deleteDoc(doc(db,'employees',id)); await removeEmployeeCode(e?.code); toast('تم الحذف بنجاح', 'success'); }
   catch(e) { toast('حدث خطأ: '+e.message, 'error'); }
 };
 
@@ -2294,12 +2310,14 @@ window.saveEmployee = async () => {
   };
   try {
     let empId = window._editEmpId;
+    const oldCode = empId ? (_employees.find(x=>x.id===empId)?.code || null) : null;
     if (empId) {
       await updateDoc(doc(db,'employees',empId), data);
     } else {
       const ref = await addDoc(collection(db,'employees'), { ...data, createdAt:Date.now() });
       empId = ref.id;
     }
+    await syncEmployeeCode(empId, oldCode, data.code);
     // لو اتحدد كمدير للقسم ده، شيل صفة المدير من أي حد تاني في نفس القسم وحدّث القسم
     if (isManager) {
       const others = _employees.filter(x=>x.departmentId===departmentId && x.id!==empId && x.isManager);
@@ -2326,6 +2344,7 @@ window.deleteEmployee = async (id) => {
       if (dept) await updateDoc(doc(db,'departments',dept.id), { managerEmployeeId:null });
     }
     await deleteDoc(doc(db,'employees',id));
+    await removeEmployeeCode(e?.code);
     toast('تم الحذف بنجاح', 'success');
   } catch(e) { toast('حدث خطأ: '+e.message, 'error'); }
 };
@@ -2340,6 +2359,48 @@ function normalizeDigits(str) {
   const eastern = '٠١٢٣٤٥٦٧٨٩', persian = '۰۱۲۳۴۵۶۷۸۹';
   return String(str).replace(/[٠-٩]/g, d=>eastern.indexOf(d)).replace(/[۰-۹]/g, d=>persian.indexOf(d)).trim();
 }
+// خريطة كود -> employeeId مستقلة، عشان الكيوسك يقدر يدوّر بكود الموظف بقراءة مستند واحد بمعرفة (get)
+// من غير ما يحتاج يقرا/يفحص كل الموظفين (list) — وده اللي بيقفل تسريب بيانات كل الموظفين للكيوسك.
+async function syncEmployeeCode(empId, oldCode, newCode) {
+  try {
+    if (oldCode && oldCode !== newCode) { await deleteDoc(doc(db,'employeeCodes', oldCode)).catch(()=>{}); }
+    if (newCode) { await setDoc(doc(db,'employeeCodes', newCode), { employeeId: empId }); }
+  } catch(e) { console.error('فشل مزامنة كود الموظف', e); }
+}
+async function removeEmployeeCode(code) {
+  if (!code) return;
+  try { await deleteDoc(doc(db,'employeeCodes', code)); } catch(e) {}
+}
+window.migrateEmployeeCodes = async () => {
+  const btn = document.getElementById('migrate-codes-btn');
+  const resultEl = document.getElementById('migrate-codes-result');
+  btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري المزامنة...';
+  resultEl.textContent = '';
+  try {
+    const snap = await getDocs(collection(db,'employees'));
+    let synced = 0, skipped = 0, duplicates = [];
+    const seenCodes = {};
+    for (const d of snap.docs) {
+      const emp = d.data();
+      if (!emp.code) { skipped++; continue; }
+      if (seenCodes[emp.code] && seenCodes[emp.code] !== d.id) {
+        duplicates.push(`${emp.code} (${emp.name} / ${seenCodes[emp.code+'_name']||'؟'})`);
+        continue; // مش هنكتب فوق كود مستخدم بالفعل — لازم يتصلح يدوي الأول
+      }
+      seenCodes[emp.code] = d.id; seenCodes[emp.code+'_name'] = emp.name;
+      await setDoc(doc(db,'employeeCodes', emp.code), { employeeId: d.id });
+      synced++;
+    }
+    let msg = `تمت المزامنة بنجاح: ${synced} موظف، ${skipped} من غير كود (متوقع لو مش محدد لهم).`;
+    if (duplicates.length) msg += ` ⚠️ تكرار في الأكواد لازم يتصلح يدوي: ${duplicates.join('، ')}`;
+    resultEl.innerHTML = `<span style="color:${duplicates.length?'var(--danger-600)':'var(--ok-700)'}">${esc(msg)}</span>`;
+    toast('تمت المزامنة', 'success');
+  } catch(e) {
+    resultEl.innerHTML = `<span style="color:var(--danger-600)">حدث خطأ: ${esc(e.message)}</span>`;
+  } finally {
+    btn.disabled = false; btn.innerHTML = '<i class="fas fa-rotate"></i> تشغيل مزامنة أكواد الموظفين الآن';
+  }
+};
 
 // الافتراضي: أيام الشغل الأحد–الخميس (JS: الأحد=0 ... السبت=6) — قابل للتخصيص لكل وردية على حدة من إعدادات الوردية
 const DEFAULT_WORK_DAYS = [0,1,2,3,4];
@@ -2560,9 +2621,10 @@ window.kioskSubmitCode = async () => {
   btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التحقق...';
   try {
     if (!secAuth.currentUser) await signInAnonymously(secAuth);
-    const snap = await getDocs(query(collection(secDb,'employees'), where('code','==',code)));
-    const empDoc = snap.docs.find(d => d.data().status !== 'resigned');
-    if (!empDoc) { kioskRenderCodeEntry('الكود ده غلط أو غير موجود'); return; }
+    const codeDoc = await getDoc(doc(secDb,'employeeCodes', code));
+    if (!codeDoc.exists()) { kioskRenderCodeEntry('الكود ده غلط أو غير موجود'); return; }
+    const empDoc = await getDoc(doc(secDb,'employees', codeDoc.data().employeeId));
+    if (!empDoc.exists() || empDoc.data().status === 'resigned') { kioskRenderCodeEntry('الكود ده غلط أو غير موجود'); return; }
     window._kioskEmp = { id: empDoc.id, ...empDoc.data() };
     await kioskLoadStatus();
   } catch(e) {
@@ -3390,7 +3452,7 @@ window.kioskDoAction = async (type) => {
     if (!updatedPasskeys.length) {
       const newPk = await webauthnRegister(emp);
       updatedPasskeys = [...updatedPasskeys, newPk];
-      await updateDoc(doc(secDb,'employees',emp.id), { passkeys: updatedPasskeys });
+      await updateDoc(doc(secDb,'employees',emp.id), { passkeys: updatedPasskeys, _authCode: emp.code });
     } else {
       await webauthnVerify(emp);
     }
@@ -3447,7 +3509,7 @@ window.kioskDoAction = async (type) => {
       employeeId: emp.id, employeeName: emp.name, departmentId: emp.departmentId||null,
       shiftId: shift?.id||null, type, date: recordDate, time: nowHM(), isRep, isDriver,
       location: { lat: pos.coords.latitude, lng: pos.coords.longitude }, distanceMeters: Math.round(dist), locationName: best.loc.name||null,
-      createdAt: Date.now(), ...extra
+      createdAt: Date.now(), authCode: emp.code, ...extra
     });
     window._kioskCarryoverCheckin = null;
 
@@ -3471,7 +3533,7 @@ window.kioskDoAction = async (type) => {
       await addDoc(collection(secDb,'personalPermissionRequests'), {
         employeeId: emp.id, employeeName: emp.name, departmentId: emp.departmentId||null,
         kind: 'permission', mode: 'instant', period: periodForDate(todayStr()), date: todayStr(),
-        position: 'start', minutes: mins, status: 'auto',
+        position: 'start', minutes: mins, status: 'auto', authCode: emp.code,
         note: 'تسجيل حضور متأخر تلقائي', requestedAt: Date.now(), requestedBy: 'kiosk:'+(emp.code||emp.id)
       });
       extraMsgHtml += `<div style="font-size:12px;color:var(--ac-700);margin-top:8px">اتخصم ${esc(minutesToHoursLabel(mins))} من رصيد إذنك الشخصي</div>`;
