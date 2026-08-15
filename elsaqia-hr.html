@@ -2522,6 +2522,16 @@ function esc(s) {
   if (s == null) return '';
   return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
+// لو الخطأ من فايربيز بيطلب إنشاء index، بيرجّع رابط حقيقي قابل للضغط بدل نص عادي (ده باغ حقيقي كان موجود
+// من قبل — الرسالة كانت بتعرض الرابط كنص عادي مش كـ<a> فعلي، فمحدش كان يقدر يضغط عليه فعليًا)
+function formatFirestoreError(prefix, e) {
+  const raw = String(e?.message || e || '');
+  const urlMatch = raw.match(/https:\/\/console\.firebase\.google\.com\S+/);
+  if (!urlMatch) return `${prefix}: ${esc(raw)}`;
+  const url = urlMatch[0].replace(/[).,]+$/, '');
+  const beforeUrl = esc(raw.slice(0, raw.indexOf(urlMatch[0])).trim());
+  return `${prefix}: ${beforeUrl} <a href="${url.replace(/"/g,'&quot;')}" target="_blank" rel="noopener" style="color:var(--ac-600,#1a7a4c);font-weight:800;text-decoration:underline">اضغط هنا لإنشاء الفهرس المطلوب في Firestore</a>`;
+}
 // سجل تدقيق (Audit Log) — بيسجّل كل تعديل مالي أو حسّاس: مين عمله، إمتى، وقيمته قبل وبعد.
 // السجل دايمًا read-only بعد الكتابة (مفيش update/delete مسموح حتى للأدمن) — تأمين ضد أي تلاعب لاحق.
 // فشل تسجيل السجل مايوقفش العملية الأساسية أبدًا (لو حصل مشكلة شبكة مثلاً وقت الكتابة).
@@ -3919,7 +3929,7 @@ async function renderOvertime() {
     snap = await getDocs(query(collection(db,'attendance'),
       where('type','==','checkout'), where('date','>=',dateFrom), where('date','<=',dateTo)));
   }
-  catch(e) { body.innerHTML = `<div class="empty"><p>خطأ: ${e.message} (ممكن Firestore يحتاج index، هيديك رابط في الـ console تعمله بضغطة)</p></div>`; return; }
+  catch(e) { body.innerHTML = `<div class="empty"><p>${formatFirestoreError('خطأ', e)}</p></div>`; return; }
 
   const pending = snap.docs.map(d=>({id:d.id,...d.data()}))
     .filter(r=>r.pendingOvertimeMinutes>0 && !r.overtimeApproved && !r.overtimeRejected)
@@ -4176,7 +4186,7 @@ window.autoFillMonthly = async () => {
       if (otEl) otEl.value = Math.round((otHours[e.id]||0)*100)/100;
     });
     toast('تم تحميل البيانات من السجلات — يُرجى مراجعتها وحفظ كل صف على حدة', 'success');
-  } catch(e) { toast('حدث خطأ: '+e.message+' (ممكن Firestore يحتاج index، هيديك رابط في الـ console تعمله بضغطة)', 'error'); }
+  } catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
 
 // ══════════════════════════════════════════════
@@ -4726,7 +4736,7 @@ window.generateCustomReport = async () => {
     document.getElementById('rep-print-btn').style.display = '';
     document.getElementById('rep-excel-btn').style.display = '';
   } catch(e) {
-    body.innerHTML = `<div class="empty"><p>خطأ: ${e.message} (ممكن Firestore محتاج index، هيديك رابط في الـ console تعمله بضغطة)</p></div>`;
+    body.innerHTML = `<div class="empty"><p>${formatFirestoreError('خطأ', e)}</p></div>`;
   }
 };
 
@@ -5700,7 +5710,8 @@ window.toast = (msg, type='info') => {
   const icon = type==='success' ? 'fa-check-circle' : type==='error' ? 'fa-exclamation-circle' : 'fa-info-circle';
   el.innerHTML = `<i class="fas ${icon}"></i>${msg}`;
   wrap.appendChild(el);
-  setTimeout(()=>{ el.style.opacity='0'; setTimeout(()=>el.remove(), 200); }, 3000);
+  const duration = type==='error' ? 10000 : 3000;
+  setTimeout(()=>{ el.style.opacity='0'; setTimeout(()=>el.remove(), 200); }, duration);
 };
 </script>
 </body>
