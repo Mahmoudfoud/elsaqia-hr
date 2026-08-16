@@ -4721,14 +4721,16 @@ window.generateCustomReport = async () => {
       }
       let attendanceDays = [];
       if (flags.wantAttendance) {
-        const [attSnap, markSnap] = await Promise.all([
+        const [checkinSnap, checkoutSnap, markSnap] = await Promise.all([
           getDocs(query(collection(db,'attendance'), where('employeeId','==',emp.id), where('type','==','checkin'), where('date','>=',dateFrom), where('date','<=',dateTo))),
+          getDocs(query(collection(db,'attendance'), where('employeeId','==',emp.id), where('type','==','checkout'), where('date','>=',dateFrom), where('date','<=',dateTo))),
           getDocs(query(collection(db,'dailyMarks'), where('employeeId','==',emp.id), where('date','>=',dateFrom), where('date','<=',dateTo)))
         ]);
-        const attByDate = {}; attSnap.docs.forEach(d=>{ const v=d.data(); attByDate[v.date]=v.time; });
+        const checkinByDate = {}; checkinSnap.docs.forEach(d=>{ const v=d.data(); checkinByDate[v.date]=v.time; });
+        const checkoutByDate = {}; checkoutSnap.docs.forEach(d=>{ const v=d.data(); checkoutByDate[v.date]=v.time; });
         const markByDate = {}; markSnap.docs.forEach(d=>{ const v=d.data(); markByDate[v.date]=v.status; });
-        const allDates = new Set([...Object.keys(attByDate), ...Object.keys(markByDate)]);
-        attendanceDays = Array.from(allDates).sort().map(dt=>({ date:dt, time: attByDate[dt]||null, status: markByDate[dt]||null }));
+        const allDates = new Set([...Object.keys(checkinByDate), ...Object.keys(checkoutByDate), ...Object.keys(markByDate)]);
+        attendanceDays = Array.from(allDates).sort().map(dt=>({ date:dt, checkinTime: checkinByDate[dt]||null, checkoutTime: checkoutByDate[dt]||null, status: markByDate[dt]||null }));
       }
       const sum = (arr,key)=>Math.round(arr.reduce((a,v)=>a+(v[key]||0),0)*100)/100;
       const evalAvg = evals.length ? Math.round(evals.reduce((a,v)=>a+(v.finalScore||0),0)/evals.length*100)/100 : null;
@@ -4787,7 +4789,7 @@ function renderReportResults() {
         <div style="font-weight:800;margin-bottom:8px">تفاصيل الحضور يوم بيوم — ${esc(r.emp.name)}</div>
         <table class="tbl"><thead><tr><th>التاريخ</th><th>الحالة</th></tr></thead><tbody>
         ${r.attendanceDays.map(d=>{
-          const label = d.time ? `حضر الساعة ${d.time}` : (d.status==='leave' ? 'إجازة من الرصيد' : d.status==='deduct' ? 'خصم يوم (جزاء)' : d.status==='absent' ? 'غياب بدون إذن' : 'لا يوجد سجل');
+          const label = attendanceDayLabel(d);
           return `<tr><td>${d.date}</td><td>${label}</td></tr>`;
         }).join('')}
         </tbody></table>
@@ -4798,6 +4800,12 @@ function renderReportResults() {
 }
 window.renderReportResults = renderReportResults;
 
+function attendanceDayLabel(d) {
+  if (d.checkinTime) {
+    return `حضر الساعة ${d.checkinTime}` + (d.checkoutTime ? ` — انصرف الساعة ${d.checkoutTime}` : ' (لسه ما سجّلش انصراف)');
+  }
+  return d.status==='leave' ? 'إجازة من الرصيد' : d.status==='deduct' ? 'خصم يوم (جزاء)' : d.status==='absent' ? 'غياب بدون إذن' : 'لا يوجد سجل';
+}
 window.printCustomReport = () => {
   if (!window._lastReport) { toast('يُرجى إنشاء التقرير أولًا', 'error'); return; }
   const content = document.getElementById('reports-body').innerHTML;
@@ -4840,7 +4848,7 @@ window.exportReportToExcel = () => {
     const attAoa = [['الموظف','التاريخ','الحالة']];
     results.forEach(r=>{
       r.attendanceDays.forEach(d=>{
-        const label = d.time ? `حضر الساعة ${d.time}` : (d.status==='leave' ? 'إجازة من الرصيد' : d.status==='deduct' ? 'خصم يوم (جزاء)' : d.status==='absent' ? 'غياب بدون إذن' : 'لا يوجد سجل');
+        const label = attendanceDayLabel(d);
         attAoa.push([r.emp.name, d.date, label]);
       });
     });
