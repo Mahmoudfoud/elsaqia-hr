@@ -3856,20 +3856,43 @@ window.saveManualAttendance = async () => {
   const note = document.getElementById('ma-note').value.trim();
   if (!time) { toast('يُرجى تحديد الساعة', 'error'); return; }
   try {
+    const emp = _employees.find(x=>x.id===window._maEmpId);
+    let extra = {};
+    if (emp && emp.category!=='rep' && emp.category!=='driver') {
+      const shift = await getEffectiveShift(emp.shiftId, window._maDate, db);
+      if (shift) {
+        const tM = hmToMin(time);
+        if (type==='checkin') {
+          extra.lateMinutes = Math.max(0, tM - hmToMin(shift.checkinTo));
+        } else if (type==='checkout') {
+          const shiftEndMin = hmToMin(shift.end);
+          const checkoutToMin = hmToMin(shift.checkoutTo);
+          if (tM > checkoutToMin) {
+            extra.pendingOvertimeMinutes = Math.max(0, tM - shiftEndMin);
+            extra.overtimeApproved = false;
+          } else {
+            extra.pendingOvertimeMinutes = 0; // تصفير أي وقت إضافي معلّق قديم لو الأدمن صحّح الوقت لمعاد ما بقاش متأخر
+          }
+        }
+      }
+    }
     const existing = await getDocs(query(collection(db,'attendance'),
       where('employeeId','==',window._maEmpId), where('date','==',window._maDate), where('type','==',type)));
-    const emp = _employees.find(x=>x.id===window._maEmpId);
     if (!existing.empty) {
-      await updateDoc(doc(db,'attendance',existing.docs[0].id), { time, note, method:'manual_admin', markedBy: CU?.email||'admin', markedAt: Date.now() });
+      await updateDoc(doc(db,'attendance',existing.docs[0].id), { time, note, method:'manual_admin', markedBy: CU?.email||'admin', markedAt: Date.now(), ...extra });
     } else {
       await addDoc(collection(db,'attendance'), {
         employeeId: window._maEmpId, employeeName: emp?.name||null, departmentId: emp?.departmentId||null,
         isRep: emp?.category==='rep', isDriver: emp?.category==='driver',
         date: window._maDate, type, time, note,
-        method: 'manual_admin', markedBy: CU?.email||'admin', markedAt: Date.now()
+        method: 'manual_admin', markedBy: CU?.email||'admin', markedAt: Date.now(), ...extra
       });
     }
-    toast('تم حفظ البيانات بنجاح', 'success');
+    if (extra.pendingOvertimeMinutes) {
+      toast(`تم الحفظ — احتُسب ${Math.round(extra.pendingOvertimeMinutes/60*10)/10} ساعة وقت إضافي معلّق، هتلاقيها في "موافقات الوقت الإضافي"`, 'success');
+    } else {
+      toast('تم حفظ البيانات بنجاح', 'success');
+    }
     closeM('mo-manualatt');
     if (_page==='dailymark') renderDailyMarkPage(); else renderDaily();
   } catch(e) { toast('حدث خطأ: '+e.message, 'error'); }
