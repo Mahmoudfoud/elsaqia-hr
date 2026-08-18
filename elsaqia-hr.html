@@ -3227,7 +3227,7 @@ window.kioskSubmitLeaveRequest = async () => {
     await addDoc(collection(secDb,'leaveRequests'), {
       employeeId: emp.id, employeeName: emp.name, departmentId: emp.departmentId||null,
       leaveType, dateFrom, dateTo, daysCount, billableDates, note, status:'pending', source:'kiosk',
-      managerApproved: null, hrApproved: null,
+      managerApproved: null, hrApproved: null, authCode: emp.code,
       requestedAt: Date.now(), requestedBy: 'kiosk:'+(emp.code||emp.id)
     });
     document.getElementById('kiosk-body').innerHTML = `
@@ -3373,7 +3373,7 @@ window.kioskSubmitPersonalPermission = async () => {
     await addDoc(collection(secDb,'personalPermissionRequests'), {
       employeeId: emp.id, employeeName: emp.name, departmentId: emp.departmentId||null,
       kind: 'permission', mode: 'planned', period, date: today, position, minutes,
-      status: 'pending', managerApproved: null, hrApproved: null, note,
+      status: 'pending', managerApproved: null, hrApproved: null, note, authCode: emp.code,
       requestedAt: Date.now(), requestedBy: 'kiosk:'+(emp.code||emp.id)
     });
     document.getElementById('kiosk-body').innerHTML = `
@@ -3548,7 +3548,7 @@ window.kioskDoAction = async (type) => {
       await addDoc(collection(secDb,'personalPermissionRequests'), {
         employeeId: emp.id, employeeName: emp.name, departmentId: emp.departmentId||null,
         kind: 'leaveCut', date: todayStr(), leaveRequestId: lr.id, leaveType: lr.leaveType,
-        checkinAt: nowHM(), shiftTotalMinutes, estWorkedMinutes,
+        checkinAt: nowHM(), shiftTotalMinutes, estWorkedMinutes, authCode: emp.code,
         suggestedRefundFraction: Math.round((estWorkedMinutes/shiftTotalMinutes)*100)/100,
         status: 'pending_hr_decision', requestedAt: Date.now(), requestedBy: 'kiosk:'+(emp.code||emp.id)
       });
