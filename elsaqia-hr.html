@@ -1029,7 +1029,7 @@ window.doLogin = async () => {
     } else if (code === 'auth/network-request-failed') {
       err.textContent = 'لا يوجد اتصال بالإنترنت — يُرجى التحقق من الشبكة والمحاولة مرة أخرى';
     } else {
-      err.textContent = 'حدث خطأ: ' + (e.message || code);
+      err.innerHTML = formatFirestoreError('حدث خطأ', {message: e.message||code});
     }
     btn.disabled = false;
     btn.innerHTML = '<i class="fas fa-sign-in-alt"></i>دخول';
@@ -1064,7 +1064,7 @@ onAuthStateChanged(auth, async user => {
       if (e.code === 'permission-denied') {
         err.textContent = 'قاعدة بيانات Firestore ما زالت مقفلة — يجب إضافة قواعد الأمان (Security Rules) أولًا';
       } else {
-        err.textContent = 'حدث خطأ: ' + (e.message || e.code || 'غير معروف');
+        err.innerHTML = formatFirestoreError('حدث خطأ', {message: e.message||e.code||'غير معروف'});
       }
       if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-sign-in-alt"></i>دخول'; }
       await signOut(auth).catch(()=>{});
@@ -1405,7 +1405,7 @@ window.saveShift = async () => {
       toast('تمت إضافة الوردية بنجاح', 'success');
     }
     closeM('mo-shift');
-  } catch(e) { toast('حدث خطأ: '+e.message, 'error'); }
+  } catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
 
 window.deleteShift = async (id) => {
@@ -1413,7 +1413,7 @@ window.deleteShift = async (id) => {
   if (usedBy>0) { toast(`هذه الوردية بها ${usedBy} موظف — يُرجى تغيير ورديتهم أولًا`, 'error'); return; }
   if (!confirm('هل أنت متأكد من حذف هذه الوردية؟')) return;
   try { await deleteDoc(doc(db,'shifts',id)); toast('تم الحذف بنجاح', 'success'); }
-  catch(e) { toast('حدث خطأ: '+e.message, 'error'); }
+  catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
 
 // ══════════════════════════════════════════════
@@ -1431,7 +1431,7 @@ async function renderReps() {
 
   let attSnap;
   try { attSnap = await getDocs(query(collection(db,'attendance'), where('date','==',date))); }
-  catch(e) { body.innerHTML = `<tr><td colspan="5"><div class="empty"><p>خطأ: ${e.message}</p></div></td></tr>`; return; }
+  catch(e) { body.innerHTML = `<tr><td colspan="5"><div class="empty"><p>${formatFirestoreError('خطأ', e)}</p></div></td></tr>`; return; }
 
   const checkins = {}, checkouts = {};
   attSnap.docs.forEach(d=>{
@@ -1518,13 +1518,13 @@ window.saveRep = async () => {
     }
     await syncEmployeeCode(empId, oldCode, data.code);
     closeM('mo-rep');
-  } catch(e) { toast('حدث خطأ: '+e.message, 'error'); }
+  } catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
 
 window.deleteRep = async (id) => {
   if (!confirm('هل أنت متأكد من حذف هذا المندوب نهائيًا؟')) return;
   try { const e=_employees.find(x=>x.id===id); await deleteDoc(doc(db,'employees',id)); await removeEmployeeCode(e?.code); toast('تم الحذف بنجاح', 'success'); }
-  catch(e) { toast('حدث خطأ: '+e.message, 'error'); }
+  catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
 
 // ══════════════════════════════════════════════
@@ -1548,7 +1548,7 @@ async function renderDrivers() {
       getDocs(query(collection(db,'attendance'), where('date','==',nextDate)))
     ]);
   }
-  catch(e) { body.innerHTML = `<tr><td colspan="7"><div class="empty"><p>خطأ: ${e.message}</p></div></td></tr>`; return; }
+  catch(e) { body.innerHTML = `<tr><td colspan="7"><div class="empty"><p>${formatFirestoreError('خطأ', e)}</p></div></td></tr>`; return; }
 
   const checkins = {}, checkouts = {};
   attSnap.docs.forEach(d=>{
@@ -1659,13 +1659,13 @@ window.saveDriver = async () => {
     }
     await syncEmployeeCode(empId, oldCode, data.code);
     closeM('mo-driver');
-  } catch(e) { toast('حدث خطأ: '+e.message, 'error'); }
+  } catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
 
 window.deleteDriver = async (id) => {
   if (!confirm('هل أنت متأكد من حذف هذا السائق نهائيًا؟')) return;
   try { const e=_employees.find(x=>x.id===id); await deleteDoc(doc(db,'employees',id)); await removeEmployeeCode(e?.code); toast('تم الحذف بنجاح', 'success'); }
-  catch(e) { toast('حدث خطأ: '+e.message, 'error'); }
+  catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
 
 // ══════════════════════════════════════════════
@@ -1676,7 +1676,7 @@ async function renderPenalties() {
   body.innerHTML = `<tr><td colspan="7"><div class="empty"><i class="fas fa-spinner fa-spin"></i><p>جاري التحميل...</p></div></td></tr>`;
   let snap;
   try { snap = await getDocs(query(collection(db,'penaltyRewards'), orderBy('date','desc'))); }
-  catch(e) { body.innerHTML = `<tr><td colspan="7"><div class="empty"><p>خطأ: ${e.message}</p></div></td></tr>`; return; }
+  catch(e) { body.innerHTML = `<tr><td colspan="7"><div class="empty"><p>${formatFirestoreError('خطأ', e)}</p></div></td></tr>`; return; }
   if (snap.empty) { body.innerHTML = `<tr><td colspan="7"><div class="empty"><i class="fas fa-balance-scale"></i><p>لا توجد حالات مسجّلة بعد</p></div></td></tr>`; return; }
   const canDel = hasPerm('data_delete');
   body.innerHTML = snap.docs.map(d=>{
@@ -1738,7 +1738,7 @@ window.savePenalty = async () => {
     toast('تم تسجيل الحالة بنجاح', 'success');
     closeM('mo-penalty');
     renderPenalties();
-  } catch(e) { toast('حدث خطأ: '+e.message, 'error'); }
+  } catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
 
 window.deletePenalty = async (id) => {
@@ -1750,7 +1750,7 @@ window.deletePenalty = async (id) => {
     if (p) await logAudit(p.type==='reward'?'حذف مكافأة':'حذف جزاء', p.employeeId, p.employeeName, { days:p.days, amount:p.amount, reason:p.reason, date:p.date });
     toast('تم الحذف بنجاح', 'success'); renderPenalties();
   }
-  catch(e) { toast('حدث خطأ: '+e.message, 'error'); }
+  catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
 
 // ══════════════════════════════════════════════
@@ -1762,7 +1762,7 @@ async function renderShiftOverrides() {
   body.innerHTML = `<tr><td colspan="5"><div class="empty"><i class="fas fa-spinner fa-spin"></i><p>جاري التحميل...</p></div></td></tr>`;
   let snap;
   try { snap = await getDocs(query(collection(db,'shiftOverrides'), orderBy('date','desc'))); }
-  catch(e) { body.innerHTML = `<tr><td colspan="5"><div class="empty"><p>خطأ: ${e.message}</p></div></td></tr>`; return; }
+  catch(e) { body.innerHTML = `<tr><td colspan="5"><div class="empty"><p>${formatFirestoreError('خطأ', e)}</p></div></td></tr>`; return; }
   const overrides = snap.docs.map(d=>({id:d.id,...d.data()}));
   if (!overrides.length) { body.innerHTML = `<tr><td colspan="5"><div class="empty"><p>لا توجد تعديلات مؤقتة مسجّلة</p></div></td></tr>`; return; }
   body.innerHTML = overrides.map(o=>{
@@ -1814,13 +1814,13 @@ window.saveShiftOverride = async () => {
     toast('تم حفظ التعديل — هيتطبق يوم ' + date + ' بس', 'success');
     closeM('mo-shift-override');
     renderShiftOverrides();
-  } catch(e) { toast('حدث خطأ: '+e.message, 'error'); }
+  } catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
 
 window.deleteShiftOverride = async (id) => {
   if (!confirm('هل أنت متأكد من حذف هذا التعديل؟ ستعود الوردية إلى مواعيدها الأساسية في هذا اليوم.')) return;
   try { await deleteDoc(doc(db,'shiftOverrides',id)); toast('تم الحذف بنجاح', 'success'); renderShiftOverrides(); }
-  catch(e) { toast('حدث خطأ: '+e.message, 'error'); }
+  catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
 
 // أي جزء (كيوسك) محتاج المواعيد الفعلية ليوم النهاردة لوردية معينة — بيرجع تعديل اليوم لو موجود، وإلا المواعيد الأساسية
@@ -1898,7 +1898,7 @@ window.saveLocation = async () => {
       toast('تمت إضافة الفرع بنجاح', 'success');
     }
     closeM('mo-location');
-  } catch(e) { toast('حدث خطأ: '+e.message, 'error'); }
+  } catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
 
 window.deleteLocation = async (id) => {
@@ -1906,7 +1906,7 @@ window.deleteLocation = async (id) => {
   if (usedBy) { toast(`هذا الفرع مرتبط بـ ${usedBy} موظف — يُرجى تغيير فرعهم أولًا`, 'error'); return; }
   if (!confirm('هل أنت متأكد من حذف هذا الفرع؟')) return;
   try { await deleteDoc(doc(db,'locations',id)); toast('تم الحذف بنجاح', 'success'); }
-  catch(e) { toast('حدث خطأ: '+e.message, 'error'); }
+  catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
 
 function renderDepartments() {
@@ -1949,7 +1949,7 @@ window.saveDept = async () => {
       toast('تمت إضافة القسم بنجاح', 'success');
     }
     closeM('mo-dept');
-  } catch(e) { toast('حدث خطأ: '+e.message, 'error'); }
+  } catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
 
 window.deleteDept = async (id) => {
@@ -1957,7 +1957,7 @@ window.deleteDept = async (id) => {
   if (usedBy>0) { toast(`هذا القسم يضم ${usedBy} موظف — يُرجى نقلهم إلى قسم آخر أولًا`, 'error'); return; }
   if (!confirm('هل أنت متأكد من حذف هذا القسم؟')) return;
   try { await deleteDoc(doc(db,'departments',id)); toast('تم الحذف بنجاح', 'success'); }
-  catch(e) { toast('حدث خطأ: '+e.message, 'error'); }
+  catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
 
 // ══════════════════════════════════════════════
@@ -2054,7 +2054,7 @@ window.removePasskey = async (empId, credId, listElId) => {
     await updateDoc(doc(db,'employees',empId), { passkeys:newList });
     toast('تم حذف البصمة المسجّلة بنجاح', 'success');
     renderEmpPasskeys(empId, listElId);
-  } catch(e) { toast('حدث خطأ: '+e.message, 'error'); }
+  } catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
 
 // الراتب الأساسي — الحافز بقى جزء من نفس الحزمة (12700) مش فلوس إضافية فوقها، فبيتخصم من المرتب
@@ -2275,7 +2275,7 @@ window.saveSalaryHistoryEntry = async (empId) => {
     await logAudit('تعديل راتب', empId, emp.name, { effectiveFrom, before, after: newCfg, note });
     toast('تم حفظ تعديل الراتب بنجاح — الحسابات السابقة لم تتأثر وبقيت كما هي', 'success');
     renderSalaryHistoryModal(empId);
-  } catch(e) { toast('حدث خطأ: '+e.message, 'error'); }
+  } catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
 window.deleteSalaryHistoryEntry = async (empId, index) => {
   const emp = _employees.find(x=>x.id===empId);
@@ -2290,7 +2290,7 @@ window.deleteSalaryHistoryEntry = async (empId, index) => {
     await logAudit('حذف سجل راتب تاريخي', empId, emp.name, { removed: toRemove });
     toast('تم الحذف بنجاح', 'success');
     renderSalaryHistoryModal(empId);
-  } catch(e) { toast('حدث خطأ: '+e.message, 'error'); }
+  } catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
 
 window.saveEmployee = async () => {
@@ -2350,7 +2350,7 @@ window.saveEmployee = async () => {
     toast(window._editEmpId ? 'تم تعديل بيانات الموظف بنجاح' : 'تمت إضافة الموظف بنجاح', 'success');
     closeM('mo-emp');
     window._editEmpId = null;
-  } catch(e) { toast('حدث خطأ: '+e.message, 'error'); }
+  } catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
 
 window.deleteEmployee = async (id) => {
@@ -2364,7 +2364,7 @@ window.deleteEmployee = async (id) => {
     await deleteDoc(doc(db,'employees',id));
     await removeEmployeeCode(e?.code);
     toast('تم الحذف بنجاح', 'success');
-  } catch(e) { toast('حدث خطأ: '+e.message, 'error'); }
+  } catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
 
 // ══════════════════════════════════════════════
@@ -2414,7 +2414,7 @@ window.migrateEmployeeCodes = async () => {
     resultEl.innerHTML = `<span style="color:${duplicates.length?'var(--danger-600)':'var(--ok-700)'}">${esc(msg)}</span>`;
     toast('تمت المزامنة', 'success');
   } catch(e) {
-    resultEl.innerHTML = `<span style="color:var(--danger-600)">حدث خطأ: ${esc(e.message)}</span>`;
+    resultEl.innerHTML = `<span style="color:var(--danger-600)">${formatFirestoreError('حدث خطأ', e)}</span>`;
   } finally {
     btn.disabled = false; btn.innerHTML = '<i class="fas fa-rotate"></i> تشغيل مزامنة أكواد الموظفين الآن';
   }
@@ -2656,7 +2656,7 @@ window.kioskSubmitCode = async () => {
     window._kioskEmp = { id: empDoc.id, ...empDoc.data() };
     await kioskLoadStatus();
   } catch(e) {
-    kioskRenderCodeEntry('حدث خطأ: ' + (e.message||e.code));
+    kioskRenderCodeEntry(formatFirestoreError('حدث خطأ', {message: e.message||e.code}));
   }
 };
 
@@ -2947,7 +2947,7 @@ window.kioskShowProfile = async () => {
   }
   body.innerHTML = '<div class="empty"><i class="fas fa-fingerprint fa-spin"></i><p>ضع بصمتك للتأكد من هويتك...</p></div>';
   try { await webauthnVerify(emp); }
-  catch(e) { body.innerHTML = `<div class="auth-err">فشل التحقق من البصمة: ${e.message}</div><div style="margin-top:10px"><a href="javascript:void(0)" onclick="kioskLoadStatus()" style="font-size:11.5px">→ رجوع</a></div>`; return; }
+  catch(e) { body.innerHTML = `<div class="auth-err">${formatFirestoreError('فشل التحقق من البصمة', e)}</div><div style="margin-top:10px"><a href="javascript:void(0)" onclick="kioskLoadStatus()" style="font-size:11.5px">→ رجوع</a></div>`; return; }
   await kioskRenderProfileBody();
 };
 
@@ -3074,7 +3074,7 @@ async function kioskRenderProfileBody() {
       ${penaltyRewardsHtml}
       <div style="margin-top:14px"><a href="javascript:void(0)" onclick="kioskLoadStatus()" style="font-size:11.5px;color:var(--slate-500)">→ رجوع</a></div>`;
   } catch(e) {
-    body.innerHTML = `<div class="auth-err">خطأ: ${e.message}</div><div style="margin-top:10px"><a href="javascript:void(0)" onclick="kioskLoadStatus()" style="font-size:11.5px">رجوع</a></div>`;
+    body.innerHTML = `<div class="auth-err">${formatFirestoreError('خطأ', e)}</div><div style="margin-top:10px"><a href="javascript:void(0)" onclick="kioskLoadStatus()" style="font-size:11.5px">رجوع</a></div>`;
   }
 };
 
@@ -3087,7 +3087,7 @@ window.kioskShowLeaveForm = async () => {
   }
   body.innerHTML = '<div class="empty"><i class="fas fa-fingerprint fa-spin"></i><p>ضع بصمتك للتأكد من هويتك...</p></div>';
   try { await webauthnVerify(emp); }
-  catch(e) { body.innerHTML = `<div class="auth-err">فشل التحقق من البصمة: ${e.message}</div><div style="margin-top:10px"><a href="javascript:void(0)" onclick="kioskLoadStatus()" style="font-size:11.5px">→ رجوع</a></div>`; return; }
+  catch(e) { body.innerHTML = `<div class="auth-err">${formatFirestoreError('فشل التحقق من البصمة', e)}</div><div style="margin-top:10px"><a href="javascript:void(0)" onclick="kioskLoadStatus()" style="font-size:11.5px">→ رجوع</a></div>`; return; }
   kioskRenderLeaveFormBody();
 };
 
@@ -3238,7 +3238,7 @@ window.kioskSubmitLeaveRequest = async () => {
       </div>`;
     setTimeout(()=>kioskRenderCodeEntry(), 3000);
   } catch(e) {
-    err.textContent = 'حدث خطأ: ' + (e.message||e.code);
+    err.innerHTML = formatFirestoreError('حدث خطأ', {message: e.message||e.code});
     btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i>إرسال الطلب';
   }
 };
@@ -3252,7 +3252,7 @@ window.kioskShowMyLeaveRequests = async () => {
   }
   body.innerHTML = '<div class="empty"><i class="fas fa-fingerprint fa-spin"></i><p>ضع بصمتك للتأكد من هويتك...</p></div>';
   try { await webauthnVerify(emp); }
-  catch(e) { body.innerHTML = `<div class="auth-err">فشل التحقق من البصمة: ${e.message}</div><div style="margin-top:10px"><a href="javascript:void(0)" onclick="kioskLoadStatus()" style="font-size:11.5px">→ رجوع</a></div>`; return; }
+  catch(e) { body.innerHTML = `<div class="auth-err">${formatFirestoreError('فشل التحقق من البصمة', e)}</div><div style="margin-top:10px"><a href="javascript:void(0)" onclick="kioskLoadStatus()" style="font-size:11.5px">→ رجوع</a></div>`; return; }
   body.innerHTML = '<div class="empty"><i class="fas fa-spinner fa-spin"></i><p>جاري التحميل...</p></div>';
   try {
     const snap = await getDocs(query(collection(secDb,'leaveRequests'), where('employeeId','==',emp.id)));
@@ -3276,7 +3276,7 @@ window.kioskShowMyLeaveRequests = async () => {
       ${rows || '<div class="empty"><p>لسه ما قدّمتش أي طلب إجازة</p></div>'}
       <div style="margin-top:12px"><a href="javascript:void(0)" onclick="kioskLoadStatus()" style="font-size:11.5px;color:var(--slate-500)">→ رجوع</a></div>`;
   } catch(e) {
-    body.innerHTML = `<div class="auth-err">خطأ: ${e.message}</div><div style="margin-top:10px"><a href="javascript:void(0)" onclick="kioskLoadStatus()" style="font-size:11.5px">رجوع</a></div>`;
+    body.innerHTML = `<div class="auth-err">${formatFirestoreError('خطأ', e)}</div><div style="margin-top:10px"><a href="javascript:void(0)" onclick="kioskLoadStatus()" style="font-size:11.5px">رجوع</a></div>`;
   }
 };
 
@@ -3305,7 +3305,7 @@ window.kioskShowPersonalPermissionForm = async () => {
   }
   body.innerHTML = '<div class="empty"><i class="fas fa-fingerprint fa-spin"></i><p>ضع بصمتك للتأكد من هويتك...</p></div>';
   try { await webauthnVerify(emp); }
-  catch(e) { body.innerHTML = `<div class="auth-err">فشل التحقق من البصمة: ${e.message}</div><div style="margin-top:10px"><a href="javascript:void(0)" onclick="kioskLoadStatus()" style="font-size:11.5px">→ رجوع</a></div>`; return; }
+  catch(e) { body.innerHTML = `<div class="auth-err">${formatFirestoreError('فشل التحقق من البصمة', e)}</div><div style="margin-top:10px"><a href="javascript:void(0)" onclick="kioskLoadStatus()" style="font-size:11.5px">→ رجوع</a></div>`; return; }
   const today = todayStr();
   const period = periodForDate(today);
   document.getElementById('kiosk-body').innerHTML = '<div class="empty"><i class="fas fa-spinner fa-spin"></i><p>جاري التحميل...</p></div>';
@@ -3384,7 +3384,7 @@ window.kioskSubmitPersonalPermission = async () => {
       </div>`;
     setTimeout(()=>kioskRenderCodeEntry(), 3500);
   } catch(e) {
-    err.textContent = 'حدث خطأ: '+e.message; err.style.display = '';
+    err.innerHTML = formatFirestoreError('حدث خطأ', e); err.style.display = '';
     btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i>إرسال الطلب';
   }
 };
@@ -3398,7 +3398,7 @@ window.kioskShowMyPersonalPermissionRequests = async () => {
   }
   body.innerHTML = '<div class="empty"><i class="fas fa-fingerprint fa-spin"></i><p>ضع بصمتك للتأكد من هويتك...</p></div>';
   try { await webauthnVerify(emp); }
-  catch(e) { body.innerHTML = `<div class="auth-err">فشل التحقق من البصمة: ${e.message}</div><div style="margin-top:10px"><a href="javascript:void(0)" onclick="kioskLoadStatus()" style="font-size:11.5px">→ رجوع</a></div>`; return; }
+  catch(e) { body.innerHTML = `<div class="auth-err">${formatFirestoreError('فشل التحقق من البصمة', e)}</div><div style="margin-top:10px"><a href="javascript:void(0)" onclick="kioskLoadStatus()" style="font-size:11.5px">→ رجوع</a></div>`; return; }
   document.getElementById('kiosk-body').innerHTML = '<div class="empty"><i class="fas fa-spinner fa-spin"></i><p>جاري التحميل...</p></div>';
   const snap = await getDocs(query(collection(secDb,'personalPermissionRequests'), where('employeeId','==',emp.id)));
   const reqs = snap.docs.map(d=>d.data()).sort((a,b)=>(b.requestedAt||0)-(a.requestedAt||0));
@@ -3581,7 +3581,7 @@ window.kioskDoAction = async (type) => {
     window._kioskInstantPermContext = null;
     await kioskLoadStatus();
     const wrap = document.getElementById('kiosk-body');
-    wrap.innerHTML += `<div class="auth-err">${e.message||e.code}</div>`;
+    wrap.innerHTML += `<div class="auth-err">${formatFirestoreError('', {message: e.message||e.code}).replace(/^: /,'')}</div>`;
   }
 };
 
@@ -3605,7 +3605,7 @@ async function renderDaily() {
       getDocs(query(collection(db,'dailyMarks'), where('date','==',date))),
       getDocs(query(collection(db,'personalPermissionRequests'), where('date','==',date), where('kind','==','permission'), where('status','==','approved')))
     ]);
-  } catch(e) { body.innerHTML = `<div class="empty"><p>خطأ: ${e.message}</p></div>`; return; }
+  } catch(e) { body.innerHTML = `<div class="empty"><p>${formatFirestoreError('خطأ', e)}</p></div>`; return; }
   const approvedPermsByEmp = {};
   ppSnapDaily.docs.forEach(d=>{ const v=d.data(); (approvedPermsByEmp[v.employeeId]=approvedPermsByEmp[v.employeeId]||[]).push(v); });
 
@@ -3748,7 +3748,7 @@ window.renderDaily = renderDaily;
 window.deleteAttendanceRecord = async (id, date) => {
   if (!confirm('هل أنت متأكد من حذف سجل الحضور هذا؟')) return;
   try { await deleteDoc(doc(db,'attendance',id)); toast('تم الحذف بنجاح', 'success'); renderDaily(); }
-  catch(e) { toast('حدث خطأ: '+e.message, 'error'); }
+  catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
 window.deleteDailyMarkRecord = async (id, date) => {
   if (!confirm('هل أنت متأكد من حذف هذه الحالة المسجّلة؟')) return;
@@ -3756,7 +3756,7 @@ window.deleteDailyMarkRecord = async (id, date) => {
     await deleteDoc(doc(db,'dailyMarks',id)); toast('تم الحذف بنجاح', 'success');
     if (_page==='dailymark') renderDailyMarkPage(); else renderDaily();
   }
-  catch(e) { toast('حدث خطأ: '+e.message, 'error'); }
+  catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
 
 window.openDailyMark = (empId, date) => {
@@ -3836,7 +3836,7 @@ window.saveDailyMark = async () => {
     toast('تم حفظ البيانات بنجاح', 'success');
     closeM('mo-dailymark');
     if (_page==='dailymark') renderDailyMarkPage(); else renderDaily();
-  } catch(e) { toast('حدث خطأ: '+e.message, 'error'); }
+  } catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
 
 // تسجيل حضور/انصراف يدوي من الأدمن — للموظف اللي معرفش يبصم بنفسه لأي سبب
@@ -3895,7 +3895,7 @@ window.saveManualAttendance = async () => {
     }
     closeM('mo-manualatt');
     if (_page==='dailymark') renderDailyMarkPage(); else renderDaily();
-  } catch(e) { toast('حدث خطأ: '+e.message, 'error'); }
+  } catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
 
 async function renderDailyMarkPage() {
@@ -3911,7 +3911,7 @@ async function renderDailyMarkPage() {
       getDocs(query(collection(db,'attendance'), where('date','==',date))),
       getDocs(query(collection(db,'dailyMarks'), where('date','==',date)))
     ]);
-  } catch(e) { tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--danger-600)">خطأ: ${e.message}</td></tr>`; return; }
+  } catch(e) { tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--danger-600)">${formatFirestoreError('خطأ', e)}</td></tr>`; return; }
 
   const checkins = {}; attSnap.docs.forEach(d=>{ const v=d.data(); if (v.type==='checkin') checkins[v.employeeId]={id:d.id,...v}; });
   const marks = {}; markSnap.docs.forEach(d=>{ const v=d.data(); marks[v.employeeId]={id:d.id,...v}; });
@@ -4001,7 +4001,7 @@ window.approveOvertime = async (id) => {
     await updateDoc(doc(db,'attendance',id), { overtimeApproved:true, approvedBy: CU?.email||'admin', approvedAt: Date.now() });
     toast('تمت الموافقة بنجاح', 'success');
     renderOvertime();
-  } catch(e) { toast('حدث خطأ: '+e.message, 'error'); }
+  } catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
 window.rejectOvertime = async (id) => {
   if (!confirm('هل أنت متأكد من رفض طلب الوقت الإضافي هذا؟')) return;
@@ -4009,7 +4009,7 @@ window.rejectOvertime = async (id) => {
     await updateDoc(doc(db,'attendance',id), { overtimeRejected:true, rejectedBy: CU?.email||'admin', rejectedAt: Date.now() });
     toast('تم تسجيل الرفض بنجاح', 'success');
     renderOvertime();
-  } catch(e) { toast('حدث خطأ: '+e.message, 'error'); }
+  } catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
 
 // ══════════════════════════════════════════════
@@ -4118,7 +4118,7 @@ window.deleteMonthlyRow = async (docId) => {
     }
     await deleteDoc(doc(db,'monthlySheets',docId));
     toast('تم الحذف بنجاح', 'success'); renderMonthly();
-  } catch(e) { toast('حدث خطأ: '+e.message, 'error'); }
+  } catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
 
 window.saveMonthlyRow = async (empId) => {
@@ -4187,7 +4187,7 @@ window.saveMonthlyRow = async (empId) => {
     if (Object.keys(changed).length) await logAudit('تعديل كشف شهري', empId, emp?.name, { period, changed });
 
     toast('تم حفظ البيانات بنجاح', 'success');
-  } catch(e) { toast('حدث خطأ: '+e.message, 'error'); }
+  } catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
 
 window.autoFillMonthly = async () => {
@@ -4263,7 +4263,7 @@ window.exportMonthlyToExcel = async () => {
     sheetSnap.docs.forEach(d=>{ sheets[d.data().employeeId] = d.data(); });
     evalSnap.docs.forEach(d=>{ evals[d.data().employeeId] = d.data(); });
     advancesSnap.docs.forEach(d=>{ const a=d.data(); (advancesByEmp[a.employeeId] ||= []).push(a); });
-  } catch(e) { toast('حدث خطأ: '+e.message, 'error'); return; }
+  } catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); return; }
 
   const headers = ['كود الموظف','اسم الموظف','المسمى الوظيفي','القسم',
     'ساعات إضافية','أيام إضافية','إجازة من الرصيد','إجازة مرضية','إجازة بالخصم','غياب','إذن شخصي',
@@ -4351,7 +4351,7 @@ window.importMonthlyFromExcel = async (event) => {
     try {
       const snap = await getDocs(query(collection(db,'monthlySheets'), where('period','==',period)));
       snap.docs.forEach(d=>{ existingSheets[d.data().employeeId] = { id:d.id, ...d.data() }; });
-    } catch(e) { toast('خطأ في قراءة البيانات الحالية: '+e.message, 'error'); return; }
+    } catch(e) { toast(formatFirestoreError('خطأ في قراءة البيانات الحالية', e), 'error'); return; }
 
     const changes = [], unmatched = [], ambiguous = [];
     for (let r=1; r<rows.length; r++) {
@@ -4388,7 +4388,7 @@ window.importMonthlyFromExcel = async (event) => {
     renderMonthlyImportPreview(unmatched, ambiguous, period);
     openM('mo-import-monthly');
   } catch(e) {
-    toast('خطأ في قراءة الملف: '+e.message, 'error');
+    toast(formatFirestoreError('خطأ في قراءة الملف', e), 'error');
   }
 };
 
@@ -4442,7 +4442,7 @@ window.confirmMonthlyImport = async () => {
     closeM('mo-import-monthly');
     window._monthlyImportPending = null;
   } catch(e) {
-    toast('خطأ أثناء الحفظ: '+e.message, 'error');
+    toast(formatFirestoreError('خطأ أثناء الحفظ', e), 'error');
   } finally {
     btn.disabled = false; btn.innerHTML = '<i class="fas fa-check"></i>تأكيد وحفظ التغييرات';
   }
@@ -4498,7 +4498,7 @@ window.renderEvaluation = renderEvaluation;
 window.deleteEvalRow = async (docId) => {
   if (!confirm('هل أنت متأكد من حذف تقييم هذا الشهر؟')) return;
   try { await deleteDoc(doc(db,'evaluations',docId)); toast('تم الحذف بنجاح', 'success'); renderEvaluation(); }
-  catch(e) { toast('حدث خطأ: '+e.message, 'error'); }
+  catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
 
 window.saveEvalRow = async (empId) => {
@@ -4542,7 +4542,7 @@ window.saveEvalRow = async (empId) => {
       await logAudit('اكتمال تقييم شهري (يؤثر على الحافز)', empId, emp?.name, { period, managerScore:mgr, hrScore:hr, factoryScore:factory, finalScore });
     }
     toast(allPresent ? 'تم حفظ الدرجة واحتساب النسبة النهائية بنجاح' : 'تم حفظ درجتك بنجاح — وستُحتسب النسبة النهائية بعد إدخال باقي المقيّمين لدرجاتهم', 'success');
-  } catch(e) { toast('حدث خطأ: '+e.message, 'error'); }
+  } catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
 
 // ══════════════════════════════════════════════
@@ -4965,7 +4965,7 @@ async function renderLeaves() {
       pendingSnap.docs.forEach(d=>byId.set(d.id, {id:d.id,...d.data()}));
       reqs = Array.from(byId.values()).sort((a,b)=>(b.requestedAt||0)-(a.requestedAt||0));
     }
-  } catch(e) { body.innerHTML = `<div class="empty"><p>حدث خطأ: ${e.message}</p></div>`; return; }
+  } catch(e) { body.innerHTML = `<div class="empty"><p>${formatFirestoreError('حدث خطأ', e)}</p></div>`; return; }
   if (CU.role!=='admin' && CU.departmentId) reqs = reqs.filter(r=>r.departmentId===CU.departmentId);
   if (!reqs.length) {
     body.innerHTML = _leavesShowAll
@@ -5048,7 +5048,7 @@ async function renderPersonalPermissionAdmin() {
   body.innerHTML = '<div class="empty"><i class="fas fa-spinner fa-spin"></i><p>جاري التحميل...</p></div>';
   let snap;
   try { snap = await getDocs(query(collection(db,'personalPermissionRequests'), orderBy('requestedAt','desc'))); }
-  catch(e) { body.innerHTML = `<div class="empty"><p>خطأ: ${e.message}</p></div>`; return; }
+  catch(e) { body.innerHTML = `<div class="empty"><p>${formatFirestoreError('خطأ', e)}</p></div>`; return; }
   let reqs = snap.docs.map(d=>({id:d.id,...d.data()}));
   if (CU.role!=='admin' && CU.departmentId) reqs = reqs.filter(r=>r.departmentId===CU.departmentId);
 
@@ -5128,7 +5128,7 @@ window.approvePersonalPermissionStage = async (id, stage, approved) => {
     await updateDoc(doc(db,'personalPermissionRequests',id), patch);
     toast('تم تسجيل الموافقة بنجاح', 'success');
     renderPersonalPermissionAdmin();
-  } catch(e) { toast('حدث خطأ: '+e.message, 'error'); }
+  } catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
 window.rejectPersonalPermissionRequest = async (id) => {
   if (!confirm('هل أنت متأكد من رفض طلب الإذن الشخصي هذا؟')) return;
@@ -5136,7 +5136,7 @@ window.rejectPersonalPermissionRequest = async (id) => {
     await updateDoc(doc(db,'personalPermissionRequests',id), { status:'rejected', rejectedBy: CU.email, rejectedAt: Date.now() });
     toast('تم تسجيل الرفض بنجاح', 'success');
     renderPersonalPermissionAdmin();
-  } catch(e) { toast('حدث خطأ: '+e.message, 'error'); }
+  } catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
 window.resolveLeaveCut = async (id, decision) => {
   const labels = { full:'رجّع اليوم كامل', partial:'رجّع نسبيًا', none:'من غير استرجاع' };
@@ -5161,13 +5161,13 @@ window.resolveLeaveCut = async (id, decision) => {
     await updateDoc(doc(db,'personalPermissionRequests',id), { status:'resolved', refundDecision: decision, resolvedBy: CU.email, resolvedAt: Date.now() });
     toast('تم تسجيل القرار بنجاح', 'success');
     renderPersonalPermissionAdmin();
-  } catch(e) { toast('حدث خطأ: '+e.message, 'error'); }
+  } catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
 
 window.deleteLeaveRequest = async (id) => {
   if (!confirm('هل أنت متأكد من حذف طلب الإجازة هذا نهائيًا؟')) return;
   try { await deleteDoc(doc(db,'leaveRequests',id)); toast('تم الحذف بنجاح', 'success'); renderLeaves(); }
-  catch(e) { toast('حدث خطأ: '+e.message, 'error'); }
+  catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
 
 window.openLeaveModal = () => {
@@ -5220,7 +5220,7 @@ window.saveLeaveRequest = async () => {
     toast('تم تسجيل طلب الإجازة بنجاح', 'success');
     closeM('mo-leave');
     renderLeaves();
-  } catch(e) { toast('حدث خطأ: '+e.message, 'error'); }
+  } catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
 
 // موافقة/رفض على مرحلة واحدة (مدير القسم أو الشؤون) — والقبول النهائي بيحصل لما الاتنين يوافقوا
@@ -5230,12 +5230,12 @@ window.approveLeaveRequestStage = async (id, stage, override) => {
     : 'متأكد من الموافقة على طلب الإجازة ده؟';
   if (!confirm(msg)) return;
   try { await settleLeaveStage(id, stage, true, !!override); toast('تم تسجيل الموافقة بنجاح', 'success'); renderLeaves(); }
-  catch(e) { toast('حدث خطأ: '+e.message, 'error'); }
+  catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
 window.rejectLeaveRequestStage = async (id, stage) => {
   if (!confirm('هل أنت متأكد من رفض طلب الإجازة هذا؟')) return;
   try { await settleLeaveStage(id, stage, false); toast('تم تسجيل الرفض بنجاح', 'success'); renderLeaves(); }
-  catch(e) { toast('حدث خطأ: '+e.message, 'error'); }
+  catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
 
 // بيوزّع daysFromBalance و daysUnpaid على الدورات المالية اللي الطلب بيقطعها (حسب تاريخ كل يوم فعليًا)، وبيبعت التحديث لكل دورة على حدة
@@ -5332,7 +5332,7 @@ window.approveLeaveRequest = async (id, override) => {
     await logAudit('اعتماد طلب إجازة (خصم رصيد)', r.employeeId, r.employeeName, { leaveType, dateFrom:r.dateFrom, dateTo:r.dateTo, daysFromBalance, daysUnpaid, sixMonthOverride: !!override });
     toast('تمت الموافقة على طلب الإجازة بنجاح', 'success');
     renderLeaves();
-  } catch(e) { toast('حدث خطأ: '+e.message, 'error'); }
+  } catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
 
 window.rejectLeaveRequest = async (id) => {
@@ -5344,7 +5344,7 @@ window.rejectLeaveRequest = async (id) => {
     if (r) await logAudit('رفض طلب إجازة', r.employeeId, r.employeeName, { dateFrom:r.dateFrom, dateTo:r.dateTo, daysCount:r.daysCount });
     toast('تم تسجيل الرفض بنجاح', 'success');
     renderLeaves();
-  } catch(e) { toast('حدث خطأ: '+e.message, 'error'); }
+  } catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
 
 window.renewAllBalances = async () => {
@@ -5354,7 +5354,7 @@ window.renewAllBalances = async () => {
     // تحديث متوازي (Promise.all) بدل موظف بعد التاني — بيقلّل زمن التنفيذ لعشرات الموظفين من دقايق لثواني
     await Promise.all(actives.map(e => updateDoc(doc(db,'employees',e.id), { leaveBalanceRegular:14, leaveBalanceCasual:7 })));
     toast(`تم تجديد رصيد الإجازات لـ ${actives.length} موظف بنجاح`, 'success');
-  } catch(e) { toast('حدث خطأ: '+e.message, 'error'); }
+  } catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
 
 // ══════════════════════════════════════════════
@@ -5367,7 +5367,7 @@ async function renderHolidays() {
   try {
     const snap = await getDocs(query(collection(db,'officialHolidays'), orderBy('date','desc')));
     _holidaysCache = snap.docs.map(d=>({id:d.id,...d.data()}));
-  } catch(e) { body.innerHTML = `<tr><td colspan="4"><div class="empty"><p>خطأ: ${e.message}</p></div></td></tr>`; return; }
+  } catch(e) { body.innerHTML = `<tr><td colspan="4"><div class="empty"><p>${formatFirestoreError('خطأ', e)}</p></div></td></tr>`; return; }
   if (!_holidaysCache.length) { body.innerHTML = `<tr><td colspan="4"><div class="empty"><p>لا توجد إجازات رسمية مسجّلة بعد</p></div></td></tr>`; return; }
   body.innerHTML = _holidaysCache.map(h=>{
     const exemptNames = (h.exemptEmployeeIds||[]).map(id=>_employees.find(e=>e.id===id)?.name).filter(Boolean);
@@ -5462,7 +5462,7 @@ window.saveHoliday = async () => {
     // نراجع طلبات الإجازة اللي كانت شاملة اليوم ده ونصحح أي تعارض تلقائيًا (رصيد + كشف شهري)
     const affected = await reconcileHolidayImpact(date, exemptEmployeeIds, title);
     if (affected > 0) toast(`تم تلقائيًا تصحيح ${affected} طلب إجازة كان شاملًا لهذا اليوم`, 'success');
-  } catch(e) { toast('حدث خطأ: '+e.message, 'error'); }
+  } catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
 
 // ملحوظة: حذف إجازة رسمية مش بيرجّع تلقائيًا أي تصحيح كان حصل بسببها لطلبات الإجازة (نادر الحدوث،
@@ -5470,7 +5470,7 @@ window.saveHoliday = async () => {
 window.deleteHoliday = async (id) => {
   if (!confirm('هل أنت متأكد من حذف هذه الإجازة الرسمية؟')) return;
   try { await deleteDoc(doc(db,'officialHolidays',id)); toast('تم الحذف بنجاح', 'success'); renderHolidays(); }
-  catch(e) { toast('حدث خطأ: '+e.message, 'error'); }
+  catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
 
 // ══════════════════════════════════════════════
@@ -5484,7 +5484,7 @@ async function renderAdvances() {
   try {
     const snap = await getDocs(collection(db,'advances'));
     _advancesCache = snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=> (b.createdAt||0)-(a.createdAt||0));
-  } catch(e) { body.innerHTML = `<tr><td colspan="9"><div class="empty"><p>خطأ: ${e.message}</p></div></td></tr>`; return; }
+  } catch(e) { body.innerHTML = `<tr><td colspan="9"><div class="empty"><p>${formatFirestoreError('خطأ', e)}</p></div></td></tr>`; return; }
   if (!_advancesCache.length) { body.innerHTML = `<tr><td colspan="9"><div class="empty"><p>لا توجد سلف مسجّلة بعد</p></div></td></tr>`; return; }
   const curPeriod = currentPeriodStr();
   const canDel = hasPerm('data_delete');
@@ -5562,7 +5562,7 @@ window.saveAdvance = async () => {
     toast('تم تسجيل السلفة بنجاح', 'success');
     closeM('mo-advance');
     renderAdvances();
-  } catch(e) { toast('حدث خطأ: '+e.message, 'error'); }
+  } catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
   finally { btn.disabled=false; btn.innerHTML='<i class="fas fa-save"></i>حفظ'; }
 };
 
@@ -5574,7 +5574,7 @@ window.cancelAdvance = async (id) => {
     if (a) await logAudit('إلغاء سلفة', a.employeeId, _employees.find(e=>e.id===a.employeeId)?.name, { amount:a.amount, remainingMonths: a.months });
     toast('تم إلغاء السلفة بنجاح', 'success'); renderAdvances();
   }
-  catch(e) { toast('حدث خطأ: '+e.message, 'error'); }
+  catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
 
 window.deleteAdvance = async (id) => {
@@ -5585,7 +5585,7 @@ window.deleteAdvance = async (id) => {
     if (a) await logAudit('حذف سلفة', a.employeeId, _employees.find(e=>e.id===a.employeeId)?.name, { amount:a.amount, months:a.months });
     toast('تم الحذف بنجاح', 'success'); renderAdvances();
   }
-  catch(e) { toast('حدث خطأ: '+e.message, 'error'); }
+  catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
 
 // بيرجع الإجازة الرسمية ليوم معين لو موجودة (تُستخدم في الدخول اليومي والكيوسك)
@@ -5606,7 +5606,7 @@ async function renderUsers() {
   try {
     const snap = await getDocs(collection(db,'users'));
     _usersCache = snap.docs.map(d=>({id:d.id,...d.data()}));
-  } catch(e) { body.innerHTML = `<tr><td colspan="5"><div class="empty"><p>خطأ: ${e.message}</p></div></td></tr>`; return; }
+  } catch(e) { body.innerHTML = `<tr><td colspan="5"><div class="empty"><p>${formatFirestoreError('خطأ', e)}</p></div></td></tr>`; return; }
   if (!_usersCache.length) { body.innerHTML = `<tr><td colspan="5"><div class="empty"><p>لا يوجد مستخدمون بعد</p></div></td></tr>`; return; }
   body.innerHTML = _usersCache.map(u=>{
     const dept = _departments.find(d=>d.id===u.departmentId);
@@ -5649,7 +5649,7 @@ async function renderAuditLog() {
   try {
     const snap = await getDocs(query(collection(db,'auditLog'), where('at','>=',fromTs), where('at','<=',toTs), orderBy('at','desc')));
     entries = snap.docs.map(d=>({id:d.id,...d.data()}));
-  } catch(e) { body.innerHTML = `<div class="empty"><p>حدث خطأ: ${e.message}</p></div>`; return; }
+  } catch(e) { body.innerHTML = `<div class="empty"><p>${formatFirestoreError('حدث خطأ', e)}</p></div>`; return; }
   if (!entries.length) { body.innerHTML = '<div class="empty"><i class="fas fa-history"></i><p>لا توجد تعديلات مسجّلة في هذه الفترة</p></div>'; return; }
   body.innerHTML = `<div class="card" style="overflow-x:auto"><table class="tbl">
     <thead><tr><th>التاريخ والوقت</th><th>الإجراء</th><th>الموظف المتأثر</th><th>بواسطة</th><th>التفاصيل</th></tr></thead>
@@ -5687,7 +5687,7 @@ window.backupNow = async () => {
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     URL.revokeObjectURL(url);
     toast('تم تجهيز النسخة الاحتياطية وتنزيلها بنجاح', 'success');
-  } catch(e) { toast('حدث خطأ أثناء إعداد النسخة الاحتياطية: '+e.message, 'error'); }
+  } catch(e) { toast(formatFirestoreError('حدث خطأ أثناء إعداد النسخة الاحتياطية', e), 'error'); }
   finally { btn.disabled = false; btn.innerHTML = '<i class="fas fa-download"></i>نسخة احتياطية الآن'; }
 };
 
@@ -5745,7 +5745,7 @@ window.saveUser = async () => {
 window.revokeUser = async (id) => {
   if (!confirm('سيتم إلغاء وصول هذا المستخدم إلى النظام. سيبقى حساب الدخول في Firebase Authentication موجودًا، ويجب حذفه يدويًا من الـ Console إذا رغبت في حذفه نهائيًا. هل أنت متأكد؟')) return;
   try { await deleteDoc(doc(db,'users',id)); toast('تم إلغاء وصول المستخدم بنجاح', 'success'); renderUsers(); }
-  catch(e) { toast('حدث خطأ: '+e.message, 'error'); }
+  catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
 
 // ══════════════════════════════════════════════
