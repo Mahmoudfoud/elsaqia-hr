@@ -2566,6 +2566,14 @@ function hmToMin(hm) { const [h,m]=hm.split(':').map(Number); return h*60+m; }
 function nowMin() { const d=new Date(); return d.getHours()*60+d.getMinutes(); }
 function nowHM() { const d=new Date(); return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
 function minToHM(total) { total=((total%1440)+1440)%1440; const h=Math.floor(total/60), m=total%60; return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0'); }
+// عرض مدة الوقت الإضافي كـ"X ساعة وY دقيقة" بدل رقم عشري (3.88) — للعرض بس، الحساب المالي بيفضل يستخدم الرقم العشري الدقيق
+function overtimeDurationLabel(totalMinutes) {
+  const m = Math.round(totalMinutes);
+  const h = Math.floor(m/60), mm = m%60;
+  if (h<=0) return `${mm} دقيقة`;
+  if (mm<=0) return `${h} ساعة`;
+  return `${h} ساعة و${mm} دقيقة`;
+}
 function addDaysToDateStr(dateStr, n) { const d=new Date(dateStr+'T00:00:00'); d.setDate(d.getDate()+n); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 
 function haversineMeters(lat1,lng1,lat2,lng2) {
@@ -3571,7 +3579,7 @@ window.kioskDoAction = async (type) => {
       <div style="text-align:center;padding:20px 0">
         <div style="font-size:40px;color:var(--ok-600);margin-bottom:10px"><i class="fas fa-check-circle"></i></div>
         <div style="font-weight:800;font-size:15px">تم تسجيل ${type==='checkin'?'حضورك':'انصرافك'} الساعة ${nowHM()}</div>
-        ${extra.pendingOvertimeMinutes ? `<div style="font-size:12px;color:var(--warn-600);margin-top:8px">وقت إضافي معلّق (${Math.round(extra.pendingOvertimeMinutes/60*10)/10} ساعة) — محتاج موافقة المدير</div>` : ''}
+        ${extra.pendingOvertimeMinutes ? `<div style="font-size:12px;color:var(--warn-600);margin-top:8px">وقت إضافي معلّق (${overtimeDurationLabel(extra.pendingOvertimeMinutes)}) — محتاج موافقة المدير</div>` : ''}
         ${extra.mealEligible ? `<div style="font-size:12px;color:var(--ac-700);margin-top:8px">مستحق وجبة</div>` : ''}
         ${extraMsgHtml}
       </div>`;
@@ -3858,9 +3866,15 @@ window.saveManualAttendance = async () => {
   try {
     const emp = _employees.find(x=>x.id===window._maEmpId);
     let extra = {};
+    let shiftWarning = '';
     if (emp && emp.category!=='rep' && emp.category!=='driver') {
-      const shift = await getEffectiveShift(emp.shiftId, window._maDate, db);
-      if (shift) {
+      if (!emp.shiftId) {
+        shiftWarning = 'تنبيه: الموظف ده مالوش وردية متعيّنة له، فمقدرناش نحسب الوقت الإضافي أو التأخير تلقائيًا — الوقت اتسجّل بس من غير حساب.';
+      } else {
+        const shift = await getEffectiveShift(emp.shiftId, window._maDate, db);
+        if (!shift) {
+          shiftWarning = 'تنبيه: وردية الموظف مش موجودة (يمكن اتحذفت)، فمقدرناش نحسب الوقت الإضافي أو التأخير تلقائيًا — الوقت اتسجّل بس من غير حساب.';
+        } else {
         const tM = hmToMin(time);
         if (type==='checkin') {
           extra.lateMinutes = Math.max(0, tM - hmToMin(shift.checkinTo));
@@ -3873,6 +3887,7 @@ window.saveManualAttendance = async () => {
           } else {
             extra.pendingOvertimeMinutes = 0; // تصفير أي وقت إضافي معلّق قديم لو الأدمن صحّح الوقت لمعاد ما بقاش متأخر
           }
+        }
         }
       }
     }
@@ -3888,8 +3903,10 @@ window.saveManualAttendance = async () => {
         method: 'manual_admin', markedBy: CU?.email||'admin', markedAt: Date.now(), ...extra
       });
     }
-    if (extra.pendingOvertimeMinutes) {
-      toast(`تم الحفظ — احتُسب ${Math.round(extra.pendingOvertimeMinutes/60*10)/10} ساعة وقت إضافي معلّق، هتلاقيها في "موافقات الوقت الإضافي"`, 'success');
+    if (shiftWarning) {
+      toast(shiftWarning, 'error');
+    } else if (extra.pendingOvertimeMinutes) {
+      toast(`تم الحفظ — احتُسب ${overtimeDurationLabel(extra.pendingOvertimeMinutes)} وقت إضافي معلّق، هتلاقيها في "موافقات الوقت الإضافي"`, 'success');
     } else {
       toast('تم حفظ البيانات بنجاح', 'success');
     }
@@ -3980,12 +3997,13 @@ async function renderOvertime() {
   body.innerHTML = pending.map(r=>{
     const emp = _employees.find(e=>e.id===r.employeeId);
     const hours = Math.round(r.pendingOvertimeMinutes/60*100)/100;
+    const durationLabel = overtimeDurationLabel(r.pendingOvertimeMinutes);
     const rate = emp ? ((getSalaryConfigForDate(emp, r.date).salary||0)/30/8)*1.7 : 0;
     const amount = Math.round(rate*hours*100)/100;
     return `<div class="card" style="margin-bottom:12px"><div class="card-body" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
       <div>
         <div style="font-weight:800">${esc(r.employeeName)}</div>
-        <div style="font-size:12px;color:var(--slate-500)">${r.date} — انصرف الساعة ${r.time} — ${hours} ساعة وقت إضافي (${amount} ج.م تقريباً)</div>
+        <div style="font-size:12px;color:var(--slate-500)">${r.date} — انصرف الساعة ${r.time} — ${durationLabel} وقت إضافي (${amount} ج.م تقريباً)</div>
       </div>
       <div style="display:flex;gap:8px">
         <button class="btn btn-red btn-sm" onclick="rejectOvertime('${r.id}')"><i class="fas fa-times"></i> رفض</button>
@@ -4069,7 +4087,10 @@ async function renderMonthly() {
     return `<tr>
       <td style="font-weight:700">${esc(e.name)}</td>
       <td>${esc(e.jobTitle)||'—'}</td>
-      <td><input class="fc" style="width:80px;padding:6px" type="number" min="0" step="0.5" id="ms-ot-${e.id}" value="${s.overtimeHours ?? 0}"></td>
+      <td>
+        <input class="fc" style="width:80px;padding:6px" type="number" min="0" step="0.5" id="ms-ot-${e.id}" value="${s.overtimeHours ?? 0}" oninput="document.getElementById('ms-ot-hint-${e.id}').textContent = overtimeDurationLabel((parseFloat(this.value)||0)*60)">
+        <div id="ms-ot-hint-${e.id}" style="font-size:10px;color:var(--slate-500);margin-top:2px">${overtimeDurationLabel((s.overtimeHours??0)*60)}</div>
+      </td>
       <td><input class="fc" style="width:70px;padding:6px" type="number" min="0" id="ms-extra-${e.id}" value="${s.extraDays ?? 0}"></td>
       <td>
         <input class="fc" style="width:70px;padding:6px" type="number" min="0" id="ms-leave-${e.id}" value="${s.leaveFromBalance ?? 0}">
@@ -4590,7 +4611,7 @@ async function renderProfile() {
     if (!s && !ev) continue;
     rows += `<tr>
       <td style="font-weight:700">${period}</td>
-      <td>${s?.overtimeHours ?? '—'}</td>
+      <td>${s?.overtimeHours ? overtimeDurationLabel(s.overtimeHours*60) : '—'}</td>
       <td>${s?.extraDays ?? '—'}</td>
       <td>${s?.leaveFromBalance ?? '—'}</td>
       <td>${s?.sickLeave ?? '—'}</td>
@@ -5165,8 +5186,33 @@ window.resolveLeaveCut = async (id, decision) => {
 };
 
 window.deleteLeaveRequest = async (id) => {
-  if (!confirm('هل أنت متأكد من حذف طلب الإجازة هذا نهائيًا؟')) return;
-  try { await deleteDoc(doc(db,'leaveRequests',id)); toast('تم الحذف بنجاح', 'success'); renderLeaves(); }
+  if (!confirm('هل أنت متأكد من حذف طلب الإجازة هذا نهائيًا؟ لو كان الطلب معتمد، هيترجع رصيد الموظف ويتصحح الكشف الشهري تلقائيًا.')) return;
+  try {
+    const rdoc = await getDoc(doc(db,'leaveRequests',id));
+    if (!rdoc.exists()) { toast('الطلب مش موجود (يمكن اتحذف بالفعل)', 'error'); return; }
+    const r = rdoc.data();
+    let restored = false;
+    if (r.status === 'approved' && ((r.daysFromBalance||0) > 0 || (r.daysUnpaid||0) > 0)) {
+      const emp = _employees.find(e=>e.id===r.employeeId);
+      if (emp && (r.daysFromBalance||0) > 0) {
+        const field = LEAVE_TYPES[r.leaveType||'regular'].field;
+        await updateDoc(doc(db,'employees',r.employeeId), { [field]: leaveBalanceOf(emp, r.leaveType||'regular') + r.daysFromBalance });
+      }
+      const billableDates = billableDatesOf(r);
+      const perPeriod = allocateLeaveDaysAcrossPeriods(billableDates, r.daysFromBalance||0);
+      for (const period in perPeriod) {
+        const { fromBalance, unpaid } = perPeriod[period];
+        await bumpMonthlySheet(r.employeeId, period, { leaveFromBalance: -fromBalance, leaveUnpaid: -unpaid },
+          `تصحيح تلقائي: حذف طلب إجازة (${LEAVE_TYPES[r.leaveType||'regular'].label}) من ${r.dateFrom} لـ${r.dateTo}`);
+      }
+      await logAudit('حذف طلب إجازة معتمد (استرجاع الرصيد)', r.employeeId, r.employeeName,
+        { leaveType:r.leaveType, daysFromBalance:r.daysFromBalance||0, daysUnpaid:r.daysUnpaid||0, dateFrom:r.dateFrom, dateTo:r.dateTo });
+      restored = true;
+    }
+    await deleteDoc(doc(db,'leaveRequests',id));
+    toast('تم الحذف بنجاح' + (restored ? ' — رجع الرصيد وتصحح الكشف الشهري' : ''), 'success');
+    renderLeaves();
+  }
   catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
 
