@@ -3445,6 +3445,19 @@ window.kioskDoAction = async (type) => {
   const isDriver = emp.category === 'driver';
   btn.disabled = true;
   try {
+    // ⚠️ مهم جدًا لآيفون: البصمة (Face ID/Touch ID) لازم تتطلب فورًا بعد لمسة المستخدم من غير أي تأخير
+    // (زي استنى تحديد الموقع) — لأن Safari/WebKit بيلغي صلاحية "لمسة المستخدم" لو حصل أي انتظار قبلها،
+    // فبيرفض طلب البصمة برسالة خطأ. عشان كده لازم البصمة تحصل الأول قبل أي حاجة async تانية.
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ضع بصمتك...';
+    let updatedPasskeys = emp.passkeys || [];
+    if (!updatedPasskeys.length) {
+      const newPk = await webauthnRegister(emp);
+      updatedPasskeys = [...updatedPasskeys, newPk];
+      await updateDoc(doc(secDb,'employees',emp.id), { passkeys: updatedPasskeys, _authCode: emp.code });
+    } else {
+      await webauthnVerify(emp);
+    }
+
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري تحديد الموقع...';
     let best = null;
     const driverRestrictedLocId = isDriver ? (type==='checkin' ? emp.driverCheckinLocationId : emp.driverCheckoutLocationId) : null;
@@ -3486,16 +3499,6 @@ window.kioskDoAction = async (type) => {
     }
     const dist = best.dist;
     const pos = best.pos;
-
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ضع بصمتك...';
-    let updatedPasskeys = emp.passkeys || [];
-    if (!updatedPasskeys.length) {
-      const newPk = await webauthnRegister(emp);
-      updatedPasskeys = [...updatedPasskeys, newPk];
-      await updateDoc(doc(secDb,'employees',emp.id), { passkeys: updatedPasskeys, _authCode: emp.code });
-    } else {
-      await webauthnVerify(emp);
-    }
 
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التسجيل...';
     let extra = {};
