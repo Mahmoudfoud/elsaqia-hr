@@ -479,7 +479,12 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
     <div class="page" id="page-leaves">
       <div class="ph">
         <div><div class="ph-title">الإجازات</div><div class="ph-sub">اعتيادية 14 يومًا + عارضة 7 أيام (تُجدَّد كل عام) + جواز 15 يومًا (رصيد يُمنح افتراضيًا مرة واحدة، ويتحكم فيه الأدمن يدويًا) — كل طلب يحتاج إلى موافقة مدير القسم والشؤون معًا</div></div>
-        <div class="ph-acts">
+        <div class="ph-acts" style="align-items:center">
+          <span style="font-size:12px;color:var(--slate-500)">من</span>
+          <input class="fc" type="date" id="lv-from" style="width:150px" onchange="renderLeaves()">
+          <span style="font-size:12px;color:var(--slate-500)">لحد</span>
+          <input class="fc" type="date" id="lv-to" style="width:150px" onchange="renderLeaves()">
+          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('lv-from').value='';document.getElementById('lv-to').value='';renderLeaves()"><i class="fas fa-times"></i>مسح الفلتر</button>
           <button class="btn btn-ghost btn-sm" id="btn-renew-balances" onclick="renewAllBalances()"><i class="fas fa-redo"></i>تجديد كل الأرصدة (بداية سنة)</button>
           <button class="btn btn-ac btn-sm" onclick="openLeaveModal()"><i class="fas fa-plus"></i>طلب إجازة جديد</button>
         </div>
@@ -3994,7 +3999,14 @@ async function renderOvertime() {
 
   if (!pending.length) { body.innerHTML = `<div class="empty"><i class="fas fa-check-circle"></i><p>لا توجد طلبات وقت إضافي معلّقة في الفترة من ${dateFrom} إلى ${dateTo}</p></div>`; return; }
 
-  body.innerHTML = pending.map(r=>{
+  const byShift = {};
+  pending.forEach(r=>{
+    const emp = _employees.find(e=>e.id===r.employeeId);
+    const key = emp?.shiftId || '__none__';
+    (byShift[key] = byShift[key]||[]).push(r);
+  });
+
+  const cardHtml = r => {
     const emp = _employees.find(e=>e.id===r.employeeId);
     const hours = Math.round(r.pendingOvertimeMinutes/60*100)/100;
     const durationLabel = overtimeDurationLabel(r.pendingOvertimeMinutes);
@@ -4010,7 +4022,23 @@ async function renderOvertime() {
         <button class="btn btn-ac btn-sm" onclick="approveOvertime('${r.id}')"><i class="fas fa-check"></i> موافقة</button>
       </div>
     </div></div>`;
-  }).join('');
+  };
+
+  let html = '';
+  _shifts.forEach(shift=>{
+    const items = byShift[shift.id];
+    if (!items || !items.length) return;
+    html += `<div style="font-weight:800;font-size:14px;margin:16px 0 8px;display:flex;align-items:center;gap:8px">
+      <i class="fas fa-clock"></i> ${esc(shift.name)} <span style="font-weight:400;color:var(--slate-500);font-size:12px">(${shift.start}-${shift.end})</span>
+    </div>` + items.map(cardHtml).join('');
+  });
+  const noShiftItems = byShift['__none__'];
+  if (noShiftItems && noShiftItems.length) {
+    html += `<div style="font-weight:800;font-size:14px;margin:16px 0 8px;display:flex;align-items:center;gap:8px">
+      <i class="fas fa-question-circle"></i> بدون وردية محدَّدة
+    </div>` + noShiftItems.map(cardHtml).join('');
+  }
+  body.innerHTML = html;
 }
 window.renderOvertime = renderOvertime;
 
@@ -4969,8 +4997,11 @@ async function renderLeaves() {
   const body = document.getElementById('leaves-body');
   body.innerHTML = '<div class="empty"><i class="fas fa-spinner fa-spin"></i><p>جاري التحميل...</p></div>';
   let reqs;
+  const lvFromEarly = document.getElementById('lv-from')?.value;
+  const lvToEarly = document.getElementById('lv-to')?.value;
+  const loadAll = _leavesShowAll || !!(lvFromEarly || lvToEarly); // لو الفلتر شغال، لازم نحمّل كل التاريخ عشان الفلترة تكون دقيقة
   try {
-    if (_leavesShowAll) {
+    if (loadAll) {
       const snap = await getDocs(query(collection(db,'leaveRequests'), orderBy('requestedAt','desc')));
       reqs = snap.docs.map(d=>({id:d.id,...d.data()}));
     } else {
@@ -4988,8 +5019,21 @@ async function renderLeaves() {
     }
   } catch(e) { body.innerHTML = `<div class="empty"><p>${formatFirestoreError('حدث خطأ', e)}</p></div>`; return; }
   if (CU.role!=='admin' && CU.departmentId) reqs = reqs.filter(r=>r.departmentId===CU.departmentId);
+
+  // فلتر "من فترة لحد فترة" اختياري — بيفلتر على أيام الإجازة نفسها (مش تاريخ تقديم الطلب)،
+  // وبيشتغل على البيانات المحمّلة أصلًا من غير أي استعلام إضافي لقاعدة البيانات
+  const lvFrom = document.getElementById('lv-from')?.value;
+  const lvTo = document.getElementById('lv-to')?.value;
+  if (lvFrom || lvTo) {
+    const f = lvFrom || '0000-01-01', t = lvTo || '9999-12-31';
+    reqs = reqs.filter(r => r.dateFrom <= t && r.dateTo >= f);
+  }
+
   if (!reqs.length) {
-    body.innerHTML = _leavesShowAll
+    const filterActive = lvFrom || lvTo;
+    body.innerHTML = filterActive
+      ? '<div class="empty"><i class="fas fa-calendar-minus"></i><p>لا توجد طلبات إجازة في الفترة المحددة</p></div>'
+      : _leavesShowAll
       ? '<div class="empty"><i class="fas fa-calendar-minus"></i><p>لا توجد طلبات إجازة بعد</p></div>'
       : '<div class="empty"><i class="fas fa-calendar-minus"></i><p>لا توجد طلبات إجازة في آخر 6 شهور</p><button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="toggleLeavesShowAll()">عرض كل التاريخ</button></div>';
     return;
