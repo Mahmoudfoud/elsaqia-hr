@@ -2608,10 +2608,10 @@ async function webauthnRegister(emp) {
   if (!window.PublicKeyCredential) throw new Error('الجهاز/المتصفح ده مش بيدعم بصمة الدخول (WebAuthn)');
   const cred = await navigator.credentials.create({ publicKey: {
     challenge: randChallenge(),
-    rp: { name: 'الساقية - الشؤون الإدارية' },
+    rp: { id: location.hostname, name: 'الساقية - الشؤون الإدارية' },
     user: { id: new TextEncoder().encode(emp.id), name: emp.code, displayName: emp.name },
     pubKeyCredParams: [{type:'public-key',alg:-7},{type:'public-key',alg:-257}],
-    authenticatorSelection: { authenticatorAttachment:'platform', userVerification:'required' },
+    authenticatorSelection: { authenticatorAttachment:'platform', userVerification:'required', residentKey:'required', requireResidentKey:true },
     timeout: 60000, attestation: 'none'
   }});
   if (!cred) throw new Error('اتلغى تسجيل البصمة');
@@ -2622,7 +2622,7 @@ async function webauthnVerify(emp) {
   if (!window.PublicKeyCredential) throw new Error('الجهاز/المتصفح ده مش بيدعم بصمة الدخول (WebAuthn)');
   const allow = (emp.passkeys||[]).map(p=>({ id: b64urlToBuf(p.id), type:'public-key' }));
   const cred = await navigator.credentials.get({ publicKey: {
-    challenge: randChallenge(), allowCredentials: allow, userVerification:'required', timeout:60000
+    challenge: randChallenge(), rpId: location.hostname, allowCredentials: allow, userVerification:'required', timeout:60000
   }});
   if (!cred) throw new Error('فشل التحقق من البصمة');
   const gotId = bufToB64url(cred.rawId);
