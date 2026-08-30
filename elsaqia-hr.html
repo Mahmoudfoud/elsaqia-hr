@@ -400,12 +400,14 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
           <button class="btn btn-ghost btn-sm" onclick="exportMonthlyToExcel()"><i class="fas fa-file-excel"></i>تصدير Excel</button>
           <input type="file" id="monthly-import-file" accept=".xlsx,.xls" style="display:none" onchange="importMonthlyFromExcel(event)">
           <button class="btn btn-ghost btn-sm" onclick="document.getElementById('monthly-import-file').click()"><i class="fas fa-file-import"></i>استيراد من Excel</button>
+          <button class="btn btn-ac btn-sm" onclick="saveAllMonthlyRows()"><i class="fas fa-save"></i>حفظ الكل</button>
         </div>
       </div>
-      <div class="card" style="overflow-x:auto"><table class="tbl">
+      <div class="card" style="overflow-x:auto;overflow-y:visible"><table class="tbl" id="monthly-table">
         <thead><tr><th>الاسم</th><th>الوظيفة</th><th>ساعات إضافية</th><th>أيام إضافية</th><th>إجازة من الرصيد</th><th>إجازة مرضية</th><th>إجازة بالخصم</th><th>غياب</th><th>إذن شخصي</th><th>الحافز %</th><th>جزاءات (أيام)</th><th>مكافآت (أيام)</th><th>ملاحظات</th><th></th></tr></thead>
         <tbody id="monthly-body"></tbody>
       </table></div>
+      <style>#monthly-table thead th{position:sticky;top:0;z-index:2;box-shadow:0 1px 0 var(--border)}</style>
     </div>
 
     <!-- MONTHLY EVALUATION -->
@@ -967,7 +969,7 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, signInAnonymously, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, collection, doc, getDoc, getDocs, setDoc, addDoc, updateDoc, deleteDoc, onSnapshot, query, where, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { initializeFirestore, collection, doc, getDoc, getDocs, setDoc, addDoc, updateDoc, deleteDoc, onSnapshot, query, where, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDEK9oIQQYWy2btXVQWIB64cQGUsjMf6j8",
@@ -979,7 +981,10 @@ const firebaseConfig = {
 };
 const fbApp = initializeApp(firebaseConfig);
 const auth  = getAuth(fbApp);
-const db    = getFirestore(fbApp);
+// experimentalAutoDetectLongPolling: بيخلي Firestore يكتشف فورًا أنسب طريقة اتصال بدل ما يستنى فشل
+// الطريقة الافتراضية الأول — ده بيقلل زمن أول اتصال خصوصًا على Safari/iOS اللي بطيء في التفاوض
+// على اتصال WebChannel العادي. مفيش أي تأثير على أندرويد/Chrome.
+const db    = initializeFirestore(fbApp, { experimentalAutoDetectLongPolling: true });
 
 // ══════════════════════════════════════════════
 // شعار شركة الساقية (مضمّن base64 داخل الملف نفسه، بدون اعتماد على رابط خارجي)
@@ -996,7 +1001,7 @@ const APP_LOGO_B64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAKAAAABwCAYA
 // حتى لا يؤثر على جلسة دخول الأدمن الحالية في نفس المتصفح
 const secApp  = initializeApp(firebaseConfig, 'secondary');
 const secAuth = getAuth(secApp);
-const secDb   = getFirestore(secApp);
+const secDb   = initializeFirestore(secApp, { experimentalAutoDetectLongPolling: true });
 
 let CU = null;          // current user {id,email,displayName,role}
 let _page = 'dashboard';
@@ -2579,6 +2584,30 @@ function overtimeDurationLabel(totalMinutes) {
   if (mm<=0) return `${h} ساعة`;
   return `${h} ساعة و${mm} دقيقة`;
 }
+window.overtimeDurationLabel = overtimeDurationLabel;
+// تنسيق إدخال الوقت الإضافي "H.MM" (زي ساعة الحائط): الرقم قبل النقطة = ساعات، بعد النقطة = دقايق فعلية (0-59)
+// — مش كسر عشري. القيمة المحفوظة في قاعدة البيانات وحساب المرتب تفضل رقم عشري حقيقي زي ما هي دايمًا.
+function decimalHoursToClockStr(decimalHours) {
+  const totalMinutes = Math.round((decimalHours||0) * 60);
+  const h = Math.floor(totalMinutes / 60), m = totalMinutes % 60;
+  return h + '.' + String(m).padStart(2,'0');
+}
+function parseClockOvertimeInput(rawStr) {
+  const str = String(rawStr ?? '').trim();
+  if (str === '') return { valid:true, decimalHours:0, hours:0, minutes:0 };
+  const parts = str.split('.');
+  const hoursPart = parts[0] === '' ? '0' : parts[0];
+  const hours = parseInt(hoursPart, 10);
+  if (isNaN(hours) || hours < 0) return { valid:false, error:'قيمة غير صحيحة' };
+  let minutes = 0;
+  if (parts.length > 1) {
+    const mm = parseInt(parts[1], 10);
+    minutes = isNaN(mm) ? 0 : mm;
+  }
+  if (minutes < 0 || minutes > 59) return { valid:false, error:'عدد الدقائق لازم يكون من 0 لحد 59', hours, minutes };
+  return { valid:true, decimalHours: hours + minutes/60, hours, minutes };
+}
+window.parseClockOvertimeInput = parseClockOvertimeInput;
 function addDaysToDateStr(dateStr, n) { const d=new Date(dateStr+'T00:00:00'); d.setDate(d.getDate()+n); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 
 function haversineMeters(lat1,lng1,lat2,lng2) {
@@ -4119,8 +4148,8 @@ async function renderMonthly() {
       <td style="font-weight:700">${esc(e.name)}</td>
       <td>${esc(e.jobTitle)||'—'}</td>
       <td>
-        <input class="fc" style="width:80px;padding:6px" type="number" min="0" step="0.5" id="ms-ot-${e.id}" value="${s.overtimeHours ?? 0}" oninput="document.getElementById('ms-ot-hint-${e.id}').textContent = overtimeDurationLabel((parseFloat(this.value)||0)*60)">
-        <div id="ms-ot-hint-${e.id}" style="font-size:10px;color:var(--slate-500);margin-top:2px">${overtimeDurationLabel((s.overtimeHours??0)*60)}</div>
+        <input class="fc" style="width:80px;padding:6px" type="number" min="0" step="any" id="ms-ot-${e.id}" value="${decimalHoursToClockStr(s.overtimeHours ?? 0)}" oninput="const r=parseClockOvertimeInput(this.value); const hint=document.getElementById('ms-ot-hint-${e.id}'); if(!r.valid){hint.textContent='⚠️ '+r.error; hint.style.color='var(--warn-600)'; this.style.borderColor='var(--warn-600)';} else {hint.textContent=overtimeDurationLabel(r.decimalHours*60); hint.style.color='var(--slate-500)'; this.style.borderColor='';}">
+        <div id="ms-ot-hint-${e.id}" style="font-size:10px;color:var(--slate-500);margin-top:2px">${overtimeDurationLabel((s.overtimeHours ?? 0)*60)}</div>
       </td>
       <td><input class="fc" style="width:70px;padding:6px" type="number" min="0" id="ms-extra-${e.id}" value="${s.extraDays ?? 0}"></td>
       <td>
@@ -4173,13 +4202,18 @@ window.deleteMonthlyRow = async (docId) => {
   } catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
 
-window.saveMonthlyRow = async (empId) => {
-  const period = document.getElementById('monthly-period').value;
+// دالة الحفظ الأساسية — مستخدمة من saveMonthlyRow (صف واحد) وsaveAllMonthlyRows (حفظ جماعي).
+// options.silent=true: بدل ما تفتح نافذة تأكيد لو الرصيد هيبقى سالب، بترجع { skipped:true } من غير ما تحفظ حاجة.
+async function commitMonthlySave(empId, period, options={}) {
+  const otRaw = document.getElementById(`ms-ot-${empId}`).value;
+  const otParsed = parseClockOvertimeInput(otRaw);
+  if (!otParsed.valid) return { success:false, reason:'invalid_overtime', message: otParsed.error };
+
   const newLeave = parseFloat(document.getElementById(`ms-leave-${empId}`).value)||0;
   const newLeaveType = document.getElementById(`ms-leave-type-${empId}`)?.value || 'regular';
   const data = {
     employeeId: empId, period,
-    overtimeHours: parseFloat(document.getElementById(`ms-ot-${empId}`).value)||0,
+    overtimeHours: otParsed.decimalHours,
     extraDays: parseFloat(document.getElementById(`ms-extra-${empId}`).value)||0,
     leaveFromBalance: newLeave,
     leaveFromBalanceType: newLeaveType,
@@ -4224,7 +4258,10 @@ window.saveMonthlyRow = async (empId) => {
     }
 
     const wouldGoNegative = Object.values(empUpdates).some(v => v < 0);
-    if (wouldGoNegative && !confirm('سيؤدي هذا التعديل إلى جعل رصيد إجازة الموظف سالبًا. هل ترغب في المتابعة؟')) return;
+    if (wouldGoNegative) {
+      if (options.silent) return { success:false, reason:'negative_balance', message:'رصيد الإجازة هيبقى سالب' };
+      if (!confirm('سيؤدي هذا التعديل إلى جعل رصيد إجازة الموظف سالبًا. هل ترغب في المتابعة؟')) return { success:false, reason:'cancelled' };
+    }
 
     const existingDocId = existingSnap.empty ? null : existingSnap.docs[0].id;
     if (existingDocId) await updateDoc(doc(db,'monthlySheets',existingDocId), data);
@@ -4238,8 +4275,41 @@ window.saveMonthlyRow = async (empId) => {
     trackedFields.forEach(f => { if ((existing?.[f]||0) !== (data[f]||0)) changed[f] = { before: existing?.[f]||0, after: data[f]||0 }; });
     if (Object.keys(changed).length) await logAudit('تعديل كشف شهري', empId, emp?.name, { period, changed });
 
-    toast('تم حفظ البيانات بنجاح', 'success');
-  } catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
+    return { success:true };
+  } catch(e) { return { success:false, reason:'error', message: formatFirestoreError('حدث خطأ', e) }; }
+}
+
+window.saveMonthlyRow = async (empId) => {
+  const period = document.getElementById('monthly-period').value;
+  const result = await commitMonthlySave(empId, period, { silent:false });
+  if (result.success) toast('تم حفظ البيانات بنجاح', 'success');
+  else if (result.reason === 'cancelled') { /* المستخدم لغى العملية بنفسه، مفيش داعي لرسالة */ }
+  else toast(result.message || 'حدث خطأ', 'error');
+};
+
+// حفظ كل الموظفين الظاهرين في الجدول دفعة واحدة. أي موظف هيخلي رصيد إجازته سالب أو فيه تنسيق ساعات
+// غلط بيتخطى تلقائيًا من غير ما يوقف الباقي، وبيتقال لك في الآخر مين اتخطى عشان تحفظه يدوي بعد المراجعة.
+window.saveAllMonthlyRows = async () => {
+  const period = document.getElementById('monthly-period').value;
+  const activeEmps = _employees.filter(e=>e.category!=='rep' && e.category!=='driver' && employeeInPeriod(e,period));
+  if (!activeEmps.length) { toast('لا يوجد موظفون لحفظهم في هذا الشهر', 'error'); return; }
+  if (!confirm(`هيتم حفظ بيانات ${activeEmps.length} موظف دفعة واحدة. متابعة؟`)) return;
+
+  let okCount = 0;
+  const skipped = [];
+  for (const emp of activeEmps) {
+    const result = await commitMonthlySave(emp.id, period, { silent:true });
+    if (result.success) okCount++;
+    else skipped.push({ name: emp.name, reason: result.reason, message: result.message });
+  }
+
+  if (!skipped.length) {
+    toast(`تم حفظ الكل بنجاح (${okCount} موظف)`, 'success');
+  } else {
+    const list = skipped.map(s => `${s.name}: ${s.reason==='negative_balance' ? 'رصيد الإجازة هيبقى سالب' : (s.reason==='invalid_overtime' ? 'تنسيق الساعات غلط' : s.message||'خطأ')}`).join('\n');
+    toast(`تم حفظ ${okCount} موظف. اتخطى ${skipped.length}: راجع الرسالة التفصيلية`, 'error');
+    alert(`الموظفين اللي اتخطوا ولازم تحفظهم يدوي بعد المراجعة:\n\n${list}`);
+  }
 };
 
 window.autoFillMonthly = async () => {
@@ -4275,7 +4345,11 @@ window.autoFillMonthly = async () => {
       const otEl = document.getElementById(`ms-ot-${e.id}`);
       if (leaveEl) leaveEl.value = leaveCount[e.id]||0;
       if (absEl) absEl.value = absenceCount[e.id]||0;
-      if (otEl) otEl.value = Math.round((otHours[e.id]||0)*100)/100;
+      if (otEl) {
+        otEl.value = decimalHoursToClockStr(otHours[e.id]||0);
+        const hint = document.getElementById(`ms-ot-hint-${e.id}`);
+        if (hint) hint.textContent = overtimeDurationLabel((otHours[e.id]||0)*60);
+      }
     });
     toast('تم تحميل البيانات من السجلات — يُرجى مراجعتها وحفظ كل صف على حدة', 'success');
   } catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
