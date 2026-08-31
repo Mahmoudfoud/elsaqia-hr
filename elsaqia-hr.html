@@ -2672,12 +2672,40 @@ window.showKiosk = () => {
   document.getElementById('auth-screen').classList.add('hidden');
   document.getElementById('kiosk-screen').classList.remove('hidden');
   window._kioskEmp = null;
-  kioskRenderCodeEntry();
+  kioskCheckRememberedDevice();
 };
 window.backToLogin = () => {
   document.getElementById('kiosk-screen').classList.add('hidden');
   document.getElementById('auth-screen').classList.remove('hidden');
 };
+
+// كل موبايل شخصي بيفتكر آخر موظف اتسجل عليه (مش أكواد، بس ID) — لو الموظف ده بقى مستقيل، الجهاز
+// ده بيوقف تمامًا على شاشة "الخدمة انتهت" من غير ما يوري خانة إدخال الكود خالص. أي خطأ تاني غير
+// "مستقيل فعلاً" (شبكة ضعيفة، إلخ) بيسيب الشاشة العادية تظهر عادي عشان مانقفلش على حد شغال بالغلط.
+async function kioskCheckRememberedDevice() {
+  const rememberedId = localStorage.getItem('elsaqia_kiosk_emp');
+  if (!rememberedId) { kioskRenderCodeEntry(); return; }
+  document.getElementById('kiosk-body').innerHTML = `<div style="text-align:center;padding:30px 0;color:var(--slate-400)"><i class="fas fa-spinner fa-spin"></i></div>`;
+  try {
+    if (!secAuth.currentUser) await signInAnonymously(secAuth);
+    await getDoc(doc(secDb,'employees', rememberedId));
+    // لو القراءة نجحت، القاعدة بالفعل بتضمن إن الموظف ده نشط (القاعدة بترفض القراءة تمامًا للمستقيل)
+  } catch(e) {
+    // القاعدة بترفض قراءة موظف مستقيل أو محذوف برسالة "permission-denied" (مش "غير موجود" عادي) —
+    // ده التأكيد الوحيد الموثوق إنه فعلاً مستقيل/محذوف. أي خطأ تاني (شبكة، إلخ) بيسيب الشاشة العادية.
+    if (e.code === 'permission-denied') { kioskRenderDeviceBlocked(); return; }
+  }
+  kioskRenderCodeEntry();
+}
+function kioskRenderDeviceBlocked() {
+  document.getElementById('kiosk-body').innerHTML = `
+    <div style="text-align:center;padding:30px 10px">
+      <i class="fas fa-lock" style="font-size:32px;color:var(--danger-600,#dc2626);margin-bottom:14px"></i>
+      <div style="font-weight:800;font-size:15px;margin-bottom:8px">تم إنهاء الخدمة</div>
+      <div style="font-size:13px;color:var(--slate-500)">هذا الرابط لم يعد صالحًا للاستخدام على هذا الجهاز.<br>للاستفسار، تواصل مع الشؤون الإدارية.</div>
+    </div>`;
+}
+window.kioskRenderDeviceBlocked = kioskRenderDeviceBlocked;
 
 function kioskRenderCodeEntry(msg='') {
   document.getElementById('kiosk-body').innerHTML = `
@@ -2704,6 +2732,7 @@ window.kioskSubmitCode = async () => {
     const empDoc = await getDoc(doc(secDb,'employees', codeDoc.data().employeeId));
     if (!empDoc.exists() || empDoc.data().status === 'resigned') { kioskRenderCodeEntry('الكود ده غلط أو غير موجود'); return; }
     window._kioskEmp = { id: empDoc.id, ...empDoc.data() };
+    localStorage.setItem('elsaqia_kiosk_emp', empDoc.id);
     await kioskLoadStatus();
   } catch(e) {
     kioskRenderCodeEntry(formatFirestoreError('حدث خطأ', {message: e.message||e.code}));
