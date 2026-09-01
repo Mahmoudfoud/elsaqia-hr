@@ -404,7 +404,7 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
         </div>
       </div>
       <div class="card" id="monthly-scroll-wrap" style="overflow-x:scroll;overflow-y:visible"><table class="tbl" id="monthly-table">
-        <thead><tr><th>الاسم</th><th>الوظيفة</th><th>ساعات إضافية</th><th>أيام إضافية</th><th>إجازة من الرصيد</th><th>إجازة مرضية</th><th>إجازة بالخصم</th><th>غياب</th><th>إذن شخصي</th><th>الحافز %</th><th>جزاءات (أيام)</th><th>مكافآت (أيام)</th><th>ملاحظات</th><th></th></tr></thead>
+        <thead><tr><th>الاسم</th><th>الوظيفة</th><th>ساعات إضافية</th><th>أيام إضافية</th><th>إجازة من الرصيد</th><th>إجازة مرضية</th><th>إجازة بالخصم</th><th title="اكتب عدد أيام الغياب الحقيقي — النظام يخصم يومين من المرتب تلقائيًا عن كل يوم غياب">غياب ⓘ</th><th>إذن شخصي</th><th>الحافز %</th><th>جزاءات (أيام)</th><th>مكافآت (أيام)</th><th>ملاحظات</th><th></th></tr></thead>
         <tbody id="monthly-body"></tbody>
       </table></div>
       <style>
@@ -989,10 +989,13 @@ const firebaseConfig = {
 };
 const fbApp = initializeApp(firebaseConfig);
 const auth  = getAuth(fbApp);
-// experimentalAutoDetectLongPolling: بيخلي Firestore يكتشف فورًا أنسب طريقة اتصال بدل ما يستنى فشل
-// الطريقة الافتراضية الأول — ده بيقلل زمن أول اتصال خصوصًا على Safari/iOS اللي بطيء في التفاوض
-// على اتصال WebChannel العادي. مفيش أي تأثير على أندرويد/Chrome.
-const db    = initializeFirestore(fbApp, { experimentalAutoDetectLongPolling: true });
+// ⚠️ بحث موسّع (أغسطس 2026) لقى باگ موثّق ومفتوح لسه في Firebase نفسها: Safari 26.4 فأعلى (آيفون وماك)
+// بطيء جدًا مع Firestore تحديدًا (GitHub firebase-js-sdk#9789) — طلبات كانت أقل من ثانية بقت ~10 ثواني.
+// auto-detect (v43) لسه بيحاول الطريقة العادية الأول قبل الاكتشاف؛ للآيفون تحديدًا بنجبر الطريقة
+// البديلة (long-polling) من الأول عشان نتجنب مسار الاتصال المعطوب تمامًا. غير آيفون: مفيش تغيير.
+const _isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+const _fsSettings = _isIOS ? { experimentalForceLongPolling: true } : { experimentalAutoDetectLongPolling: true };
+const db    = initializeFirestore(fbApp, _fsSettings);
 
 // ══════════════════════════════════════════════
 // شعار شركة الساقية (مضمّن base64 داخل الملف نفسه، بدون اعتماد على رابط خارجي)
@@ -1009,7 +1012,7 @@ const APP_LOGO_B64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAKAAAABwCAYA
 // حتى لا يؤثر على جلسة دخول الأدمن الحالية في نفس المتصفح
 const secApp  = initializeApp(firebaseConfig, 'secondary');
 const secAuth = getAuth(secApp);
-const secDb   = initializeFirestore(secApp, { experimentalAutoDetectLongPolling: true });
+const secDb   = initializeFirestore(secApp, _fsSettings);
 
 let CU = null;          // current user {id,email,displayName,role}
 let _page = 'dashboard';
@@ -2129,9 +2132,12 @@ function computeIncentive(emp, evalScorePercent, periodStr) {
   return Math.round((cfg.incentiveBase||0) * ratio * (evalScorePercent/100) * 100)/100;
 }
 // خصم الشهر من الراتب الأساسي (غياب + إجازة بالخصم + جزاءات) — يوم واحد = الراتب الأساسي/30 (قبل خصم التأمينات والضرائب)
+// ⚠️ الغياب تحديدًا يومين خصم لكل يوم غياب حقيقي (عقوبة) — الحقل sheet.absence بيخزّن عدد أيام الغياب
+// الحقيقي (زي ما هو، سواء جه من التحميل التلقائي أو اتكتب يدويًا)، والمضاعفة ×2 بتحصل هنا بس، في مكان
+// واحد مركزي، عشان تفضل صح دايمًا بغض النظر عن مصدر الرقم. إجازة بالخصم والجزاءات يوم = يوم عادي.
 function computeMonthlyDeduction(emp, sheet, periodStr) {
   if (!sheet) return 0;
-  const days = (sheet.absence||0) + (sheet.leaveUnpaid||0) + (sheet.penaltyDays||0);
+  const days = (sheet.absence||0)*2 + (sheet.leaveUnpaid||0) + (sheet.penaltyDays||0);
   if (!days) return 0;
   const cfg = periodStr ? getSalaryConfigForDate(emp, cycleRangeForPeriod(periodStr).endDate) : emp;
   const dailyRate = (cfg.salary||0)/30;
@@ -4361,7 +4367,7 @@ window.autoFillMonthly = async () => {
     const absenceCount = {}, leaveCount = {}, otHours = {};
     markSnap.docs.forEach(d=>{
       const v = d.data();
-      if (v.status==='absent') absenceCount[v.employeeId] = (absenceCount[v.employeeId]||0)+2; // كل يوم غياب بدون إذن = يومين خصم من المرتب (عقوبة)
+      if (v.status==='absent') absenceCount[v.employeeId] = (absenceCount[v.employeeId]||0)+1; // عدد أيام الغياب الحقيقي — المضاعفة (×2) بتحصل وقت حساب الخصم بس، مش هنا
       if (v.status==='leave') leaveCount[v.employeeId] = (leaveCount[v.employeeId]||0)+1;
     });
     coSnap.docs.forEach(d=>{
@@ -4828,7 +4834,7 @@ async function renderProfile() {
       ${advancesHtml}
     </div></div>
     <div class="card" style="overflow-x:auto"><table class="tbl">
-      <thead><tr><th>الشهر</th><th>ساعات إضافية</th><th>أيام إضافية</th><th>إجازة من الرصيد</th><th>إجازة مرضية</th><th>إجازة بالخصم</th><th>غياب</th><th>إذن شخصي</th><th>الحافز %</th><th>جزاءات (أيام)</th><th>مكافآت (أيام)</th><th>ملاحظات</th></tr></thead>
+      <thead><tr><th>الشهر</th><th>ساعات إضافية</th><th>أيام إضافية</th><th>إجازة من الرصيد</th><th>إجازة مرضية</th><th>إجازة بالخصم</th><th title="عدد أيام الغياب الحقيقي — كل يوم بيتخصم منه يومين من المرتب">غياب ⓘ</th><th>إذن شخصي</th><th>الحافز %</th><th>جزاءات (أيام)</th><th>مكافآت (أيام)</th><th>ملاحظات</th></tr></thead>
       <tbody>${rows}</tbody>
     </table></div>
     ${penaltyRewardsHtml}`;
