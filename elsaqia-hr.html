@@ -3062,9 +3062,24 @@ async function kioskRenderProfileBody() {
       if (!employeeInPeriod(emp, period)) continue;
       const s = sheets[period]; const ev = evals[period];
       if (!s && !ev) continue;
-      rows += `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:12px;text-align:right;gap:8px">
-        <span style="font-weight:700;white-space:nowrap">${period}</span>
-        <span>إجازة: ${s?.leaveFromBalance??0} · مرضي: ${s?.sickLeave??0} · بالخصم: ${s?.leaveUnpaid??0} · غياب: ${s?.absence??0} · إذن: ${s?.personalPermission??0} · جزاءات: ${s?.penaltyDays??0} · مكافآت: ${s?.rewardDays??0} · إضافي: ${s?.overtimeHours??0}س/${s?.extraDays??0}ي${ev?.finalScore!=null?' · حافز: '+ev.finalScore+'%':''}</span>
+      // نفس معادلة "الصافي التقديري" المستخدمة للشهر الحالي، بس مطبّقة على كل شهر سابق برواتبه
+      // وإعداداته الفعلية وقتها (مش الراتب الحالي) — عشان تفضل صح حتى لو الراتب اتغيّر بعد كده
+      const mNet = computeNetSalaryForPeriod(emp, period);
+      const mDeduction = computeMonthlyDeduction(emp, s, period);
+      const mExtra = computeExtraDaysAmount(emp, s, period);
+      const mOt = computeOvertimeAmount(emp, s, period);
+      const mReward = computeMonthlyRewardAmount(emp, s, period);
+      const mAdvanceDeduction = computeAdvanceDeductionForPeriod(empAdvances, period);
+      const mIncentive = ev?.finalScore != null ? computeIncentive(emp, ev.finalScore, period) : null;
+      const mEstimatedTotal = Math.round((mNet - mDeduction - mAdvanceDeduction + mExtra + mOt + mReward)*100)/100;
+      const mGrandTotal = Math.round((mEstimatedTotal + (mIncentive||0))*100)/100;
+      rows += `<div style="padding:8px 0;border-bottom:1px solid var(--border);text-align:right">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+          <span style="font-weight:700;font-size:13px">${period}</span>
+          <span style="font-weight:800;font-size:14px;color:var(--ac-600)">${mGrandTotal} ج.م</span>
+        </div>
+        <div style="font-size:11px;color:var(--slate-500);margin-top:2px">صافي: ${mEstimatedTotal} ج.م${mIncentive!=null?' · حافز: '+mIncentive+' ج.م':' · لا يوجد تقييم لهذا الشهر بعد'}</div>
+        <div style="font-size:11px;color:var(--slate-500);margin-top:2px">إجازة: ${s?.leaveFromBalance??0} · مرضي: ${s?.sickLeave??0} · بالخصم: ${s?.leaveUnpaid??0} · غياب: ${s?.absence??0} · إذن: ${s?.personalPermission??0} · جزاءات: ${s?.penaltyDays??0} · مكافآت: ${s?.rewardDays??0} · إضافي: ${s?.overtimeHours??0}س/${s?.extraDays??0}ي${ev?.finalScore!=null?' · تقييم: '+ev.finalScore+'%':''}</div>
       </div>`;
     }
 
