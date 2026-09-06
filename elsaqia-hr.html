@@ -2739,6 +2739,16 @@ window.kioskSubmitCode = async () => {
     if (!empDoc.exists() || empDoc.data().status === 'resigned') { kioskRenderCodeEntry('الكود ده غلط أو غير موجود'); return; }
     window._kioskEmp = { id: empDoc.id, ...empDoc.data() };
     localStorage.setItem('elsaqia_kiosk_emp', empDoc.id);
+    // ⚠️ إصلاح أمان (دفعة 4): ربط جهاز الكيوسك الحالي بالموظف صاحب الكود — بيسمح بعد كده لقواعد
+    // الأمان إنها تتأكد إن أي قراءة لبيانات الموظف (كشوفه، إجازاته، تقييماته...) جاية من نفس جهازه
+    // هو بس. بيتكتب في كل مرة يدخل بكوده الصح (مش أول مرة بس) — عشان لو غيّر تليفونه، الربط يتحدّث
+    // تلقائيًا من غير ما نحتاج نعمل حاجة يدوية. لو الكتابة فشلت لأي سبب (شبكة مثلاً)، منسيبهاش توقف
+    // الدخول العادي — دخوله وتسجيله للحضور أهم وميتأثرش.
+    if (empDoc.data().kioskUid !== secAuth.currentUser.uid) {
+      try {
+        await updateDoc(doc(secDb,'employees', empDoc.id), { kioskUid: secAuth.currentUser.uid, _authCode: code });
+      } catch(e) { /* تجاهل: مش هدف أساسي، القراءات هتفضل شغالة بفترة السماح لحد ما ينجح لاحقًا */ }
+    }
     await kioskLoadStatus();
   } catch(e) {
     kioskRenderCodeEntry(formatFirestoreError('حدث خطأ', {message: e.message||e.code}));
