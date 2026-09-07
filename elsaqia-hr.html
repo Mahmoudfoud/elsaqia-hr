@@ -855,8 +855,8 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
       </select></div>
       <div id="lv-balance-note" style="font-size:12px;color:var(--slate-500);margin:-6px 0 12px"></div>
       <div class="frow c2">
-        <div class="fg"><label class="fl">من تاريخ</label><input class="fc" type="date" id="lv-from"></div>
-        <div class="fg"><label class="fl">حتى تاريخ</label><input class="fc" type="date" id="lv-to"></div>
+        <div class="fg"><label class="fl">من تاريخ</label><input class="fc" type="date" id="lv-from-modal"></div>
+        <div class="fg"><label class="fl">حتى تاريخ</label><input class="fc" type="date" id="lv-to-modal"></div>
       </div>
       <div class="fg"><label class="fl">ملاحظات</label><textarea class="fc" id="lv-note" rows="2"></textarea></div>
     </div>
@@ -4494,11 +4494,19 @@ window.exportMonthlyToExcel = async () => {
   // الأعمدة دي بتتحدث تلقائي جوه Excel نفسه، بنفس معادلات النظام بالظبط
   for (let i=0;i<activeEmps.length;i++) {
     const r = i+2; // صف العناوين = 1
+    const e = activeEmps[i];
+    // ⚠️ إصلاح (المراجعة الشاملة): معادلة الحافز كانت بتفترض إن الموظف اشتغل الدورة كاملة، فمكانتش
+    // بتراعي نسبة الأيام الفعلية لموظف اتعيّن أو استقال في نص الدورة — بعكس نفس الحساب في لوحة الأدمن
+    // و"سجلي السنوي" اللي بيراعيها فعليًا (computeIncentive). النسبة دي ثابتة لكل موظف/شهر (مبنية على
+    // تاريخ التعيين/الاستقالة المسجّل، مش رقم المفروض الأدمن يعدّله من جوه الإكسيل) فبتتحط كرقم جوه
+    // نص المعادلة نفسها، والمعادلة تفضل حيّة (بتتحدّث تلقائي لو الأدمن غيّر الحافز الأساسي أو نسبة
+    // التقييم من جوه الإكسيل).
+    const incentiveRatio = daysWorkedRatioInCycle(e, period);
     ws[`R${r}`] = { t:'n', f:`(J${r}*2+I${r}+M${r})*O${r}/30` };   // خصم الغياب (×2) والإجازة بالخصم والجزاءات
     ws[`S${r}`] = { t:'n', f:`F${r}*O${r}/30*2` };               // قيمة الأيام الإضافية (يوم = ضعف اليومية)
     ws[`T${r}`] = { t:'n', f:`E${r}*(O${r}/30/8)*1.7` };         // قيمة الساعات الإضافية (الساعة × 1.7)
     ws[`U${r}`] = { t:'n', f:`N${r}*O${r}/30` };                 // قيمة المكافآت
-    ws[`V${r}`] = { t:'n', f:`Q${r}*L${r}/100` };                // الحافز المستحق = الحافز الأساسي × نسبة التقييم
+    ws[`V${r}`] = { t:'n', f:`Q${r}*L${r}/100*${incentiveRatio}` }; // الحافز المستحق = الحافز الأساسي × نسبة التقييم × نسبة أيام العمل الفعلية
     ws[`W${r}`] = { t:'n', f:`P${r}-R${r}-X${r}+S${r}+T${r}+U${r}` };  // الصافي التقديري لهذا الشهر (بعد خصم قسط السلفة)
     ws[`Y${r}`] = { t:'n', f:`W${r}+V${r}` };                    // الإجمالي (الصافي + الحافز المستحق)
   }
@@ -5411,8 +5419,8 @@ window.openLeaveModal = () => {
   if (CU.role!=='admin' && CU.departmentId) emps = emps.filter(e=>e.departmentId===CU.departmentId);
   sel.innerHTML = emps.map(e=>`<option value="${e.id}">${esc(e.name)}</option>`).join('');
   document.getElementById('lv-type').value = 'regular';
-  document.getElementById('lv-from').value = '';
-  document.getElementById('lv-to').value = '';
+  document.getElementById('lv-from-modal').value = '';
+  document.getElementById('lv-to-modal').value = '';
   document.getElementById('lv-note').value = '';
   onLeaveEmpChange();
   openM('mo-leave');
@@ -5427,8 +5435,8 @@ window.onLeaveEmpChange = () => {
 window.saveLeaveRequest = async () => {
   const employeeId = document.getElementById('lv-emp').value;
   const leaveType = document.getElementById('lv-type').value;
-  const dateFrom = document.getElementById('lv-from').value;
-  const dateTo = document.getElementById('lv-to').value;
+  const dateFrom = document.getElementById('lv-from-modal').value;
+  const dateTo = document.getElementById('lv-to-modal').value;
   const note = document.getElementById('lv-note').value.trim();
   if (!employeeId || !dateFrom || !dateTo) { toast('يُرجى تحديد الموظف والتواريخ', 'error'); return; }
   if (dateTo < dateFrom) { toast('يجب أن يكون تاريخ النهاية بعد تاريخ البداية', 'error'); return; }
