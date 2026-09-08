@@ -346,6 +346,13 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
           <div id="migrate-codes-result" style="margin-top:8px;font-size:12px"></div>
         </div>
       </div>
+      <div class="card">
+        <div class="card-body" style="font-size:12.5px">
+          <div style="font-weight:800;margin-bottom:6px"><i class="fas fa-calculator"></i> معاملات حساب المرتب</div>
+          <div style="color:var(--slate-600);margin-bottom:10px">التحكم في معامل الساعة الإضافية، معامل اليوم الإضافي، ومعامل خصم الغياب. أي تغيير له تاريخ سريان — الشهور السابقة لتاريخ السريان تفضل محسوبة بالمعامل القديم كما هي، بدون أي تأثير رجعي.</div>
+          <button class="btn btn-ghost btn-sm" onclick="openPolicySettingsModal()"><i class="fas fa-history"></i>عرض/تعديل معاملات الحساب (سجل تاريخي)</button>
+        </div>
+      </div>
       <div class="card"><div class="card-body" style="font-size:12px;color:var(--slate-500)">
         كل موظف تقدر تحدد له فرع معيّن من "بيانات الموظف" فيتحقق النظام إنه داخل نطاق الفرع ده بس وقت تسجيل الحضور/الانصراف. لو مافيش فرع محدد لموظف، النظام هيقبل تسجيله من أي فرع من الفروع المسجّلة هنا.
       </div></div>
@@ -958,6 +965,13 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
   <div class="modal" style="max-width:640px">
     <div class="mh"><span class="mh-title">السجل التاريخي لتفاصيل الراتب</span><button class="mclose" onclick="closeM('mo-salary-history')">×</button></div>
     <div class="mb" id="salary-history-body"></div>
+  </div>
+</div>
+
+<div class="overlay" id="mo-policy-settings">
+  <div class="modal" style="max-width:640px">
+    <div class="mh"><span class="mh-title">معاملات حساب المرتب — سجل تاريخي</span><button class="mclose" onclick="closeM('mo-policy-settings')">×</button></div>
+    <div class="mb" id="policy-settings-body"></div>
   </div>
 </div>
 
@@ -2095,6 +2109,21 @@ function getSalaryConfigForDate(emp, dateStr) {
   }
   return { salary: emp.salary||0, incomeTax: emp.incomeTax||0, incentiveBase: emp.incentiveBase||0, socialInsurance: emp.socialInsurance||0, medicalInsurance: emp.medicalInsurance||0 };
 }
+// إعدادات معاملات الحساب (الساعة الإضافية، اليوم الإضافي، الغياب) السارية فعليًا في تاريخ معيّن —
+// من سجل تعديلات إعدادات الشركة (settings/company.policyHistory) لو موجود، وإلا القيم الافتراضية
+// اللي كانت مكتوبة صلب الكود قبل ما ميزة الإعدادات دي تتضاف (1.7 / 2 / 2) — عشان أي شهر قديم
+// اتحسب قبل إضافة الميزة دي يفضل بالظبط زي ما هو، وأي شهر جديد ماتغيّرش سياسته يستخدم نفس الأرقام
+// من غير ما حد يحتاج يضيف سجل يدوي. القيم دي مش خاصة بموظف معيّن — بتخص الشركة كلها.
+function getPolicyConfigForDate(dateStr) {
+  const defaults = { overtimeMultiplier: 1.7, extraDayMultiplier: 2, absenceMultiplier: 2 };
+  const history = _companySettings && _companySettings.policyHistory;
+  if (Array.isArray(history) && history.length) {
+    let best = null;
+    for (const h of history) { if (h.effectiveFrom <= dateStr && (!best || h.effectiveFrom > best.effectiveFrom)) best = h; }
+    if (best) return { ...defaults, ...best };
+  }
+  return defaults;
+}
 // بيحوّل أي تاريخ حقيقي لرقمه الافتراضي (1-30) جوه الدورة الشهرية اللي هو واقع فيها —
 // نظام "الشهر دايمًا 30 يوم": يوم 26 من الشهر = افتراضي 1 ... يوم 30 = افتراضي 5، ويوم 31 بيتكبح على افتراضي 5 برضو (زي يوم 30 بالظبط)
 // وبعدين يوم 1 من الشهر اللي بعده = افتراضي 6 ... يوم 25 = افتراضي 30
@@ -2137,18 +2166,22 @@ function computeIncentive(emp, evalScorePercent, periodStr) {
 // واحد مركزي، عشان تفضل صح دايمًا بغض النظر عن مصدر الرقم. إجازة بالخصم والجزاءات يوم = يوم عادي.
 function computeMonthlyDeduction(emp, sheet, periodStr) {
   if (!sheet) return 0;
-  const days = (sheet.absence||0)*2 + (sheet.leaveUnpaid||0) + (sheet.penaltyDays||0);
+  const asOfDate = periodStr ? cycleRangeForPeriod(periodStr).endDate : todayStr();
+  const policy = getPolicyConfigForDate(asOfDate);
+  const days = (sheet.absence||0)*policy.absenceMultiplier + (sheet.leaveUnpaid||0) + (sheet.penaltyDays||0);
   if (!days) return 0;
-  const cfg = periodStr ? getSalaryConfigForDate(emp, cycleRangeForPeriod(periodStr).endDate) : emp;
+  const cfg = periodStr ? getSalaryConfigForDate(emp, asOfDate) : emp;
   const dailyRate = (cfg.salary||0)/30;
   return Math.round(days*dailyRate*100)/100;
 }
 // قيمة الأيام الإضافية — يوم إضافي = ضعف الراتب اليومي الأساسي (الراتب/30 × 2)
 function computeExtraDaysAmount(emp, sheet, periodStr) {
   if (!sheet || !sheet.extraDays) return 0;
-  const cfg = periodStr ? getSalaryConfigForDate(emp, cycleRangeForPeriod(periodStr).endDate) : emp;
+  const asOfDate = periodStr ? cycleRangeForPeriod(periodStr).endDate : todayStr();
+  const cfg = periodStr ? getSalaryConfigForDate(emp, asOfDate) : emp;
+  const policy = getPolicyConfigForDate(asOfDate);
   const dailyRate = (cfg.salary||0)/30;
-  return Math.round(sheet.extraDays*dailyRate*2*100)/100;
+  return Math.round(sheet.extraDays*dailyRate*policy.extraDayMultiplier*100)/100;
 }
 // قيمة المكافآت المسجّلة من صفحة الجزاءات والمكافآت — يوم واحد = الراتب الأساسي/30 (تُضاف للصافي)
 function computeMonthlyRewardAmount(emp, sheet, periodStr) {
@@ -2160,8 +2193,10 @@ function computeMonthlyRewardAmount(emp, sheet, periodStr) {
 // قيمة الساعات الإضافية المعتمدة — الساعة = (الراتب/30/8) × 1.7
 function computeOvertimeAmount(emp, sheet, periodStr) {
   if (!sheet || !sheet.overtimeHours) return 0;
-  const cfg = periodStr ? getSalaryConfigForDate(emp, cycleRangeForPeriod(periodStr).endDate) : emp;
-  const hourlyRate = ((cfg.salary||0)/30/8)*1.7;
+  const asOfDate = periodStr ? cycleRangeForPeriod(periodStr).endDate : todayStr();
+  const cfg = periodStr ? getSalaryConfigForDate(emp, asOfDate) : emp;
+  const policy = getPolicyConfigForDate(asOfDate);
+  const hourlyRate = ((cfg.salary||0)/30/8)*policy.overtimeMultiplier;
   return Math.round(sheet.overtimeHours*hourlyRate*100)/100;
 }
 
@@ -2314,6 +2349,85 @@ window.deleteSalaryHistoryEntry = async (empId, index) => {
     await logAudit('حذف سجل راتب تاريخي', empId, emp.name, { removed: toRemove });
     toast('تم الحذف بنجاح', 'success');
     renderSalaryHistoryModal(empId);
+  } catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
+};
+
+window.openPolicySettingsModal = () => {
+  renderPolicySettingsModal();
+  openM('mo-policy-settings');
+};
+function renderPolicySettingsModal() {
+  const history = Array.isArray(_companySettings && _companySettings.policyHistory) ? [..._companySettings.policyHistory] : [];
+  history.sort((a,b)=> a.effectiveFrom < b.effectiveFrom ? 1 : -1); // الأحدث فوق
+  const canDelete = hasPerm('settings_manage');
+
+  let rowsHtml = '';
+  if (!history.length) {
+    rowsHtml = `<div class="empty" style="padding:14px"><p>لا توجد تعديلات مسجّلة بعد — يتم تطبيق القيم الافتراضية (الساعة الإضافية ×1.7، اليوم الإضافي ×2، الغياب ×2) على جميع الفترات</p></div>`;
+  } else {
+    rowsHtml = `<div style="max-height:220px;overflow-y:auto;margin-bottom:14px">` + history.map((h,i)=>`
+      <div style="border:1px solid var(--slate-200);border-radius:8px;padding:10px 12px;margin-bottom:6px;font-size:12px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-weight:800">ساري من ${h.effectiveFrom}</span>
+          ${canDelete ? `<button class="btn btn-red btn-ic btn-xs" onclick="deletePolicyHistoryEntry(${i})"><i class="fas fa-trash"></i></button>` : ''}
+        </div>
+        <div style="color:var(--slate-600);margin-top:4px">
+          الساعة الإضافية: ×${h.overtimeMultiplier ?? 1.7} · اليوم الإضافي: ×${h.extraDayMultiplier ?? 2} · الغياب: ×${h.absenceMultiplier ?? 2}
+        </div>
+        ${h.note?`<div style="color:var(--slate-500);margin-top:2px">${esc(h.note)}</div>`:''}
+        <div style="color:var(--slate-400);font-size:10.5px;margin-top:2px">${h.changedBy?esc(h.changedBy)+' — ':''}${h.changedAt?new Date(h.changedAt).toLocaleString('ar-EG'):''}</div>
+      </div>`).join('') + `</div>`;
+  }
+
+  const cur = history.find(h=>h.effectiveFrom<=todayStr()) || { overtimeMultiplier:1.7, extraDayMultiplier:2, absenceMultiplier:2 };
+  const body = document.getElementById('policy-settings-body');
+  body.innerHTML = `
+    ${rowsHtml}
+    <div style="border-top:1px solid var(--slate-200);padding-top:12px;margin-top:4px">
+      <div style="font-weight:800;font-size:13px;margin-bottom:8px">تعديل جديد</div>
+      <div class="fg"><label class="fl">تاريخ السريان</label><input class="fc" type="date" id="ps-effective"></div>
+      <div class="frow c2">
+        <div class="fg"><label class="fl">معامل الساعة الإضافية</label><input class="fc" type="number" step="0.01" min="0" id="ps-overtime" value="${cur.overtimeMultiplier ?? 1.7}"></div>
+        <div class="fg"><label class="fl">معامل اليوم الإضافي</label><input class="fc" type="number" step="0.01" min="0" id="ps-extraday" value="${cur.extraDayMultiplier ?? 2}"></div>
+      </div>
+      <div class="fg"><label class="fl">معامل خصم الغياب</label><input class="fc" type="number" step="0.01" min="0" id="ps-absence" value="${cur.absenceMultiplier ?? 2}"></div>
+      <div class="fg"><label class="fl">سبب التعديل (اختياري)</label><input class="fc" type="text" id="ps-note" placeholder="مثلاً: قرار إداري جديد"></div>
+      <button class="btn btn-ac btn-sm" style="margin-top:8px" onclick="savePolicyHistoryEntry()"><i class="fas fa-save"></i>حفظ التعديل</button>
+      <div style="font-size:11px;color:var(--slate-500);margin-top:6px">حساب راتب أي شهر سابق لتاريخ السريان هذا يستمر بالمعاملات القديمة كما هي — لا يوجد أي تأثير رجعي</div>
+    </div>`;
+}
+window.savePolicyHistoryEntry = async () => {
+  const effectiveFrom = document.getElementById('ps-effective').value;
+  if (!effectiveFrom) { toast('يُرجى اختيار تاريخ السريان', 'error'); return; }
+  const newEntry = {
+    effectiveFrom,
+    overtimeMultiplier: parseFloat(document.getElementById('ps-overtime').value) || 0,
+    extraDayMultiplier: parseFloat(document.getElementById('ps-extraday').value) || 0,
+    absenceMultiplier: parseFloat(document.getElementById('ps-absence').value) || 0,
+    note: document.getElementById('ps-note').value.trim(),
+    changedBy: CU.displayName||CU.email, changedAt: Date.now()
+  };
+  const history = Array.isArray(_companySettings && _companySettings.policyHistory) ? [..._companySettings.policyHistory, newEntry] : [newEntry];
+  try {
+    await setDoc(doc(db,'settings','company'), { policyHistory: history }, { merge: true });
+    _companySettings = { ..._companySettings, policyHistory: history };
+    await logAudit('تعديل معاملات حساب المرتب', 'company', 'إعدادات الشركة', { effectiveFrom, ...newEntry });
+    toast('تم حفظ التعديل بنجاح — الشهور السابقة لم تتأثر وبقيت كما هي', 'success');
+    renderPolicySettingsModal();
+  } catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
+};
+window.deletePolicyHistoryEntry = async (index) => {
+  if (!confirm('هل أنت متأكد من حذف هذا التعديل من السجل التاريخي؟ سيؤثر ذلك على حسابات أي فترة كانت تعتمد عليه.')) return;
+  const history = Array.isArray(_companySettings && _companySettings.policyHistory) ? [..._companySettings.policyHistory] : [];
+  const historySorted = [...history].sort((a,b)=> a.effectiveFrom < b.effectiveFrom ? 1 : -1);
+  const toRemove = historySorted[index];
+  const newHistory = history.filter(h => h !== toRemove);
+  try {
+    await setDoc(doc(db,'settings','company'), { policyHistory: newHistory }, { merge: true });
+    _companySettings = { ..._companySettings, policyHistory: newHistory };
+    await logAudit('حذف سجل معاملات حساب مرتب', 'company', 'إعدادات الشركة', { removed: toRemove });
+    toast('تم الحذف بنجاح', 'success');
+    renderPolicySettingsModal();
   } catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
 
@@ -2674,10 +2788,21 @@ async function webauthnVerify(emp) {
   return true;
 }
 
+// الكيوسك متصل بقاعدة بيانات منفصلة (secDb) عن لوحة الأدمن (db)، فمش بيشوف _companySettings
+// اللي بتتحمّل بس بعد تسجيل دخول الأدمن — من غير الدالة دي، "سجلي السنوي" كان هيستخدم القيم
+// الافتراضية دايمًا حتى لو الأدمن غيّر معاملات الحساب فعليًا من لوحته
+async function loadCompanySettingsForKiosk() {
+  if (_companySettings) return;
+  try {
+    const sdoc = await getDoc(doc(secDb,'settings','company'));
+    _companySettings = sdoc.exists() ? sdoc.data() : null;
+  } catch(e) { _companySettings = null; }
+}
 window.showKiosk = () => {
   document.getElementById('auth-screen').classList.add('hidden');
   document.getElementById('kiosk-screen').classList.remove('hidden');
   window._kioskEmp = null;
+  loadCompanySettingsForKiosk();
   kioskCheckRememberedDevice();
 };
 window.backToLogin = () => {
@@ -4110,7 +4235,7 @@ async function renderOvertime() {
     const emp = _employees.find(e=>e.id===r.employeeId);
     const hours = Math.round(r.pendingOvertimeMinutes/60*100)/100;
     const durationLabel = overtimeDurationLabel(r.pendingOvertimeMinutes);
-    const rate = emp ? ((getSalaryConfigForDate(emp, r.date).salary||0)/30/8)*1.7 : 0;
+    const rate = emp ? ((getSalaryConfigForDate(emp, r.date).salary||0)/30/8)*getPolicyConfigForDate(r.date).overtimeMultiplier : 0;
     const amount = Math.round(rate*hours*100)/100;
     return `<div class="card" style="margin-bottom:12px"><div class="card-body" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
       <div>
@@ -4444,6 +4569,9 @@ const MONTHLY_IMPORT_FIELDS = [
 window.exportMonthlyToExcel = async () => {
   const period = document.getElementById('monthly-period').value || currentPeriodStr();
   document.getElementById('monthly-period').value = period;
+  // معاملات الحساب (الساعة الإضافية، اليوم الإضافي، الغياب) السارية في نهاية الدورة دي — نفس القيمة
+  // لكل موظفي التصدير (مش بتختلف من موظف للتاني)، فبتتحسب مرة واحدة بس هنا
+  const exportPolicy = getPolicyConfigForDate(cycleRangeForPeriod(period).endDate);
   const activeEmps = _employees.filter(e=>e.category!=='rep' && e.category!=='driver' && employeeInPeriod(e,period));
   if (!activeEmps.length) { toast('لا يوجد موظفون مسجّلون لهذا الشهر', 'error'); return; }
 
@@ -4502,9 +4630,9 @@ window.exportMonthlyToExcel = async () => {
     // نص المعادلة نفسها، والمعادلة تفضل حيّة (بتتحدّث تلقائي لو الأدمن غيّر الحافز الأساسي أو نسبة
     // التقييم من جوه الإكسيل).
     const incentiveRatio = daysWorkedRatioInCycle(e, period);
-    ws[`R${r}`] = { t:'n', f:`(J${r}*2+I${r}+M${r})*O${r}/30` };   // خصم الغياب (×2) والإجازة بالخصم والجزاءات
-    ws[`S${r}`] = { t:'n', f:`F${r}*O${r}/30*2` };               // قيمة الأيام الإضافية (يوم = ضعف اليومية)
-    ws[`T${r}`] = { t:'n', f:`E${r}*(O${r}/30/8)*1.7` };         // قيمة الساعات الإضافية (الساعة × 1.7)
+    ws[`R${r}`] = { t:'n', f:`(J${r}*${exportPolicy.absenceMultiplier}+I${r}+M${r})*O${r}/30` };   // خصم الغياب والإجازة بالخصم والجزاءات
+    ws[`S${r}`] = { t:'n', f:`F${r}*O${r}/30*${exportPolicy.extraDayMultiplier}` };               // قيمة الأيام الإضافية
+    ws[`T${r}`] = { t:'n', f:`E${r}*(O${r}/30/8)*${exportPolicy.overtimeMultiplier}` };         // قيمة الساعات الإضافية
     ws[`U${r}`] = { t:'n', f:`N${r}*O${r}/30` };                 // قيمة المكافآت
     ws[`V${r}`] = { t:'n', f:`Q${r}*L${r}/100*${incentiveRatio}` }; // الحافز المستحق = الحافز الأساسي × نسبة التقييم × نسبة أيام العمل الفعلية
     ws[`W${r}`] = { t:'n', f:`P${r}-R${r}-X${r}+S${r}+T${r}+U${r}` };  // الصافي التقديري لهذا الشهر (بعد خصم قسط السلفة)
