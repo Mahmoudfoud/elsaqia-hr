@@ -254,6 +254,7 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
       <div class="ph">
         <div><div class="ph-title">الموظفين</div><div class="ph-sub" id="emp-count-sub">—</div></div>
         <div class="ph-acts">
+          <input class="fc" id="emp-search-name" type="text" placeholder="بحث بالاسم..." style="max-width:180px" oninput="renderEmployees()">
           <select class="fc" id="emp-filter-dept" style="max-width:170px" onchange="renderEmployees()"><option value="">كل الأقسام</option></select>
           <button class="btn btn-ac btn-sm" onclick="openEmpModal()"><i class="fas fa-plus"></i>إضافة موظف</button>
         </div>
@@ -497,11 +498,12 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
       <div class="ph">
         <div><div class="ph-title">الإجازات</div><div class="ph-sub">اعتيادية 14 يومًا + عارضة 7 أيام (تُجدَّد كل عام) + جواز 15 يومًا (رصيد يُمنح افتراضيًا مرة واحدة، ويتحكم فيه الأدمن يدويًا) — كل طلب يحتاج إلى موافقة مدير القسم والشؤون معًا</div></div>
         <div class="ph-acts" style="align-items:center">
+          <input class="fc" id="lv-search-name" type="text" placeholder="بحث باسم الموظف..." style="width:170px" oninput="renderLeaves()">
           <span style="font-size:12px;color:var(--slate-500)">من</span>
           <input class="fc" type="date" id="lv-from" style="width:150px" onchange="renderLeaves()">
           <span style="font-size:12px;color:var(--slate-500)">لحد</span>
           <input class="fc" type="date" id="lv-to" style="width:150px" onchange="renderLeaves()">
-          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('lv-from').value='';document.getElementById('lv-to').value='';renderLeaves()"><i class="fas fa-times"></i>مسح الفلتر</button>
+          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('lv-search-name').value='';document.getElementById('lv-from').value='';document.getElementById('lv-to').value='';renderLeaves()"><i class="fas fa-times"></i>مسح الفلتر</button>
           <button class="btn btn-ghost btn-sm" id="btn-renew-balances" onclick="renewAllBalances()"><i class="fas fa-redo"></i>تجديد كل الأرصدة (بداية سنة)</button>
           <button class="btn btn-ac btn-sm" onclick="openLeaveModal()"><i class="fas fa-plus"></i>طلب إجازة جديد</button>
         </div>
@@ -2000,8 +2002,10 @@ window.deleteDept = async (id) => {
 // ══════════════════════════════════════════════
 function renderEmployees() {
   const filterDept = document.getElementById('emp-filter-dept')?.value || '';
+  const searchName = normalizeArabicSearch(document.getElementById('emp-search-name')?.value || '');
   const staffOnly = _employees.filter(e=>e.category!=='rep' && e.category!=='driver');
-  const list = filterDept ? staffOnly.filter(e=>e.departmentId===filterDept) : staffOnly;
+  let list = filterDept ? staffOnly.filter(e=>e.departmentId===filterDept) : staffOnly;
+  if (searchName) list = list.filter(e=>normalizeArabicSearch(e.name).includes(searchName));
   document.getElementById('emp-count-sub').textContent = `${list.length} موظف`;
   if (!list.length) {
     document.getElementById('emp-body').innerHTML = `<tr><td colspan="7"><div class="empty"><i class="fas fa-id-card"></i><p>لا يوجد موظفون مضافون بعد</p></div></td></tr>`;
@@ -2510,6 +2514,14 @@ window.deleteEmployee = async (id) => {
 // ══════════════════════════════════════════════
 // بعض كيبوردات الموبايل بتكتب أرقام عربية/فارسية (١٢٣) بدل الإنجليزية (123) من غير ما المستخدم يحس،
 // فبنوحّد أي كود موظف لأرقام إنجليزية قبل الحفظ أو البحث حتى يتطابق الكود دائماً
+// تطبيع النص العربي للبحث — عشان البحث يلاقي النتيجة حتى لو الهمزة أو التاء المربوطة مكتوبة بشكل مختلف
+// شوية عن المخزّن (زي "احمد"/"أحمد"، أو "فاطمه"/"فاطمة")
+function normalizeArabicSearch(str) {
+  return String(str||'')
+    .replace(/[أإآا]/g,'ا').replace(/ة/g,'ه').replace(/[ىي]/g,'ي')
+    .replace(/[\u064B-\u0652]/g,'') // إزالة التشكيل لو موجود
+    .trim().toLowerCase();
+}
 function normalizeDigits(str) {
   if (!str) return str;
   const eastern = '٠١٢٣٤٥٦٧٨٩', persian = '۰۱۲۳۴۵۶۷۸۹';
@@ -5280,7 +5292,10 @@ async function renderLeaves() {
   let reqs;
   const lvFromEarly = document.getElementById('lv-from')?.value;
   const lvToEarly = document.getElementById('lv-to')?.value;
-  const loadAll = _leavesShowAll || !!(lvFromEarly || lvToEarly); // لو الفلتر شغال، لازم نحمّل كل التاريخ عشان الفلترة تكون دقيقة
+  const searchNameEarly = document.getElementById('lv-search-name')?.value?.trim();
+  // البحث بالاسم بيحتاج نحمّل كل التاريخ (مش آخر 6 شهور بس) — عشان الهدف منه غالبًا إنك تلاقي
+  // إجازة قديمة لموظف معيّن، مش بس الحديثة
+  const loadAll = _leavesShowAll || !!(lvFromEarly || lvToEarly || searchNameEarly);
   try {
     if (loadAll) {
       const snap = await getDocs(query(collection(db,'leaveRequests'), orderBy('requestedAt','desc')));
@@ -5309,11 +5324,13 @@ async function renderLeaves() {
     const f = lvFrom || '0000-01-01', t = lvTo || '9999-12-31';
     reqs = reqs.filter(r => r.dateFrom <= t && r.dateTo >= f);
   }
+  const searchName = normalizeArabicSearch(document.getElementById('lv-search-name')?.value || '');
+  if (searchName) reqs = reqs.filter(r => normalizeArabicSearch(r.employeeName).includes(searchName));
 
   if (!reqs.length) {
-    const filterActive = lvFrom || lvTo;
+    const filterActive = lvFrom || lvTo || searchName;
     body.innerHTML = filterActive
-      ? '<div class="empty"><i class="fas fa-calendar-minus"></i><p>لا توجد طلبات إجازة في الفترة المحددة</p></div>'
+      ? '<div class="empty"><i class="fas fa-calendar-minus"></i><p>لا توجد طلبات إجازة تطابق البحث</p></div>'
       : _leavesShowAll
       ? '<div class="empty"><i class="fas fa-calendar-minus"></i><p>لا توجد طلبات إجازة بعد</p></div>'
       : '<div class="empty"><i class="fas fa-calendar-minus"></i><p>لا توجد طلبات إجازة في آخر 6 شهور</p><button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="toggleLeavesShowAll()">عرض كل التاريخ</button></div>';
@@ -5383,7 +5400,7 @@ async function renderLeaves() {
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">${actions}${delBtn}</div>
     </div></div>`;
-  }).join('') + (_leavesShowAll ? '' : `<div style="text-align:center;margin-top:10px"><button class="btn btn-ghost btn-sm" onclick="toggleLeavesShowAll()"><i class="fas fa-history"></i> عرض كل التاريخ (قبل آخر 6 شهور)</button></div>`);
+  }).join('') + (loadAll ? '' : `<div style="text-align:center;margin-top:10px"><button class="btn btn-ghost btn-sm" onclick="toggleLeavesShowAll()"><i class="fas fa-history"></i> عرض كل التاريخ (قبل آخر 6 شهور)</button></div>`);
   renderPersonalPermissionAdmin();
 }
 window.renderLeaves = renderLeaves;
