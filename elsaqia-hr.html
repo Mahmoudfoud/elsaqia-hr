@@ -76,7 +76,8 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
 
 .main{flex:1;min-width:0;padding:26px 30px;max-width:1400px}
 .page{display:none}
-.page.active{display:block}
+.page.active{display:block; animation: pageFadeIn .22s ease}
+@keyframes pageFadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
 .ph{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:22px}
 .ph-title{font-size:21px;font-weight:800;color:var(--navy-900)}
 .ph-sub{font-size:12.5px;color:var(--slate-500);margin-top:3px}
@@ -226,6 +227,7 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
       <div class="nav-link" data-page="settings" data-perm="settings_manage" onclick="goPage('settings')"><i class="fas fa-cog"></i>الإعدادات</div>
       <div class="nav-link" data-page="users" data-adminonly onclick="goPage('users')"><i class="fas fa-user-shield"></i>المستخدمون والصلاحيات</div>
       <div class="nav-link" data-page="auditlog" data-adminonly onclick="goPage('auditlog')"><i class="fas fa-history"></i>سجل التدقيق</div>
+      <div class="nav-link" data-page="healthcheck" data-adminonly onclick="goPage('healthcheck')"><i class="fas fa-heart-pulse"></i>صحة النظام</div>
     </div>
     <div class="sb-user">
       <div class="sb-user-row">
@@ -245,6 +247,7 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
     <!-- DASHBOARD -->
     <div class="page" id="page-dashboard">
       <div class="ph"><div><div class="ph-title">لوحة التحكم</div><div class="ph-sub" id="dash-date"></div></div></div>
+      <div id="dash-attention" style="margin-bottom:16px"></div>
       <div class="stats" id="dash-stats"></div>
       <div class="card"><div class="card-body" id="dash-depts"></div></div>
     </div>
@@ -325,7 +328,10 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
     <div class="page" id="page-penalties">
       <div class="ph">
         <div><div class="ph-title">الجزاءات والمكافآت</div><div class="ph-sub">تسجيل حالة لكل موظف — القيمة = (الراتب الأساسي ÷ 30) × عدد الأيام</div></div>
-        <div class="ph-acts"><button class="btn btn-ac btn-sm" onclick="openPenaltyModal()"><i class="fas fa-plus"></i>تسجيل حالة</button></div>
+        <div class="ph-acts">
+          <input class="fc" id="pen-search-name" type="text" placeholder="بحث باسم الموظف..." style="width:170px" oninput="renderPenalties()">
+          <button class="btn btn-ac btn-sm" onclick="openPenaltyModal()"><i class="fas fa-plus"></i>تسجيل حالة</button>
+        </div>
       </div>
       <div class="card"><table class="tbl">
         <thead><tr><th>الموظف</th><th>النوع</th><th>الأيام</th><th>القيمة</th><th>السبب</th><th>التاريخ</th><th></th></tr></thead>
@@ -376,7 +382,10 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
     <div class="page" id="page-dailymark">
       <div class="ph">
         <div><div class="ph-title">تسجيل حالة اليوم</div><div class="ph-sub">تحديد حالة أي موظف يدويًا (غياب بدون إذن / إجازة من الرصيد) لأي تاريخ، مباشرة من غير المرور بصفحة الدخول اليومي</div></div>
-        <div class="ph-acts"><input class="fc" type="date" id="dm-page-date" style="width:160px" onchange="renderDailyMarkPage()"></div>
+        <div class="ph-acts">
+          <input class="fc" id="dm-search-name" type="text" placeholder="بحث باسم الموظف..." style="width:170px" oninput="renderDailyMarkPage()">
+          <input class="fc" type="date" id="dm-page-date" style="width:160px" onchange="renderDailyMarkPage()">
+        </div>
       </div>
       <div class="card"><table class="tbl">
         <thead><tr><th>الاسم</th><th>القسم</th><th>حالة اليوم</th><th></th></tr></thead>
@@ -443,7 +452,8 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
       <div class="ph">
         <div><div class="ph-title">ملفات الموظفين</div><div class="ph-sub">سجل أي موظف كامل على مدار السنة</div></div>
         <div class="ph-acts">
-          <select class="fc" id="profile-emp" style="width:220px" onchange="renderProfile()"></select>
+          <input class="fc" type="text" id="profile-emp-search" style="width:220px" placeholder="اكتب اسم الموظف أو اختر من القائمة..." autocomplete="off" oninput="resolveEmployeeSearch('profile-emp-search','profile-emp');renderProfile()">
+          <input type="hidden" id="profile-emp">
           <input class="fc" type="number" id="profile-year" style="width:110px" onchange="renderProfile()">
         </div>
       </div>
@@ -459,9 +469,8 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
         <div class="frow c2">
           <div class="fg">
             <label class="fl">الموظف</label>
-            <select class="fc" id="rep-emp">
-              <option value="__all__">— كل الموظفين (تقرير مجمّع) —</option>
-            </select>
+            <input class="fc" type="text" id="rep-emp-search" placeholder="اكتب اسم الموظف — سيب الخانة فاضية لكل الموظفين" autocomplete="off" oninput="resolveEmployeeSearch('rep-emp-search','rep-emp',{allowAll:true})">
+            <input type="hidden" id="rep-emp" value="__all__">
           </div>
           <div class="fg"></div>
         </div>
@@ -532,7 +541,10 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
     <div class="page" id="page-advances">
       <div class="ph">
         <div><div class="ph-title">السلف</div><div class="ph-sub">تُقسَّط السلفة على عدد الشهور الذي تحدده، وتُخصم تلقائيًا من صافي راتب الموظف كل شهر بدءًا من الدورة التي تختارها — يأخذ الشهر الأخير فرق التقريب إذا لم ينقسم المبلغ بالتساوي</div></div>
-        <div class="ph-acts"><button class="btn btn-ac btn-sm" onclick="openAdvanceModal()"><i class="fas fa-plus"></i>سلفة جديدة</button></div>
+        <div class="ph-acts">
+          <input class="fc" id="adv-search-name" type="text" placeholder="بحث باسم الموظف..." style="width:170px" oninput="renderAdvances()">
+          <button class="btn btn-ac btn-sm" onclick="openAdvanceModal()"><i class="fas fa-plus"></i>سلفة جديدة</button>
+        </div>
       </div>
       <div class="card"><table class="tbl">
         <thead><tr><th>الموظف</th><th>المبلغ الإجمالي</th><th>القسط الشهري</th><th>من دورة</th><th>لحد دورة</th><th>المسدد</th><th>المتبقي</th><th>الحالة</th><th></th></tr></thead>
@@ -565,15 +577,25 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
       <div class="card" style="margin-bottom:14px"><div class="card-body" style="display:flex;gap:10px;align-items:end;flex-wrap:wrap">
         <div class="fg" style="margin:0"><label class="fl">من تاريخ</label><input class="fc" type="date" id="audit-from" style="width:160px"></div>
         <div class="fg" style="margin:0"><label class="fl">إلى تاريخ</label><input class="fc" type="date" id="audit-to" style="width:160px"></div>
+        <div class="fg" style="margin:0"><label class="fl">بحث باسم الموظف</label><input class="fc" id="audit-search-name" type="text" placeholder="اسم الموظف..." style="width:170px"></div>
         <button class="btn btn-ac btn-sm" onclick="renderAuditLog()"><i class="fas fa-search"></i>بحث</button>
       </div></div>
       <div id="auditlog-body"></div>
+    </div>
+
+    <!-- HEALTH CHECK -->
+    <div class="page" id="page-healthcheck">
+      <div class="ph">
+        <div><div class="ph-title">صحة النظام</div><div class="ph-sub">فحص تلقائي لأي بيانات محتاجة انتباهك — من غير ما تحتاج تدوّر يدوي زي أي وقت فات</div></div>
+        <div class="ph-acts"><button class="btn btn-ghost btn-sm" onclick="renderHealthCheck()"><i class="fas fa-rotate"></i>تحديث الفحص</button></div>
+      </div>
+      <div id="healthcheck-body"></div>
     </div>
   </div>
 </div>
 
 <!-- ══════════ MODALS ══════════ -->
-<div class="overlay" id="mo-emp">
+<div class="overlay" id="mo-emp" data-submit="saveEmployee">
   <div class="modal">
     <div class="mh"><span class="mh-title" id="emp-modal-title">إضافة موظف</span><button class="mclose" onclick="closeM('mo-emp')">×</button></div>
     <div class="mb">
@@ -641,7 +663,7 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
   </div>
 </div>
 
-<div class="overlay" id="mo-dept">
+<div class="overlay" id="mo-dept" data-submit="saveDept">
   <div class="modal" style="max-width:400px">
     <div class="mh"><span class="mh-title" id="dept-modal-title">قسم جديد</span><button class="mclose" onclick="closeM('mo-dept')">×</button></div>
     <div class="mb">
@@ -654,7 +676,7 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
   </div>
 </div>
 
-<div class="overlay" id="mo-shift">
+<div class="overlay" id="mo-shift" data-submit="saveShift">
   <div class="modal" style="max-width:420px">
     <div class="mh"><span class="mh-title" id="shift-modal-title">وردية جديدة</span><button class="mclose" onclick="closeM('mo-shift')">×</button></div>
     <div class="mb">
@@ -688,7 +710,7 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
   </div>
 </div>
 
-<div class="overlay" id="mo-rep">
+<div class="overlay" id="mo-rep" data-submit="saveRep">
   <div class="modal" style="max-width:440px">
     <div class="mh"><span class="mh-title" id="rep-modal-title">مندوب جديد</span><button class="mclose" onclick="closeM('mo-rep')">×</button></div>
     <div class="mb">
@@ -720,7 +742,7 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
   </div>
 </div>
 
-<div class="overlay" id="mo-driver">
+<div class="overlay" id="mo-driver" data-submit="saveDriver">
   <div class="modal" style="max-width:440px">
     <div class="mh"><span class="mh-title" id="driver-modal-title">سائق جديد</span><button class="mclose" onclick="closeM('mo-driver')">×</button></div>
     <div class="mb">
@@ -757,11 +779,14 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
   </div>
 </div>
 
-<div class="overlay" id="mo-penalty">
+<div class="overlay" id="mo-penalty" data-submit="savePenalty">
   <div class="modal" style="max-width:440px">
     <div class="mh"><span class="mh-title">تسجيل جزاء / مكافأة</span><button class="mclose" onclick="closeM('mo-penalty')">×</button></div>
     <div class="mb">
-      <div class="fg"><label class="fl">الموظف</label><select class="fc" id="pen-emp"></select></div>
+      <div class="fg"><label class="fl">الموظف</label>
+        <input class="fc" type="text" id="pen-emp-search" placeholder="اكتب اسم الموظف أو اختر من القائمة..." autocomplete="off" oninput="resolveEmployeeSearch('pen-emp-search','pen-emp')">
+        <input type="hidden" id="pen-emp">
+      </div>
       <div class="frow c2">
         <div class="fg"><label class="fl">النوع</label><select class="fc" id="pen-type" onchange="updatePenaltyPreview()">
           <option value="penalty">جزاء</option>
@@ -780,7 +805,7 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
   </div>
 </div>
 
-<div class="overlay" id="mo-shift-override">
+<div class="overlay" id="mo-shift-override" data-submit="saveShiftOverride">
   <div class="modal" style="max-width:440px">
     <div class="mh"><span class="mh-title">تعديل وردية ليوم محدد</span><button class="mclose" onclick="closeM('mo-shift-override')">×</button></div>
     <div class="mb">
@@ -809,7 +834,7 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
   </div>
 </div>
 
-<div class="overlay" id="mo-dailymark">
+<div class="overlay" id="mo-dailymark" data-submit="saveDailyMark">
   <div class="modal" style="max-width:380px">
     <div class="mh"><span class="mh-title">تسجيل حالة اليوم</span><button class="mclose" onclick="closeM('mo-dailymark')">×</button></div>
     <div class="mb">
@@ -830,7 +855,7 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
   </div>
 </div>
 
-<div class="overlay" id="mo-manualatt">
+<div class="overlay" id="mo-manualatt" data-submit="saveManualAttendance">
   <div class="modal" style="max-width:380px">
     <div class="mh"><span class="mh-title">تسجيل حضور/انصراف يدوي</span><button class="mclose" onclick="closeM('mo-manualatt')">×</button></div>
     <div class="mb">
@@ -852,11 +877,14 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
   </div>
 </div>
 
-<div class="overlay" id="mo-leave">
+<div class="overlay" id="mo-leave" data-submit="saveLeaveRequest">
   <div class="modal" style="max-width:460px">
     <div class="mh"><span class="mh-title">طلب إجازة</span><button class="mclose" onclick="closeM('mo-leave')">×</button></div>
     <div class="mb">
-      <div class="fg"><label class="fl">الموظف</label><select class="fc" id="lv-emp" onchange="onLeaveEmpChange()"></select></div>
+      <div class="fg"><label class="fl">الموظف</label>
+        <input class="fc" type="text" id="lv-emp-search" placeholder="اكتب اسم الموظف أو اختر من القائمة..." autocomplete="off" oninput="resolveEmployeeSearch('lv-emp-search','lv-emp');onLeaveEmpChange()">
+        <input type="hidden" id="lv-emp">
+      </div>
       <div class="fg"><label class="fl">نوع الإجازة</label><select class="fc" id="lv-type" onchange="onLeaveEmpChange()">
         <option value="regular">إجازة اعتيادية</option>
         <option value="casual">إجازة عارضة</option>
@@ -876,7 +904,7 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
   </div>
 </div>
 
-<div class="overlay" id="mo-location">
+<div class="overlay" id="mo-location" data-submit="saveLocation">
   <div class="modal" style="max-width:460px">
     <div class="mh"><span class="mh-title" id="location-modal-title">فرع جديد</span><button class="mclose" onclick="closeM('mo-location')">×</button></div>
     <div class="mb">
@@ -896,7 +924,7 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
   </div>
 </div>
 
-<div class="overlay" id="mo-holiday">
+<div class="overlay" id="mo-holiday" data-submit="saveHoliday">
   <div class="modal" style="max-width:460px">
     <div class="mh"><span class="mh-title" id="holiday-modal-title">إجازة رسمية جديدة</span><button class="mclose" onclick="closeM('mo-holiday')">×</button></div>
     <div class="mb">
@@ -916,12 +944,13 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
   </div>
 </div>
 
-<div class="overlay" id="mo-advance">
+<div class="overlay" id="mo-advance" data-submit="saveAdvance">
   <div class="modal" style="max-width:460px">
     <div class="mh"><span class="mh-title">سلفة جديدة</span><button class="mclose" onclick="closeM('mo-advance')">×</button></div>
     <div class="mb">
       <div class="fg"><label class="fl">الموظف</label>
-        <select class="fc" id="adv-emp"></select>
+        <input class="fc" type="text" id="adv-emp-search" placeholder="اكتب اسم الموظف أو اختر من القائمة..." autocomplete="off" oninput="resolveEmployeeSearch('adv-emp-search','adv-emp')">
+        <input type="hidden" id="adv-emp">
       </div>
       <div class="frow c2">
         <div class="fg"><label class="fl">المبلغ الإجمالي (ج.م)</label><input class="fc" type="number" min="1" id="adv-amount" oninput="updateAdvanceCalc()"></div>
@@ -938,7 +967,7 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
   </div>
 </div>
 
-<div class="overlay" id="mo-user">
+<div class="overlay" id="mo-user" data-submit="saveUser">
   <div class="modal" style="max-width:520px">
     <div class="mh"><span class="mh-title" id="user-modal-title">مستخدم جديد</span><button class="mclose" onclick="closeM('mo-user')">×</button></div>
     <div class="mb">
@@ -974,6 +1003,19 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
   <div class="modal" style="max-width:640px">
     <div class="mh"><span class="mh-title">معاملات حساب المرتب — سجل تاريخي</span><button class="mclose" onclick="closeM('mo-policy-settings')">×</button></div>
     <div class="mb" id="policy-settings-body"></div>
+  </div>
+</div>
+
+<div class="overlay" id="mo-confirm">
+  <div class="modal" style="max-width:420px">
+    <div class="mh"><span class="mh-title">تأكيد</span><button class="mclose" onclick="_resolveConfirm(false)">×</button></div>
+    <div class="mb">
+      <div id="confirm-message" style="font-size:14px;line-height:1.8;color:var(--slate-700)"></div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+        <button class="btn btn-ghost btn-sm" onclick="_resolveConfirm(false)">إلغاء</button>
+        <button class="btn btn-red btn-sm" id="confirm-ok-btn" onclick="_resolveConfirm(true)" autofocus>تأكيد</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1259,9 +1301,21 @@ function startListeners() {
           return managerNeedsAction || hrNeedsAction;
         });
         const actionableLeaveCut = canHrApprove ? reqs.filter(r=>r.kind==='leaveCut' && r.status==='pending_hr_decision') : [];
+        _ppPlannedCount = actionablePlanned.length;
+        _ppLeaveCutCount = actionableLeaveCut.length;
         _ppActionableCount = actionablePlanned.length + actionableLeaveCut.length;
         refreshCombinedLeavesBadge();
         if (_page==='leaves') renderPersonalPermissionAdmin();
+      })
+    );
+  }
+  if (hasPerm('overtime_approve')) {
+    _unsubs.push(
+      // كل طلبات الوقت الإضافي المعلّقة (من غير حد تاريخ)، عشان بطاقة "يحتاج انتباهك" متفوّتش
+      // حاجة قديمة زي ما حصل قبل كده مع طلبات الإذن الشخصي
+      onSnapshot(query(collection(db,'attendance'), where('pendingOvertimeMinutes','>',0)), s=>{
+        _overtimeActionableCount = s.docs.map(d=>d.data()).filter(r=>!r.overtimeApproved && !r.overtimeRejected).length;
+        refreshCombinedLeavesBadge();
       })
     );
   }
@@ -1283,8 +1337,11 @@ function updateLeavesBadge(count) {
 }
 // الشارة موحّدة بين طلبات الإجازة العادية وطلبات الإذن الشخصي (مستقبلي + قرارات قطع إجازة) —
 // عشان المدير/الشؤون ميفوّتوش أي طلب من الاتنين وهو بس بيبص على القائمة الجانبية
-let _leavesActionableCount = 0, _ppActionableCount = 0;
-function refreshCombinedLeavesBadge() { updateLeavesBadge(_leavesActionableCount + _ppActionableCount); }
+let _leavesActionableCount = 0, _ppActionableCount = 0, _ppPlannedCount = 0, _ppLeaveCutCount = 0, _overtimeActionableCount = 0;
+function refreshCombinedLeavesBadge() {
+  updateLeavesBadge(_leavesActionableCount + _ppActionableCount);
+  if (_page==='dashboard') renderAttentionWidget();
+}
 
 // ══════════════════════════════════════════════
 // NAVIGATION
@@ -1296,13 +1353,14 @@ window.goPage = (name) => {
   const leavesAlt = name==='leaves' && hasPerm('leaves_dept_approve');
   if (name==='users' && CU.role!=='admin') { toast('هذه الصفحة مخصصة للمسؤول (Admin) فقط', 'error'); return; }
   if (name==='auditlog' && CU.role!=='admin') { toast('هذه الصفحة مخصصة للمسؤول (Admin) فقط', 'error'); return; }
+  if (name==='healthcheck' && CU.role!=='admin') { toast('هذه الصفحة مخصصة للمسؤول (Admin) فقط', 'error'); return; }
   if (perm && !hasPerm(perm) && !evalAlt && !leavesAlt) { toast('ليس لديك صلاحية الوصول إلى هذه الصفحة', 'error'); return; }
   _page = name;
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('page-'+name)?.classList.add('active');
   document.querySelectorAll('.nav-link').forEach(n=>n.classList.toggle('active', n.dataset.page===name));
   toggleSidebar(false);
-  const renders = { dashboard:renderDashboard, employees:renderEmployees, departments:renderDepartments, shifts:renderShifts, reps:renderReps, drivers:renderDrivers, settings:renderSettings, daily:renderDaily, dailymark:renderDailyMarkPage, overtime:renderOvertime, monthly:renderMonthly, evaluation:renderEvaluation, profile:renderProfile, reports:renderReports, leaves:renderLeaves, penalties:renderPenalties, holidays:renderHolidays, advances:renderAdvances, users:renderUsers, auditlog:renderAuditLog };
+  const renders = { dashboard:renderDashboard, employees:renderEmployees, departments:renderDepartments, shifts:renderShifts, reps:renderReps, drivers:renderDrivers, settings:renderSettings, daily:renderDaily, dailymark:renderDailyMarkPage, overtime:renderOvertime, monthly:renderMonthly, evaluation:renderEvaluation, profile:renderProfile, reports:renderReports, leaves:renderLeaves, penalties:renderPenalties, holidays:renderHolidays, advances:renderAdvances, users:renderUsers, auditlog:renderAuditLog, healthcheck:renderHealthCheck };
   renders[name]?.();
 };
 
@@ -1314,8 +1372,106 @@ window.toggleSidebar = (open) => {
 // ══════════════════════════════════════════════
 // DASHBOARD
 // ══════════════════════════════════════════════
+// بطاقة "يحتاج انتباهك" — كل الطلبات المعلّقة اللي محتاجة قرار منك، مجمّعة مع بعض في مكان واحد،
+// بدل ما تعتمد على ملاحظة الشارات الصغيرة في كل صفحة لوحدها. نفس الأرقام بالظبط اللي بتظهر
+// كشارات في القائمة الجانبية — مفيش حساب جديد، بس تجميع في مكان واحد
+function renderAttentionWidget() {
+  const el = document.getElementById('dash-attention');
+  if (!el) return;
+  const items = [];
+  if (hasPerm('leaves_manage') || hasPerm('leaves_dept_approve')) {
+    if (_leavesActionableCount>0) items.push({ label:'طلب إجازة محتاج موافقتك', count:_leavesActionableCount, page:'leaves', icon:'fa-calendar-day' });
+    if (_ppPlannedCount>0) items.push({ label:'طلب إذن شخصي محتاج قرار', count:_ppPlannedCount, page:'leaves', icon:'fa-user-clock' });
+    if (_ppLeaveCutCount>0) items.push({ label:'قرار "قطع إجازة" محتاج تحديد', count:_ppLeaveCutCount, page:'leaves', icon:'fa-scissors' });
+  }
+  if (hasPerm('overtime_approve') && _overtimeActionableCount>0) {
+    items.push({ label:'طلب وقت إضافي محتاج اعتماد', count:_overtimeActionableCount, page:'overtime', icon:'fa-business-time' });
+  }
+  if (!items.length) {
+    el.innerHTML = `<div class="card"><div class="card-body" style="display:flex;align-items:center;gap:10px;color:var(--slate-500)"><i class="fas fa-circle-check" style="color:var(--ac-600);font-size:18px"></i><span>مفيش أي حاجة محتاجة انتباهك دلوقتي — كل الطلبات متابعة</span></div></div>`;
+    return;
+  }
+  el.innerHTML = `<div class="card" style="border-inline-start:4px solid var(--danger-600)"><div class="card-body">
+    <div style="font-weight:800;font-size:14px;margin-bottom:10px;color:var(--danger-600)"><i class="fas fa-bell"></i> يحتاج انتباهك (${items.reduce((s,i)=>s+i.count,0)})</div>
+    ${items.map(i=>`
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border)">
+        <div style="display:flex;align-items:center;gap:9px">
+          <i class="fas ${i.icon}" style="color:var(--slate-500);width:16px;text-align:center"></i>
+          <span style="font-size:13.5px">${i.label}</span>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="goPage('${i.page}')"><span class="badge" style="background:var(--danger-600);color:#fff;margin-inline-end:6px">${i.count}</span>روح لهناك</button>
+      </div>`).join('')}
+  </div></div>`;
+}
+
+// ══════════════════════════════════════════════
+// صحة النظام — فحص تلقائي لحالات بيانات غريبة/منسية، بدل ما نكتشفها بالصدفة زي ما حصل قبل كده
+// ══════════════════════════════════════════════
+async function renderHealthCheck() {
+  const body = document.getElementById('healthcheck-body');
+  body.innerHTML = '<div class="empty"><i class="fas fa-spinner fa-spin"></i><p>جاري الفحص...</p></div>';
+  let advSnap, leaveSnap, ppSnap;
+  try {
+    [advSnap, leaveSnap, ppSnap] = await Promise.all([
+      getDocs(query(collection(db,'advances'), where('status','==','active'))),
+      getDocs(query(collection(db,'leaveRequests'), where('status','==','pending'))),
+      getDocs(query(collection(db,'personalPermissionRequests'), where('status','in',['pending','pending_hr_decision'])))
+    ]);
+  } catch(e) { body.innerHTML = `<div class="empty"><p>${formatFirestoreError('حدث خطأ أثناء الفحص', e)}</p></div>`; return; }
+
+  const resignedIds = new Set(_employees.filter(e=>e.status==='resigned').map(e=>e.id));
+  const empById = id => _employees.find(e=>e.id===id);
+  const sevenDaysAgoMs = Date.now() - 7*24*60*60*1000;
+
+  const issues = [];
+
+  // 1) موظف مستقيل ولسه له سلفة نشطة
+  const advOnResigned = advSnap.docs.map(d=>({id:d.id,...d.data()})).filter(a=>resignedIds.has(a.employeeId));
+  if (advOnResigned.length) issues.push({ title:'موظفين مستقيلين ولسه ليهم سلفة نشطة', icon:'fa-hand-holding-dollar', severity:'danger',
+    items: advOnResigned.map(a=>{
+      const end = advanceEndPeriod(a);
+      const curP = currentPeriodStr();
+      const paid = advancePaidUpTo(a, curP>end?end:curP);
+      const remaining = Math.round(((a.amount||0)-paid)*100)/100;
+      return `${empById(a.employeeId)?.name||'موظف محذوف'} — متبقي ${remaining>0?remaining:0} ج.م تقريبًا`;
+    }) });
+
+  // 2) موظف مستقيل وليه طلب إجازة لسه معلّق
+  const leaveOnResigned = leaveSnap.docs.map(d=>({id:d.id,...d.data()})).filter(r=>resignedIds.has(r.employeeId));
+  if (leaveOnResigned.length) issues.push({ title:'موظفين مستقيلين وليهم طلب إجازة لسه معلّق', icon:'fa-calendar-xmark', severity:'warning',
+    items: leaveOnResigned.map(r=>`${r.employeeName||empById(r.employeeId)?.name||'موظف محذوف'} — من ${r.dateFrom} لحد ${r.dateTo}`) });
+
+  // 3) موظف من غير قسم محدد (هيتخطى أي فلترة بالقسم بالغلط)
+  const noDept = _employees.filter(e=>e.status!=='resigned' && e.category!=='rep' && e.category!=='driver' && !e.departmentId);
+  if (noDept.length) issues.push({ title:'موظفين من غير قسم محدد', icon:'fa-sitemap', severity:'warning',
+    items: noDept.map(e=>e.name) });
+
+  // 4) طلبات معلّقة من أكتر من أسبوع (إجازة أو إذن شخصي) — سهل تتنسى
+  const staleLeave = leaveSnap.docs.map(d=>({id:d.id,...d.data()})).filter(r=>(r.requestedAt||0) < sevenDaysAgoMs);
+  const stalePp = ppSnap.docs.map(d=>({id:d.id,...d.data()})).filter(r=>(r.requestedAt||0) < sevenDaysAgoMs);
+  const staleAll = [...staleLeave.map(r=>r.employeeName||empById(r.employeeId)?.name||'موظف محذوف'), ...stalePp.map(r=>r.employeeName||empById(r.employeeId)?.name||'موظف محذوف')];
+  if (staleAll.length) issues.push({ title:'طلبات معلّقة من أكتر من أسبوع محتاجة قرار', icon:'fa-clock', severity:'danger', items: staleAll });
+
+  // 5) موظف نشط بصمته اتمسحت أو ماسجلش بصمة خالص — مش هيقدر يستخدم الكيوسك
+  const noPasskey = _employees.filter(e=>e.status!=='resigned' && e.category!=='rep' && e.category!=='driver' && (!e.passkeys || !e.passkeys.length));
+  if (noPasskey.length) issues.push({ title:'موظفين نشطين من غير بصمة مسجّلة (مش هيقدروا يسجلوا حضور)', icon:'fa-fingerprint', severity:'warning',
+    items: noPasskey.map(e=>e.name) });
+
+  if (!issues.length) {
+    body.innerHTML = `<div class="card"><div class="card-body" style="display:flex;align-items:center;gap:10px;color:var(--slate-500)"><i class="fas fa-circle-check" style="color:var(--ac-600);font-size:18px"></i><span>مفيش أي حاجة غريبة في البيانات دلوقتي — كل حاجة سليمة</span></div></div>`;
+    return;
+  }
+  body.innerHTML = issues.map(iss=>`
+    <div class="card" style="margin-bottom:12px;border-inline-start:4px solid var(--${iss.severity==='danger'?'danger':'warn'}-600)"><div class="card-body">
+      <div style="font-weight:800;font-size:13.5px;margin-bottom:8px"><i class="fas ${iss.icon}"></i> ${esc(iss.title)} (${iss.items.length})</div>
+      ${iss.items.map(t=>`<div style="font-size:12.5px;color:var(--slate-600);padding:4px 0;border-bottom:1px solid var(--border)">${esc(t)}</div>`).join('')}
+    </div></div>`).join('');
+}
+window.renderHealthCheck = renderHealthCheck;
+
 function renderDashboard() {
   document.getElementById('dash-date').textContent = new Date().toLocaleDateString('ar-EG', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+  renderAttentionWidget();
   const active = _employees.filter(e=>e.status!=='resigned' && e.category!=='rep' && e.category!=='driver');
   const activeReps = _employees.filter(e=>e.status!=='resigned' && e.category==='rep');
   const activeDrivers = _employees.filter(e=>e.status!=='resigned' && e.category==='driver');
@@ -1448,7 +1604,7 @@ window.saveShift = async () => {
 window.deleteShift = async (id) => {
   const usedBy = _employees.filter(e=>e.shiftId===id && e.status!=='resigned').length;
   if (usedBy>0) { toast(`هذه الوردية بها ${usedBy} موظف — يُرجى تغيير ورديتهم أولًا`, 'error'); return; }
-  if (!confirm('هل أنت متأكد من حذف هذه الوردية؟')) return;
+  if (!(await confirmDialog('هل أنت متأكد من حذف هذه الوردية؟'))) return;
   try { await deleteDoc(doc(db,'shifts',id)); toast('تم الحذف بنجاح', 'success'); }
   catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
@@ -1559,7 +1715,7 @@ window.saveRep = async () => {
 };
 
 window.deleteRep = async (id) => {
-  if (!confirm('هل أنت متأكد من حذف هذا المندوب نهائيًا؟')) return;
+  if (!(await confirmDialog('هل أنت متأكد من حذف هذا المندوب نهائيًا؟'))) return;
   try { const e=_employees.find(x=>x.id===id); await deleteDoc(doc(db,'employees',id)); await removeEmployeeCode(e?.code); toast('تم الحذف بنجاح', 'success'); }
   catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
@@ -1700,7 +1856,7 @@ window.saveDriver = async () => {
 };
 
 window.deleteDriver = async (id) => {
-  if (!confirm('هل أنت متأكد من حذف هذا السائق نهائيًا؟')) return;
+  if (!(await confirmDialog('هل أنت متأكد من حذف هذا السائق نهائيًا؟'))) return;
   try { const e=_employees.find(x=>x.id===id); await deleteDoc(doc(db,'employees',id)); await removeEmployeeCode(e?.code); toast('تم الحذف بنجاح', 'success'); }
   catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
@@ -1715,8 +1871,12 @@ async function renderPenalties() {
   try { snap = await getDocs(query(collection(db,'penaltyRewards'), orderBy('date','desc'))); }
   catch(e) { body.innerHTML = `<tr><td colspan="7"><div class="empty"><p>${formatFirestoreError('خطأ', e)}</p></div></td></tr>`; return; }
   if (snap.empty) { body.innerHTML = `<tr><td colspan="7"><div class="empty"><i class="fas fa-balance-scale"></i><p>لا توجد حالات مسجّلة بعد</p></div></td></tr>`; return; }
+  const searchName = normalizeArabicSearch(document.getElementById('pen-search-name')?.value || '');
+  let docs = snap.docs;
+  if (searchName) docs = docs.filter(d=>normalizeArabicSearch(d.data().employeeName).includes(searchName));
+  if (!docs.length) { body.innerHTML = `<tr><td colspan="7"><div class="empty"><i class="fas fa-balance-scale"></i><p>لا توجد نتائج تطابق البحث</p></div></td></tr>`; return; }
   const canDel = hasPerm('data_delete');
-  body.innerHTML = snap.docs.map(d=>{
+  body.innerHTML = docs.map(d=>{
     const r = d.data();
     const typeBadge = r.type==='reward' ? '<span class="badge bg-ok">مكافأة</span>' : '<span class="badge bg-danger">جزاء</span>';
     return `<tr>
@@ -1733,9 +1893,10 @@ async function renderPenalties() {
 window.renderPenalties = renderPenalties;
 
 window.openPenaltyModal = () => {
-  const sel = document.getElementById('pen-emp');
-  const eligible = _employees.filter(e=>e.status!=='resigned').sort((a,b)=>a.name.localeCompare(b.name,'ar'));
-  sel.innerHTML = eligible.map(e=>`<option value="${e.id}">${esc(e.name)}${e.category==='rep'?' (مندوب)':e.category==='driver'?' (سائق)':''}</option>`).join('');
+  const eligible = _employees.filter(e=>e.status!=='resigned');
+  bindEmployeeSearch('pen-emp-search', eligible, e=>e.name+(e.category==='rep'?' (مندوب)':e.category==='driver'?' (سائق)':''));
+  document.getElementById('pen-emp-search').value = '';
+  document.getElementById('pen-emp').value = '';
   document.getElementById('pen-type').value = 'penalty';
   document.getElementById('pen-days').value = '1';
   document.getElementById('pen-date').value = todayStr();
@@ -1779,7 +1940,7 @@ window.savePenalty = async () => {
 };
 
 window.deletePenalty = async (id) => {
-  if (!confirm('هل أنت متأكد من حذف هذا السجل نهائيًا؟')) return;
+  if (!(await confirmDialog('هل أنت متأكد من حذف هذا السجل نهائيًا؟'))) return;
   try {
     const snap = await getDoc(doc(db,'penaltyRewards',id));
     const p = snap.exists() ? snap.data() : null;
@@ -1855,7 +2016,7 @@ window.saveShiftOverride = async () => {
 };
 
 window.deleteShiftOverride = async (id) => {
-  if (!confirm('هل أنت متأكد من حذف هذا التعديل؟ ستعود الوردية إلى مواعيدها الأساسية في هذا اليوم.')) return;
+  if (!(await confirmDialog('هل أنت متأكد من حذف هذا التعديل؟ ستعود الوردية إلى مواعيدها الأساسية في هذا اليوم.'))) return;
   try { await deleteDoc(doc(db,'shiftOverrides',id)); toast('تم الحذف بنجاح', 'success'); renderShiftOverrides(); }
   catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
@@ -1941,7 +2102,7 @@ window.saveLocation = async () => {
 window.deleteLocation = async (id) => {
   const usedBy = _employees.filter(e=>e.locationId===id && e.status!=='resigned').length;
   if (usedBy) { toast(`هذا الفرع مرتبط بـ ${usedBy} موظف — يُرجى تغيير فرعهم أولًا`, 'error'); return; }
-  if (!confirm('هل أنت متأكد من حذف هذا الفرع؟')) return;
+  if (!(await confirmDialog('هل أنت متأكد من حذف هذا الفرع؟'))) return;
   try { await deleteDoc(doc(db,'locations',id)); toast('تم الحذف بنجاح', 'success'); }
   catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
@@ -1992,7 +2153,7 @@ window.saveDept = async () => {
 window.deleteDept = async (id) => {
   const usedBy = _employees.filter(e=>e.departmentId===id && e.status!=='resigned').length;
   if (usedBy>0) { toast(`هذا القسم يضم ${usedBy} موظف — يُرجى نقلهم إلى قسم آخر أولًا`, 'error'); return; }
-  if (!confirm('هل أنت متأكد من حذف هذا القسم؟')) return;
+  if (!(await confirmDialog('هل أنت متأكد من حذف هذا القسم؟'))) return;
   try { await deleteDoc(doc(db,'departments',id)); toast('تم الحذف بنجاح', 'success'); }
   catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
@@ -2086,7 +2247,7 @@ function renderEmpPasskeys(empId, listElId) {
 }
 
 window.removePasskey = async (empId, credId, listElId) => {
-  if (!confirm('هل أنت متأكد من حذف هذه البصمة؟ سيقوم الموظف بتسجيل بصمة جديدة عند دخوله التالي.')) return;
+  if (!(await confirmDialog('هل أنت متأكد من حذف هذه البصمة؟ سيقوم الموظف بتسجيل بصمة جديدة عند دخوله التالي.'))) return;
   try {
     const emp = _employees.find(x=>x.id===empId);
     const newList = (emp?.passkeys||[]).filter(p=>p.id!==credId);
@@ -2343,7 +2504,7 @@ window.saveSalaryHistoryEntry = async (empId) => {
 window.deleteSalaryHistoryEntry = async (empId, index) => {
   const emp = _employees.find(x=>x.id===empId);
   if (!emp || !Array.isArray(emp.salaryHistory)) return;
-  if (!confirm('هل أنت متأكد من حذف هذا التعديل من السجل التاريخي؟ سيؤثر ذلك على حسابات أي فترة كانت تعتمد عليه.')) return;
+  if (!(await confirmDialog('هل أنت متأكد من حذف هذا التعديل من السجل التاريخي؟ سيؤثر ذلك على حسابات أي فترة كانت تعتمد عليه.'))) return;
   const historySorted = [...emp.salaryHistory].sort((a,b)=> a.effectiveFrom < b.effectiveFrom ? 1 : -1);
   const toRemove = historySorted[index];
   const newHistory = emp.salaryHistory.filter(h => h !== toRemove);
@@ -2421,7 +2582,7 @@ window.savePolicyHistoryEntry = async () => {
   } catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
 window.deletePolicyHistoryEntry = async (index) => {
-  if (!confirm('هل أنت متأكد من حذف هذا التعديل من السجل التاريخي؟ سيؤثر ذلك على حسابات أي فترة كانت تعتمد عليه.')) return;
+  if (!(await confirmDialog('هل أنت متأكد من حذف هذا التعديل من السجل التاريخي؟ سيؤثر ذلك على حسابات أي فترة كانت تعتمد عليه.'))) return;
   const history = Array.isArray(_companySettings && _companySettings.policyHistory) ? [..._companySettings.policyHistory] : [];
   const historySorted = [...history].sort((a,b)=> a.effectiveFrom < b.effectiveFrom ? 1 : -1);
   const toRemove = historySorted[index];
@@ -2496,7 +2657,7 @@ window.saveEmployee = async () => {
 };
 
 window.deleteEmployee = async (id) => {
-  if (!confirm('هل أنت متأكد من حذف هذا الموظف؟')) return;
+  if (!(await confirmDialog('هل أنت متأكد من حذف هذا الموظف؟'))) return;
   try {
     const e = _employees.find(x=>x.id===id);
     if (e && e.isManager) {
@@ -2522,6 +2683,56 @@ function normalizeArabicSearch(str) {
     .replace(/[\u064B-\u0652]/g,'') // إزالة التشكيل لو موجود
     .trim().toLowerCase();
 }
+// ══════════════════════════════════════════════
+// خانة بحث بالاسم + قائمة منسدلة للموظف (تحل محل <select> العادي في 5 أماكن: طلب إجازة،
+// جزاءات ومكافآت، سلف، تقرير مخصص، التقييم الشهري) — بتدّي نفس تجربة السكرول القديمة
+// (تقدر تفتح القائمة وتختار) + إمكانية الكتابة للفلترة السريعة، مع بعض في نفس الخانة
+// ══════════════════════════════════════════════
+function bindEmployeeSearch(searchInputId, pool, labelFn) {
+  labelFn = labelFn || (e => e.name);
+  const inp = document.getElementById(searchInputId);
+  const listId = searchInputId + '-list';
+  let dl = document.getElementById(listId);
+  if (!dl) { dl = document.createElement('datalist'); dl.id = listId; document.body.appendChild(dl); inp.setAttribute('list', listId); }
+  const sorted = [...pool].sort((a,b)=>a.name.localeCompare(b.name,'ar'));
+  const labelCount = {};
+  sorted.forEach(e=>{ const l=labelFn(e); labelCount[l]=(labelCount[l]||0)+1; });
+  const map = {};
+  const finalLabels = sorted.map(e=>{
+    let label = labelFn(e);
+    if (labelCount[label] > 1) label += ` — ${e.code}`;
+    map[label] = e.id;
+    return label;
+  });
+  dl.innerHTML = finalLabels.map(l=>`<option value="${esc(l)}">`).join('');
+  inp._empMap = map;
+  inp._empList = sorted;
+  inp._empLabelFn = labelFn;
+}
+function setEmployeeSearchById(searchInputId, empId) {
+  const inp = document.getElementById(searchInputId);
+  const list = inp._empList || [];
+  const e = list.find(x=>x.id===empId);
+  if (!e) { inp.value=''; return; }
+  const labelFn = inp._empLabelFn || (x=>x.name);
+  const label = labelFn(e);
+  const dup = list.filter(x=>labelFn(x)===label).length > 1;
+  inp.value = dup ? `${label} — ${e.code}` : label;
+}
+function resolveEmployeeSearch(searchInputId, hiddenId, opts={}) {
+  const inp = document.getElementById(searchInputId);
+  const hidden = document.getElementById(hiddenId);
+  let id = (inp._empMap||{})[inp.value];
+  if (!id && !inp.value.trim() && opts.allowAll) id = '__all__';
+  if (!id && !inp.value.trim() && opts.defaultFirst && inp._empList && inp._empList.length) {
+    id = inp._empList[0].id;
+    setEmployeeSearchById(searchInputId, id);
+  }
+  hidden.value = id || '';
+  return id || '';
+}
+window.resolveEmployeeSearch = resolveEmployeeSearch;
+
 function normalizeDigits(str) {
   if (!str) return str;
   const eastern = '٠١٢٣٤٥٦٧٨٩', persian = '۰۱۲۳۴۵۶۷۸۹';
@@ -3996,12 +4207,12 @@ async function renderDaily() {
 window.renderDaily = renderDaily;
 
 window.deleteAttendanceRecord = async (id, date) => {
-  if (!confirm('هل أنت متأكد من حذف سجل الحضور هذا؟')) return;
+  if (!(await confirmDialog('هل أنت متأكد من حذف سجل الحضور هذا؟'))) return;
   try { await deleteDoc(doc(db,'attendance',id)); toast('تم الحذف بنجاح', 'success'); renderDaily(); }
   catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
 window.deleteDailyMarkRecord = async (id, date) => {
-  if (!confirm('هل أنت متأكد من حذف هذه الحالة المسجّلة؟')) return;
+  if (!(await confirmDialog('هل أنت متأكد من حذف هذه الحالة المسجّلة؟'))) return;
   try {
     await deleteDoc(doc(db,'dailyMarks',id)); toast('تم الحذف بنجاح', 'success');
     if (_page==='dailymark') renderDailyMarkPage(); else renderDaily();
@@ -4175,10 +4386,12 @@ async function renderDailyMarkPage() {
   const checkins = {}; attSnap.docs.forEach(d=>{ const v=d.data(); if (v.type==='checkin') checkins[v.employeeId]={id:d.id,...v}; });
   const marks = {}; markSnap.docs.forEach(d=>{ const v=d.data(); marks[v.employeeId]={id:d.id,...v}; });
 
-  const activeEmps = _employees.filter(e=>e.category!=='rep' && e.category!=='driver' && employeeHiredBy(e,date))
+  const activeEmps0 = _employees.filter(e=>e.category!=='rep' && e.category!=='driver' && employeeHiredBy(e,date))
     .sort((a,b)=>a.name.localeCompare(b.name,'ar'));
+  const searchName = normalizeArabicSearch(document.getElementById('dm-search-name')?.value || '');
+  const activeEmps = searchName ? activeEmps0.filter(e=>normalizeArabicSearch(e.name).includes(searchName)) : activeEmps0;
 
-  if (!activeEmps.length) { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--slate-500)">لا يوجد موظفون</td></tr>'; return; }
+  if (!activeEmps.length) { tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--slate-500)">${searchName?'لا توجد نتائج تطابق البحث':'لا يوجد موظفون'}</td></tr>`; return; }
 
   const canDel = hasPerm('data_delete');
   tbody.innerHTML = activeEmps.map(e=>{
@@ -4287,7 +4500,7 @@ window.approveOvertime = async (id) => {
   } catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
 window.rejectOvertime = async (id) => {
-  if (!confirm('هل أنت متأكد من رفض طلب الوقت الإضافي هذا؟')) return;
+  if (!(await confirmDialog('هل أنت متأكد من رفض طلب الوقت الإضافي هذا؟'))) return;
   try {
     await updateDoc(doc(db,'attendance',id), { overtimeRejected:true, rejectedBy: CU?.email||'admin', rejectedAt: Date.now() });
     toast('تم تسجيل الرفض بنجاح', 'success');
@@ -4389,7 +4602,7 @@ async function renderMonthly() {
 window.renderMonthly = renderMonthly;
 
 window.deleteMonthlyRow = async (docId) => {
-  if (!confirm('هل أنت متأكد من حذف بيانات الكشف الشهري لهذا الموظف عن هذا الشهر؟')) return;
+  if (!(await confirmDialog('هل أنت متأكد من حذف بيانات الكشف الشهري لهذا الموظف عن هذا الشهر؟'))) return;
   try {
     // لو الصف ده كان فيه إجازة من الرصيد متزامنة فعليًا مع رصيد الموظف (leaveFromBalanceType موجودة)،
     // لازم نرجّع القيمة دي لرصيده قبل ما نمسح السجل، وإلا هتضيع من غير رجوع.
@@ -4465,7 +4678,7 @@ async function commitMonthlySave(empId, period, options={}) {
     const wouldGoNegative = Object.values(empUpdates).some(v => v < 0);
     if (wouldGoNegative) {
       if (options.silent) return { success:false, reason:'negative_balance', message:'رصيد الإجازة هيبقى سالب' };
-      if (!confirm('سيؤدي هذا التعديل إلى جعل رصيد إجازة الموظف سالبًا. هل ترغب في المتابعة؟')) return { success:false, reason:'cancelled' };
+      if (!(await confirmDialog('سيؤدي هذا التعديل إلى جعل رصيد إجازة الموظف سالبًا. هل ترغب في المتابعة؟'))) return { success:false, reason:'cancelled' };
     }
 
     const existingDocId = existingSnap.empty ? null : existingSnap.docs[0].id;
@@ -4498,7 +4711,7 @@ window.saveAllMonthlyRows = async () => {
   const period = document.getElementById('monthly-period').value;
   const activeEmps = _employees.filter(e=>e.category!=='rep' && e.category!=='driver' && employeeInPeriod(e,period));
   if (!activeEmps.length) { toast('لا يوجد موظفون لحفظهم في هذا الشهر', 'error'); return; }
-  if (!confirm(`هيتم حفظ بيانات ${activeEmps.length} موظف دفعة واحدة. متابعة؟`)) return;
+  if (!(await confirmDialog(`هيتم حفظ بيانات ${activeEmps.length} موظف دفعة واحدة. متابعة؟`))) return;
 
   let okCount = 0;
   const skipped = [];
@@ -4541,7 +4754,7 @@ window.autoFillMonthly = async () => {
       const leaveEl = document.getElementById(`ms-leave-${e.id}`);
       return leaveEl && parseFloat(leaveEl.value||0) > 0 && (leaveCount[e.id]||0) !== parseFloat(leaveEl.value||0);
     });
-    if (wouldOverwrite && !confirm('بعض الموظفين لديهم رقم إجازة مسجَّل بالفعل (قد يكون ناتجًا عن طلب إجازة معتمد). سيؤدي التحميل التلقائي إلى استبداله برقم "تسجيل حالة اليوم". هل ترغب في المتابعة؟')) {
+    if (wouldOverwrite && !(await confirmDialog('بعض الموظفين لديهم رقم إجازة مسجَّل بالفعل (قد يكون ناتجًا عن طلب إجازة معتمد). سيؤدي التحميل التلقائي إلى استبداله برقم "تسجيل حالة اليوم". هل ترغب في المتابعة؟'))) {
       return;
     }
     targets.forEach(e=>{
@@ -4838,7 +5051,7 @@ async function renderEvaluation() {
 window.renderEvaluation = renderEvaluation;
 
 window.deleteEvalRow = async (docId) => {
-  if (!confirm('هل أنت متأكد من حذف تقييم هذا الشهر؟')) return;
+  if (!(await confirmDialog('هل أنت متأكد من حذف تقييم هذا الشهر؟'))) return;
   try { await deleteDoc(doc(db,'evaluations',docId)); toast('تم الحذف بنجاح', 'success'); renderEvaluation(); }
   catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
@@ -4892,30 +5105,39 @@ window.saveEvalRow = async (empId) => {
 // ══════════════════════════════════════════════
 window.openProfile = (empId) => {
   goPage('profile');
-  setTimeout(()=>{ document.getElementById('profile-emp').value = empId; renderProfile(); }, 50);
+  setTimeout(()=>{
+    const eligible = _employees.filter(e=>e.status!=='resigned' && e.category!=='rep' && e.category!=='driver');
+    bindEmployeeSearch('profile-emp-search', eligible);
+    setEmployeeSearchById('profile-emp-search', empId);
+    document.getElementById('profile-emp').value = empId;
+    renderProfile();
+  }, 50);
 };
 
 async function renderProfile() {
-  const sel = document.getElementById('profile-emp');
-  if (!sel.options.length) {
-    sel.innerHTML = _employees.filter(e=>e.status!=='resigned' && e.category!=='rep' && e.category!=='driver').map(e=>`<option value="${e.id}">${esc(e.name)}</option>`).join('');
+  const hidden = document.getElementById('profile-emp');
+  if (!hidden._bound) {
+    const eligible = _employees.filter(e=>e.status!=='resigned' && e.category!=='rep' && e.category!=='driver');
+    bindEmployeeSearch('profile-emp-search', eligible);
+    hidden._bound = true;
   }
   const yearInput = document.getElementById('profile-year');
   if (!yearInput.value) yearInput.value = new Date().getFullYear();
-  const empId = sel.value || sel.options[0]?.value;
+  const empId = hidden.value || resolveEmployeeSearch('profile-emp-search','profile-emp',{defaultFirst:true});
   const body = document.getElementById('profile-body');
   if (!empId) { body.innerHTML = '<div class="empty"><p>لا يوجد موظفون</p></div>'; return; }
-  sel.value = empId;
   const year = yearInput.value;
   const emp = _employees.find(e=>e.id===empId);
   body.innerHTML = '<div class="empty"><i class="fas fa-spinner fa-spin"></i><p>جاري التحميل...</p></div>';
 
-  const [sheetsSnap, evalsSnap, advancesSnap, penaltyRewardsSnap] = await Promise.all([
+  const [sheetsSnap, evalsSnap, advancesSnap, penaltyRewardsSnap, leavesSnap] = await Promise.all([
     getDocs(query(collection(db,'monthlySheets'), where('employeeId','==',empId))),
     getDocs(query(collection(db,'evaluations'), where('employeeId','==',empId))),
     getDocs(query(collection(db,'advances'), where('employeeId','==',empId))),
-    getDocs(query(collection(db,'penaltyRewards'), where('employeeId','==',empId)))
+    getDocs(query(collection(db,'penaltyRewards'), where('employeeId','==',empId))),
+    getDocs(query(collection(db,'leaveRequests'), where('employeeId','==',empId)))
   ]);
+  const empLeaves = leavesSnap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.dateFrom||'').localeCompare(a.dateFrom||'')).slice(0,10);
   const empAdvances = advancesSnap.docs.map(d=>({id:d.id,...d.data()}));
   const empPenaltyRewards = penaltyRewardsSnap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
   const sheets = {}; sheetsSnap.docs.forEach(d=>{ const v=d.data(); if (v.period && v.period.startsWith(year+'-')) sheets[v.period]=v; });
@@ -4986,6 +5208,18 @@ async function renderProfile() {
       </tr>`).join('')}</tbody></table>
     </div></div>` : '';
 
+  const leavesHtml = empLeaves.length ? `
+    <div class="card" style="overflow-x:auto"><div class="card-body">
+      <div style="font-weight:700;font-size:13px;margin-bottom:8px">آخر الإجازات (بالتواريخ)</div>
+      <table class="tbl"><thead><tr><th>من</th><th>لحد</th><th>النوع</th><th>الأيام</th><th>الحالة</th></tr></thead>
+      <tbody>${empLeaves.map(r=>{
+        const statusLabel = r.status==='approved' ? '<span class="badge bg-ok">معتمدة</span>'
+          : r.status==='rejected' ? '<span class="badge bg-danger">مرفوضة</span>'
+          : '<span class="badge bg-slate">قيد المراجعة</span>';
+        return `<tr><td>${r.dateFrom||'—'}</td><td>${r.dateTo||'—'}</td><td style="font-size:12.5px">${LEAVE_TYPES[r.leaveType]?.label||r.leaveType||'—'}</td><td>${r.daysCount??'—'}</td><td>${statusLabel}</td></tr>`;
+      }).join('')}</tbody></table>
+    </div></div>` : '';
+
   body.innerHTML = `
     <div class="card"><div class="card-body">
       <div style="font-weight:800;font-size:16px">${esc(emp.name)}</div>
@@ -5006,6 +5240,7 @@ async function renderProfile() {
       </div>
       ${advancesHtml}
     </div></div>
+    ${leavesHtml}
     <div class="card" style="overflow-x:auto"><table class="tbl">
       <thead><tr><th>الشهر</th><th>ساعات إضافية</th><th>أيام إضافية</th><th>إجازة من الرصيد</th><th>إجازة مرضية</th><th>إجازة بالخصم</th><th title="عدد أيام الغياب الحقيقي — كل يوم بيتخصم منه يومين من المرتب">غياب ⓘ</th><th>إذن شخصي</th><th>الحافز %</th><th>جزاءات (أيام)</th><th>مكافآت (أيام)</th><th>ملاحظات</th></tr></thead>
       <tbody>${rows}</tbody>
@@ -5018,10 +5253,11 @@ window.renderProfile = renderProfile;
 // CUSTOM REPORTS — تقرير مخصص لموظف أو لكل الموظفين، عن أي فترة وأي بيانات
 // ══════════════════════════════════════════════
 function renderReports() {
-  const sel = document.getElementById('rep-emp');
-  if (sel.options.length <= 1) {
-    const opts = _employees.filter(e=>e.status!=='resigned' && e.category!=='rep' && e.category!=='driver').map(e=>`<option value="${e.id}">${esc(e.name)}</option>`).join('');
-    sel.insertAdjacentHTML('beforeend', opts);
+  const hidden = document.getElementById('rep-emp');
+  if (!hidden._bound) {
+    const eligible = _employees.filter(e=>e.status!=='resigned' && e.category!=='rep' && e.category!=='driver');
+    bindEmployeeSearch('rep-emp-search', eligible);
+    hidden._bound = true;
   }
   if (!document.getElementById('rep-from').value) {
     document.getElementById('rep-from').value = cycleRangeForPeriod(currentPeriodStr()).startDate;
@@ -5034,7 +5270,7 @@ function renderReports() {
 window.renderReports = renderReports;
 
 window.generateCustomReport = async () => {
-  const empSel = document.getElementById('rep-emp').value;
+  const empSel = resolveEmployeeSearch('rep-emp-search','rep-emp',{allowAll:true});
   const dateFrom = document.getElementById('rep-from').value;
   const dateTo = document.getElementById('rep-to').value;
   if (!dateFrom || !dateTo) { toast('يُرجى تحديد الفترة (من - إلى)', 'error'); return; }
@@ -5494,7 +5730,7 @@ window.approvePersonalPermissionStage = async (id, stage, approved) => {
   } catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
 window.rejectPersonalPermissionRequest = async (id) => {
-  if (!confirm('هل أنت متأكد من رفض طلب الإذن الشخصي هذا؟')) return;
+  if (!(await confirmDialog('هل أنت متأكد من رفض طلب الإذن الشخصي هذا؟'))) return;
   try {
     await updateDoc(doc(db,'personalPermissionRequests',id), { status:'rejected', rejectedBy: CU.email, rejectedAt: Date.now() });
     toast('تم تسجيل الرفض بنجاح', 'success');
@@ -5503,7 +5739,7 @@ window.rejectPersonalPermissionRequest = async (id) => {
 };
 window.resolveLeaveCut = async (id, decision) => {
   const labels = { full:'رجّع اليوم كامل', partial:'رجّع نسبيًا', none:'من غير استرجاع' };
-  if (!confirm(`هل أنت متأكد من "${labels[decision]}"؟`)) return;
+  if (!(await confirmDialog(`هل أنت متأكد من "${labels[decision]}"؟`))) return;
   try {
     const rdoc = await getDoc(doc(db,'personalPermissionRequests',id));
     const r = rdoc.data();
@@ -5528,7 +5764,7 @@ window.resolveLeaveCut = async (id, decision) => {
 };
 
 window.deleteLeaveRequest = async (id) => {
-  if (!confirm('هل أنت متأكد من حذف طلب الإجازة هذا نهائيًا؟ لو كان الطلب معتمد، هيترجع رصيد الموظف ويتصحح الكشف الشهري تلقائيًا.')) return;
+  if (!(await confirmDialog('هل أنت متأكد من حذف طلب الإجازة هذا نهائيًا؟ لو كان الطلب معتمد، هيترجع رصيد الموظف ويتصحح الكشف الشهري تلقائيًا.'))) return;
   try {
     const rdoc = await getDoc(doc(db,'leaveRequests',id));
     if (!rdoc.exists()) { toast('الطلب مش موجود (يمكن اتحذف بالفعل)', 'error'); return; }
@@ -5559,10 +5795,11 @@ window.deleteLeaveRequest = async (id) => {
 };
 
 window.openLeaveModal = () => {
-  const sel = document.getElementById('lv-emp');
   let emps = _employees.filter(e=>e.status!=='resigned');
   if (CU.role!=='admin' && CU.departmentId) emps = emps.filter(e=>e.departmentId===CU.departmentId);
-  sel.innerHTML = emps.map(e=>`<option value="${e.id}">${esc(e.name)}</option>`).join('');
+  bindEmployeeSearch('lv-emp-search', emps);
+  document.getElementById('lv-emp-search').value = '';
+  document.getElementById('lv-emp').value = '';
   document.getElementById('lv-type').value = 'regular';
   document.getElementById('lv-from-modal').value = '';
   document.getElementById('lv-to-modal').value = '';
@@ -5616,12 +5853,12 @@ window.approveLeaveRequestStage = async (id, stage, override) => {
   const msg = override
     ? 'متأكد من الموافقة على طلب الإجازة ده؟ هتتصرف من الرصيد بتجاوز شرط الـ6 شهور خدمة.'
     : 'متأكد من الموافقة على طلب الإجازة ده؟';
-  if (!confirm(msg)) return;
+  if (!(await confirmDialog(msg))) return;
   try { await settleLeaveStage(id, stage, true, !!override); toast('تم تسجيل الموافقة بنجاح', 'success'); renderLeaves(); }
   catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
 window.rejectLeaveRequestStage = async (id, stage) => {
-  if (!confirm('هل أنت متأكد من رفض طلب الإجازة هذا؟')) return;
+  if (!(await confirmDialog('هل أنت متأكد من رفض طلب الإجازة هذا؟'))) return;
   try { await settleLeaveStage(id, stage, false); toast('تم تسجيل الرفض بنجاح', 'success'); renderLeaves(); }
   catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
@@ -5692,7 +5929,7 @@ window.approveLeaveRequest = async (id, override) => {
   const msg = override
     ? 'متأكد من الموافقة على طلب الإجازة ده؟ هتتصرف من الرصيد بتجاوز شرط الـ6 شهور خدمة.'
     : 'متأكد من الموافقة على طلب الإجازة ده؟';
-  if (!confirm(msg)) return;
+  if (!(await confirmDialog(msg))) return;
   try {
     const rdoc = await getDoc(doc(db,'leaveRequests',id));
     const r = rdoc.data();
@@ -5724,7 +5961,7 @@ window.approveLeaveRequest = async (id, override) => {
 };
 
 window.rejectLeaveRequest = async (id) => {
-  if (!confirm('هل أنت متأكد من رفض طلب الإجازة هذا؟')) return;
+  if (!(await confirmDialog('هل أنت متأكد من رفض طلب الإجازة هذا؟'))) return;
   try {
     const rdoc = await getDoc(doc(db,'leaveRequests',id));
     const r = rdoc.exists() ? rdoc.data() : null;
@@ -5736,7 +5973,7 @@ window.rejectLeaveRequest = async (id) => {
 };
 
 window.renewAllBalances = async () => {
-  if (!confirm('سيتم تجديد رصيد الإجازة الاعتيادية والعارضة لجميع الموظفين العاملين إلى 14 و7 أيام على التوالي (رصيد إجازة الجواز لا يُجدَّد تلقائيًا — في حال حدوث حالة زواج أخرى، يمكن إضافة رصيدها يدويًا من ملف الموظف). يُنصح بتنفيذ هذا الإجراء في بداية كل عام فقط. هل أنت متأكد؟')) return;
+  if (!(await confirmDialog('سيتم تجديد رصيد الإجازة الاعتيادية والعارضة لجميع الموظفين العاملين إلى 14 و7 أيام على التوالي (رصيد إجازة الجواز لا يُجدَّد تلقائيًا — في حال حدوث حالة زواج أخرى، يمكن إضافة رصيدها يدويًا من ملف الموظف). يُنصح بتنفيذ هذا الإجراء في بداية كل عام فقط. هل أنت متأكد؟'))) return;
   try {
     const actives = _employees.filter(e=>e.status!=='resigned');
     // تحديث متوازي (Promise.all) بدل موظف بعد التاني — بيقلّل زمن التنفيذ لعشرات الموظفين من دقايق لثواني
@@ -5856,7 +6093,7 @@ window.saveHoliday = async () => {
 // ملحوظة: حذف إجازة رسمية مش بيرجّع تلقائيًا أي تصحيح كان حصل بسببها لطلبات الإجازة (نادر الحدوث،
 // وأي تصحيح رجعي هيحتاج مراجعة يدوية عشان نتأكد إنه مش هيتعارض مع تعديلات تانية حصلت في الوقت ده)
 window.deleteHoliday = async (id) => {
-  if (!confirm('هل أنت متأكد من حذف هذه الإجازة الرسمية؟')) return;
+  if (!(await confirmDialog('هل أنت متأكد من حذف هذه الإجازة الرسمية؟'))) return;
   try { await deleteDoc(doc(db,'officialHolidays',id)); toast('تم الحذف بنجاح', 'success'); renderHolidays(); }
   catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
@@ -5876,7 +6113,14 @@ async function renderAdvances() {
   if (!_advancesCache.length) { body.innerHTML = `<tr><td colspan="9"><div class="empty"><p>لا توجد سلف مسجّلة بعد</p></div></td></tr>`; return; }
   const curPeriod = currentPeriodStr();
   const canDel = hasPerm('data_delete');
-  body.innerHTML = _advancesCache.map(a=>{
+  const searchName = normalizeArabicSearch(document.getElementById('adv-search-name')?.value || '');
+  let advList = _advancesCache;
+  if (searchName) advList = advList.filter(a=>{
+    const emp = _employees.find(e=>e.id===a.employeeId);
+    return emp && normalizeArabicSearch(emp.name).includes(searchName);
+  });
+  if (!advList.length) { body.innerHTML = `<tr><td colspan="9"><div class="empty"><p>لا توجد نتائج تطابق البحث</p></div></td></tr>`; return; }
+  body.innerHTML = advList.map(a=>{
     const emp = _employees.find(e=>e.id===a.employeeId);
     const paid = advancePaidUpTo(a, curPeriod > advanceEndPeriod(a) ? advanceEndPeriod(a) : curPeriod);
     const remaining = Math.round((a.amount - paid)*100)/100;
@@ -5903,7 +6147,9 @@ window.renderAdvances = renderAdvances;
 
 window.openAdvanceModal = () => {
   const activeEmps = _employees.filter(e=>e.status!=='resigned');
-  document.getElementById('adv-emp').innerHTML = activeEmps.map(e=>`<option value="${e.id}">${esc(e.name)}</option>`).join('');
+  bindEmployeeSearch('adv-emp-search', activeEmps);
+  document.getElementById('adv-emp-search').value = '';
+  document.getElementById('adv-emp').value = '';
   document.getElementById('adv-amount').value = '';
   document.getElementById('adv-months').value = 1;
   document.getElementById('adv-start').value = currentPeriodStr();
@@ -5937,7 +6183,7 @@ window.saveAdvance = async () => {
   const monthlyAmount = Math.floor((amount/months)*100)/100;
   const lastMonthAmount = Math.round((amount - monthlyAmount*(months-1))*100)/100;
   const existingActive = _advancesCache.filter(a=>a.employeeId===employeeId && a.status==='active');
-  if (existingActive.length && !confirm('هذا الموظف لديه سلفة نشطة بالفعل. هل ترغب في تسجيل سلفة إضافية؟')) return;
+  if (existingActive.length && !(await confirmDialog('هذا الموظف لديه سلفة نشطة بالفعل. هل ترغب في تسجيل سلفة إضافية؟'))) return;
   const btn = document.getElementById('adv-save-btn');
   btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الحفظ...';
   try {
@@ -5955,7 +6201,7 @@ window.saveAdvance = async () => {
 };
 
 window.cancelAdvance = async (id) => {
-  if (!confirm('هل أنت متأكد من إلغاء هذه السلفة؟ لن يتم خصم أي أقساط إضافية بعد الآن، وستبقى الأقساط المخصومة حتى الآن كما هي.')) return;
+  if (!(await confirmDialog('هل أنت متأكد من إلغاء هذه السلفة؟ لن يتم خصم أي أقساط إضافية بعد الآن، وستبقى الأقساط المخصومة حتى الآن كما هي.'))) return;
   try {
     const a = _advancesCache.find(x=>x.id===id);
     await updateDoc(doc(db,'advances',id), { status:'cancelled' });
@@ -5966,7 +6212,7 @@ window.cancelAdvance = async (id) => {
 };
 
 window.deleteAdvance = async (id) => {
-  if (!confirm('سيتم حذف هذه السلفة نهائيًا ولا يمكن التراجع عن هذا الإجراء. هل أنت متأكد؟')) return;
+  if (!(await confirmDialog('سيتم حذف هذه السلفة نهائيًا ولا يمكن التراجع عن هذا الإجراء. هل أنت متأكد؟'))) return;
   try {
     const a = _advancesCache.find(x=>x.id===id);
     await deleteDoc(doc(db,'advances',id));
@@ -6027,18 +6273,21 @@ async function renderAuditLog() {
   const body = document.getElementById('auditlog-body');
   const fromEl = document.getElementById('audit-from');
   const toEl = document.getElementById('audit-to');
-  // افتراضيًا: آخر 30 يوم بس (نفس مبدأ عدم تحميل كل التاريخ من غير حد)
+  const searchName = normalizeArabicSearch(document.getElementById('audit-search-name')?.value || '');
+  // افتراضيًا: آخر 30 يوم بس (نفس مبدأ عدم تحميل كل التاريخ من غير حد) — لكن لو فيه بحث بالاسم،
+  // نوسّع النطاق لكل التاريخ عشان البحث يلاقي حتى التعديلات القديمة، مش بس آخر 30 يوم
   if (!fromEl.value) { const d = new Date(); d.setDate(d.getDate()-30); fromEl.value = d.toISOString().slice(0,10); }
   if (!toEl.value) { toEl.value = todayStr(); }
-  const fromTs = new Date(fromEl.value+'T00:00:00').getTime();
-  const toTs = new Date(toEl.value+'T23:59:59').getTime();
+  const fromTs = searchName ? 0 : new Date(fromEl.value+'T00:00:00').getTime();
+  const toTs = searchName ? Date.now() : new Date(toEl.value+'T23:59:59').getTime();
   body.innerHTML = '<div class="empty"><i class="fas fa-spinner fa-spin"></i><p>جاري التحميل...</p></div>';
   let entries;
   try {
     const snap = await getDocs(query(collection(db,'auditLog'), where('at','>=',fromTs), where('at','<=',toTs), orderBy('at','desc')));
     entries = snap.docs.map(d=>({id:d.id,...d.data()}));
   } catch(e) { body.innerHTML = `<div class="empty"><p>${formatFirestoreError('حدث خطأ', e)}</p></div>`; return; }
-  if (!entries.length) { body.innerHTML = '<div class="empty"><i class="fas fa-history"></i><p>لا توجد تعديلات مسجّلة في هذه الفترة</p></div>'; return; }
+  if (searchName) entries = entries.filter(e=>normalizeArabicSearch(e.employeeName).includes(searchName));
+  if (!entries.length) { body.innerHTML = `<div class="empty"><i class="fas fa-history"></i><p>${searchName?'لا توجد نتائج تطابق البحث':'لا توجد تعديلات مسجّلة في هذه الفترة'}</p></div>`; return; }
   body.innerHTML = `<div class="card" style="overflow-x:auto"><table class="tbl">
     <thead><tr><th>التاريخ والوقت</th><th>الإجراء</th><th>الموظف المتأثر</th><th>بواسطة</th><th>التفاصيل</th></tr></thead>
     <tbody>${entries.map(e=>`<tr>
@@ -6131,7 +6380,7 @@ window.saveUser = async () => {
 };
 
 window.revokeUser = async (id) => {
-  if (!confirm('سيتم إلغاء وصول هذا المستخدم إلى النظام. سيبقى حساب الدخول في Firebase Authentication موجودًا، ويجب حذفه يدويًا من الـ Console إذا رغبت في حذفه نهائيًا. هل أنت متأكد؟')) return;
+  if (!(await confirmDialog('سيتم إلغاء وصول هذا المستخدم إلى النظام. سيبقى حساب الدخول في Firebase Authentication موجودًا، ويجب حذفه يدويًا من الـ Console إذا رغبت في حذفه نهائيًا. هل أنت متأكد؟'))) return;
   try { await deleteDoc(doc(db,'users',id)); toast('تم إلغاء وصول المستخدم بنجاح', 'success'); renderUsers(); }
   catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
@@ -6139,8 +6388,44 @@ window.revokeUser = async (id) => {
 // ══════════════════════════════════════════════
 // UTILITIES: modal + toast
 // ══════════════════════════════════════════════
-window.openM = (id) => document.getElementById(id).classList.add('open');
+window.openM = (id) => {
+  const el = document.getElementById(id);
+  el.classList.add('open');
+  // تركيز تلقائي على أول خانة إدخال جوه المودال، عشان تقدر تكتب على طول من غير ما تدوس عليها الأول
+  setTimeout(()=>{
+    el.querySelector('input:not([type=hidden]):not(:disabled), textarea:not(:disabled), select:not(:disabled)')?.focus();
+  }, 60);
+};
 window.closeM = (id) => document.getElementById(id).classList.remove('open');
+
+// نافذة تأكيد موحّدة بنفس تصميم البرنامج، بدل نافذة confirm() الافتراضية القديمة بتاعة المتصفح —
+// شكلها زي أي مودال تاني في البرنامج، وبترجع Promise<boolean> عشان تستخدم مع await زي confirm() بالظبط
+let _confirmResolve = null;
+window.confirmDialog = (message) => {
+  return new Promise(resolve => {
+    _confirmResolve = resolve;
+    document.getElementById('confirm-message').textContent = message;
+    openM('mo-confirm');
+    setTimeout(()=>document.getElementById('confirm-ok-btn')?.focus(), 30);
+  });
+};
+window._resolveConfirm = (val) => {
+  closeM('mo-confirm');
+  const r = _confirmResolve; _confirmResolve = null;
+  if (r) r(val);
+};
+
+// Enter داخل أي خانة نصية (input) جوه أي مودال مفتوح بينادي دالة الحفظ الخاصة بيه تلقائيًا،
+// بدل ما تكون مضطر تدوس بالماوس على زرار الحفظ كل مرة. مش بتأثر على textarea (عشان مينفعش
+// تمنع نزول سطر جديد فيها) ولا على select (Enter فيها بتتحكم في فتح/قفل القائمة نفسها أصلاً)
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter') return;
+  if (e.target.tagName !== 'INPUT') return;
+  const modal = e.target.closest('.overlay.open[data-submit]');
+  if (!modal) return;
+  const fn = window[modal.dataset.submit];
+  if (typeof fn === 'function') { e.preventDefault(); fn(); }
+});
 window.toast = (msg, type='info') => {
   const wrap = document.getElementById('toast-wrap');
   const el = document.createElement('div');
