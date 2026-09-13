@@ -420,11 +420,14 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
           <button class="btn btn-ac btn-sm" onclick="saveAllMonthlyRows()"><i class="fas fa-save"></i>حفظ الكل</button>
         </div>
       </div>
-      <div class="card" id="monthly-scroll-wrap" style="overflow-x:scroll;overflow-y:visible"><table class="tbl" id="monthly-table">
+      <div class="card" id="monthly-scroll-wrap" style="overflow:auto;max-height:65vh"><table class="tbl" id="monthly-table">
         <thead><tr><th>الاسم</th><th>الوظيفة</th><th>ساعات إضافية</th><th>أيام إضافية</th><th>إجازة من الرصيد</th><th>إجازة مرضية</th><th>إجازة بالخصم</th><th title="اكتب عدد أيام الغياب الحقيقي — النظام يخصم يومين من المرتب تلقائيًا عن كل يوم غياب">غياب ⓘ</th><th>إذن شخصي</th><th>الحافز %</th><th>جزاءات (أيام)</th><th>مكافآت (أيام)</th><th>ملاحظات</th><th></th></tr></thead>
         <tbody id="monthly-body"></tbody>
       </table></div>
       <style>
+        /* ⚠️ إصلاح باگ: overflow-x بس من غير ارتفاع محدد كان بيخلي الهيدر الثابت مش شغال فعليًا —
+           المتصفح بيحتاج حاوية تمرير حقيقية (بارتفاع محدد) عشان position:sticky يلتزم بيها ويفضل
+           الهيدر ثابت وانت نازل بين الموظفين */
         #monthly-table{border-collapse:separate;border-spacing:0}
         #monthly-table thead th{position:sticky;top:0;z-index:2;box-shadow:0 1px 0 var(--border)}
         #monthly-scroll-wrap{scrollbar-width:auto;scrollbar-color:var(--slate-300) var(--slate-100)}
