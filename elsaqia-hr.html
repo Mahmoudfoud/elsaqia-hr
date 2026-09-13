@@ -78,6 +78,8 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
 .page{display:none}
 .page.active{display:block; animation: pageFadeIn .22s ease}
 @keyframes pageFadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+.kiosk-check-pop{animation:kioskCheckPop .5s cubic-bezier(.34,1.56,.64,1)}
+@keyframes kioskCheckPop{0%{opacity:0;transform:scale(.3)}60%{opacity:1;transform:scale(1.15)}100%{transform:scale(1)}}
 .ph{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:22px}
 .ph-title{font-size:21px;font-weight:800;color:var(--navy-900)}
 .ph-sub{font-size:12.5px;color:var(--slate-500);margin-top:3px}
@@ -1350,7 +1352,11 @@ function refreshCombinedLeavesBadge() {
 // NAVIGATION
 // ══════════════════════════════════════════════
 const PAGE_PERM = { employees:'employees_manage', departments:'departments_manage', shifts:'shifts_manage', reps:'reps_manage', drivers:'drivers_manage', settings:'settings_manage', daily:'daily_view', dailymark:'daily_view', overtime:'overtime_approve', monthly:'monthly_manage', evaluation:'eval_manager', profile:'profiles_view', reports:'reports_view', leaves:'leaves_manage', penalties:'penalties_rewards_manage', holidays:'holidays_manage', advances:'advances_manage' };
-window.goPage = (name) => {
+window.goPage = async (name) => {
+  if (_page==='monthly' && name!=='monthly' && _monthlyDirtyRows.size>0) {
+    if (!(await confirmDialog(`عندك تعديلات لسه ما اتحفظتش لـ${_monthlyDirtyRows.size} موظف في الكشف الشهري. لو خرجت من الصفحة دي هتضيع. متأكد عايز تكمل؟`))) return;
+    _monthlyDirtyRows.clear();
+  }
   const perm = PAGE_PERM[name];
   const evalAlt = name==='evaluation' && (hasPerm('eval_hr')||hasPerm('eval_factory'));
   const leavesAlt = name==='leaves' && hasPerm('leaves_dept_approve');
@@ -4031,15 +4037,19 @@ window.kioskDoAction = async (type) => {
       window._kioskInstantPermContext = null;
     }
 
+    const warmMsg = type==='checkin'
+      ? 'نتمنى لك يوم عمل مثمرًا وموفقًا'
+      : (extra.pendingOvertimeMinutes ? 'نقدّر وقتك الثمين، شكرًا جزيلاً على تفانيك اليوم' : 'شكرًا لجهدك اليوم، نراك قريبًا بإذن الله');
     document.getElementById('kiosk-body').innerHTML = `
       <div style="text-align:center;padding:20px 0">
-        <div style="font-size:40px;color:var(--ok-600);margin-bottom:10px"><i class="fas fa-check-circle"></i></div>
+        <div class="kiosk-check-pop" style="font-size:40px;color:var(--ok-600);margin-bottom:10px"><i class="fas fa-check-circle"></i></div>
         <div style="font-weight:800;font-size:15px">تم تسجيل ${type==='checkin'?'حضورك':'انصرافك'} الساعة ${nowHM()}</div>
+        <div style="font-size:12.5px;color:var(--ac-700);margin-top:8px;font-weight:600">${warmMsg}</div>
         ${extra.pendingOvertimeMinutes ? `<div style="font-size:12px;color:var(--warn-600);margin-top:8px">وقت إضافي معلّق (${overtimeDurationLabel(extra.pendingOvertimeMinutes)}) — محتاج موافقة المدير</div>` : ''}
         ${extra.mealEligible ? `<div style="font-size:12px;color:var(--ac-700);margin-top:8px">مستحق وجبة</div>` : ''}
         ${extraMsgHtml}
       </div>`;
-    setTimeout(()=>kioskRenderCodeEntry(), 3500);
+    setTimeout(()=>kioskRenderCodeEntry(), 10000);
   } catch(e) {
     window._kioskLeaveCutContext = null;
     window._kioskInstantPermContext = null;
@@ -4539,6 +4549,7 @@ async function renderMonthly() {
   if (!periodInput.value) periodInput.value = currentPeriodStr();
   const period = periodInput.value;
   const body = document.getElementById('monthly-body');
+  _monthlyDirtyRows.clear(); // تحميل جديد = مفيش تعديلات غير محفوظة لسه
   body.innerHTML = `<tr><td colspan="14"><div class="empty"><i class="fas fa-spinner fa-spin"></i><p>جاري التحميل...</p></div></td></tr>`;
 
   const activeEmps = _employees.filter(e=>e.category!=='rep' && e.category!=='driver' && employeeInPeriod(e,period));
@@ -4703,7 +4714,7 @@ async function commitMonthlySave(empId, period, options={}) {
 window.saveMonthlyRow = async (empId) => {
   const period = document.getElementById('monthly-period').value;
   const result = await commitMonthlySave(empId, period, { silent:false });
-  if (result.success) toast('تم حفظ البيانات بنجاح', 'success');
+  if (result.success) { toast('تم حفظ البيانات بنجاح', 'success'); _monthlyDirtyRows.delete(empId); }
   else if (result.reason === 'cancelled') { /* المستخدم لغى العملية بنفسه، مفيش داعي لرسالة */ }
   else toast(result.message || 'حدث خطأ', 'error');
 };
@@ -4720,7 +4731,7 @@ window.saveAllMonthlyRows = async () => {
   const skipped = [];
   for (const emp of activeEmps) {
     const result = await commitMonthlySave(emp.id, period, { silent:true });
-    if (result.success) okCount++;
+    if (result.success) { okCount++; _monthlyDirtyRows.delete(emp.id); }
     else skipped.push({ name: emp.name, reason: result.reason, message: result.message });
   }
 
@@ -6428,6 +6439,35 @@ document.addEventListener('keydown', (e) => {
   if (!modal) return;
   const fn = window[modal.dataset.submit];
   if (typeof fn === 'function') { e.preventDefault(); fn(); }
+});
+
+// ══════════════════════════════════════════════
+// الكشف الشهري: تتبّع التعديلات غير المحفوظة + تنقّل بالكيبورد بين الموظفين (زي الإكسيل)
+// ══════════════════════════════════════════════
+let _monthlyDirtyRows = new Set();
+document.getElementById('monthly-body')?.addEventListener('input', (e)=>{
+  const m = e.target.id.match(/^ms-[a-z-]+-(.+)$/);
+  if (m) _monthlyDirtyRows.add(m[1]);
+});
+// Enter في أي خانة (غياب، ساعات إضافية، إجازة...) بينزلك على طول لنفس الخانة بتاعة الموظف اللي
+// تحت، بدل ما تحتاج تدوس بالماوس كل مرة — بيشتغل بحساب مكان الخانة في الصف (مش أسماء الحقول)،
+// عشان يفضل صحيح لو اتضافت أو اتغيّرت أعمدة يومًا ما
+document.getElementById('monthly-body')?.addEventListener('keydown', (e)=>{
+  if (e.key !== 'Enter') return;
+  if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'SELECT') return;
+  const cell = e.target.closest('td');
+  const row = e.target.closest('tr');
+  if (!cell || !row) return;
+  const nextRow = row.nextElementSibling;
+  if (!nextRow) return;
+  const nextCell = nextRow.cells[cell.cellIndex];
+  const nextField = nextCell?.querySelector('input, select');
+  if (nextField) { e.preventDefault(); nextField.focus(); nextField.select?.(); }
+});
+// تحذير قبل فقد أي تعديل غير محفوظ — سواء بقفل التاب/تحديث الصفحة (تحذير المتصفح القياسي، مينفعش
+// يتخصص شكله) أو بالتنقل لصفحة تانية جوه البرنامج نفسه (تحذيرنا المخصص، جوه goPage)
+window.addEventListener('beforeunload', (e)=>{
+  if (_page==='monthly' && _monthlyDirtyRows.size>0) { e.preventDefault(); e.returnValue=''; }
 });
 window.toast = (msg, type='info') => {
   const wrap = document.getElementById('toast-wrap');
