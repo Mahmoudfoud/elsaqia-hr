@@ -350,7 +350,7 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
       <div class="card" style="border:1px solid var(--warn-300,#f0c96b)">
         <div class="card-body" style="font-size:12.5px">
           <div style="font-weight:800;margin-bottom:6px"><i class="fas fa-shield-halved"></i> تحديث أمان الكيوسك — مطلوب مرة واحدة فقط</div>
-          <div style="color:var(--slate-600);margin-bottom:10px">بعد تحديث أمان الكيوسك، لازم تشغّل المزامنة دي مرة واحدة عشان كل الموظفين الحاليين يقدروا يستخدموا الكيوسك بالكود بتاعهم زي الأول. الزرار آمن تمامًا لو اتضغط أكتر من مرة بالغلط.</div>
+          <div style="color:var(--slate-600);margin-bottom:10px">بعد تحديث أمان الكيوسك، يجب تشغيل هذه المزامنة مرة واحدة حتى يتمكّن جميع الموظفين الحاليين من استخدام الكيوسك بالكود الخاص بهم كالمعتاد. هذا الزر آمن تمامًا حتى لو تم الضغط عليه أكثر من مرة بالخطأ.</div>
           <button class="btn btn-primary btn-sm" onclick="migrateEmployeeCodes()" id="migrate-codes-btn"><i class="fas fa-rotate"></i> تشغيل مزامنة أكواد الموظفين الآن</button>
           <div id="migrate-codes-result" style="margin-top:8px;font-size:12px"></div>
         </div>
@@ -1017,7 +1017,7 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
     <div class="mb">
       <div id="confirm-message" style="font-size:14px;line-height:1.8;color:var(--slate-700)"></div>
       <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
-        <button class="btn btn-ghost btn-sm" onclick="_resolveConfirm(false)">إلغاء</button>
+        <button class="btn btn-ghost btn-sm" id="confirm-cancel-btn" onclick="_resolveConfirm(false)">إلغاء</button>
         <button class="btn btn-red btn-sm" id="confirm-ok-btn" onclick="_resolveConfirm(true)" autofocus>تأكيد</button>
       </div>
     </div>
@@ -1354,7 +1354,7 @@ function refreshCombinedLeavesBadge() {
 const PAGE_PERM = { employees:'employees_manage', departments:'departments_manage', shifts:'shifts_manage', reps:'reps_manage', drivers:'drivers_manage', settings:'settings_manage', daily:'daily_view', dailymark:'daily_view', overtime:'overtime_approve', monthly:'monthly_manage', evaluation:'eval_manager', profile:'profiles_view', reports:'reports_view', leaves:'leaves_manage', penalties:'penalties_rewards_manage', holidays:'holidays_manage', advances:'advances_manage' };
 window.goPage = async (name) => {
   if (_page==='monthly' && name!=='monthly' && _monthlyDirtyRows.size>0) {
-    if (!(await confirmDialog(`عندك تعديلات لسه ما اتحفظتش لـ${_monthlyDirtyRows.size} موظف في الكشف الشهري. لو خرجت من الصفحة دي هتضيع. متأكد عايز تكمل؟`))) return;
+    if (!(await confirmDialog(`لديك تعديلات غير محفوظة لـ${_monthlyDirtyRows.size} موظف في الكشف الشهري، وستفقدها إذا غادرت هذه الصفحة الآن. هل أنت متأكد من المتابعة؟`))) return;
     _monthlyDirtyRows.clear();
   }
   const perm = PAGE_PERM[name];
@@ -1389,15 +1389,15 @@ function renderAttentionWidget() {
   if (!el) return;
   const items = [];
   if (hasPerm('leaves_manage') || hasPerm('leaves_dept_approve')) {
-    if (_leavesActionableCount>0) items.push({ label:'طلب إجازة محتاج موافقتك', count:_leavesActionableCount, page:'leaves', icon:'fa-calendar-day' });
-    if (_ppPlannedCount>0) items.push({ label:'طلب إذن شخصي محتاج قرار', count:_ppPlannedCount, page:'leaves', icon:'fa-user-clock' });
-    if (_ppLeaveCutCount>0) items.push({ label:'قرار "قطع إجازة" محتاج تحديد', count:_ppLeaveCutCount, page:'leaves', icon:'fa-scissors' });
+    if (_leavesActionableCount>0) items.push({ label:'طلب إجازة بحاجة إلى موافقتك', count:_leavesActionableCount, page:'leaves', icon:'fa-calendar-day' });
+    if (_ppPlannedCount>0) items.push({ label:'طلب إذن شخصي بحاجة إلى قرار', count:_ppPlannedCount, page:'leaves', icon:'fa-user-clock' });
+    if (_ppLeaveCutCount>0) items.push({ label:'قرار "قطع إجازة" بحاجة إلى تحديد', count:_ppLeaveCutCount, page:'leaves', icon:'fa-scissors' });
   }
   if (hasPerm('overtime_approve') && _overtimeActionableCount>0) {
-    items.push({ label:'طلب وقت إضافي محتاج اعتماد', count:_overtimeActionableCount, page:'overtime', icon:'fa-business-time' });
+    items.push({ label:'طلب وقت إضافي بحاجة إلى اعتماد', count:_overtimeActionableCount, page:'overtime', icon:'fa-business-time' });
   }
   if (!items.length) {
-    el.innerHTML = `<div class="card"><div class="card-body" style="display:flex;align-items:center;gap:10px;color:var(--slate-500)"><i class="fas fa-circle-check" style="color:var(--ac-600);font-size:18px"></i><span>مفيش أي حاجة محتاجة انتباهك دلوقتي — كل الطلبات متابعة</span></div></div>`;
+    el.innerHTML = `<div class="card"><div class="card-body" style="display:flex;align-items:center;gap:10px;color:var(--slate-500)"><i class="fas fa-circle-check" style="color:var(--ac-600);font-size:18px"></i><span>لا توجد أي طلبات تحتاج إلى اهتمامك حاليًا — جميع الطلبات متابَعة</span></div></div>`;
     return;
   }
   el.innerHTML = `<div class="card" style="border-inline-start:4px solid var(--danger-600)"><div class="card-body">
@@ -1436,7 +1436,7 @@ async function renderHealthCheck() {
 
   // 1) موظف مستقيل ولسه له سلفة نشطة
   const advOnResigned = advSnap.docs.map(d=>({id:d.id,...d.data()})).filter(a=>resignedIds.has(a.employeeId));
-  if (advOnResigned.length) issues.push({ title:'موظفين مستقيلين ولسه ليهم سلفة نشطة', icon:'fa-hand-holding-dollar', severity:'danger',
+  if (advOnResigned.length) issues.push({ title:'موظفون مستقيلون لا تزال لديهم سلفة نشطة', icon:'fa-hand-holding-dollar', severity:'danger',
     items: advOnResigned.map(a=>{
       const end = advanceEndPeriod(a);
       const curP = currentPeriodStr();
@@ -1447,7 +1447,7 @@ async function renderHealthCheck() {
 
   // 2) موظف مستقيل وليه طلب إجازة لسه معلّق
   const leaveOnResigned = leaveSnap.docs.map(d=>({id:d.id,...d.data()})).filter(r=>resignedIds.has(r.employeeId));
-  if (leaveOnResigned.length) issues.push({ title:'موظفين مستقيلين وليهم طلب إجازة لسه معلّق', icon:'fa-calendar-xmark', severity:'warning',
+  if (leaveOnResigned.length) issues.push({ title:'موظفون مستقيلون لديهم طلب إجازة لا يزال معلّقًا', icon:'fa-calendar-xmark', severity:'warning',
     items: leaveOnResigned.map(r=>`${r.employeeName||empById(r.employeeId)?.name||'موظف محذوف'} — من ${r.dateFrom} لحد ${r.dateTo}`) });
 
   // 3) موظف من غير قسم محدد (هيتخطى أي فلترة بالقسم بالغلط)
@@ -1463,11 +1463,11 @@ async function renderHealthCheck() {
 
   // 5) موظف نشط بصمته اتمسحت أو ماسجلش بصمة خالص — مش هيقدر يستخدم الكيوسك
   const noPasskey = _employees.filter(e=>e.status!=='resigned' && e.category!=='rep' && e.category!=='driver' && (!e.passkeys || !e.passkeys.length));
-  if (noPasskey.length) issues.push({ title:'موظفين نشطين من غير بصمة مسجّلة (مش هيقدروا يسجلوا حضور)', icon:'fa-fingerprint', severity:'warning',
+  if (noPasskey.length) issues.push({ title:'موظفون نشطون بلا بصمة مسجّلة (لن يتمكّنوا من تسجيل الحضور)', icon:'fa-fingerprint', severity:'warning',
     items: noPasskey.map(e=>e.name) });
 
   if (!issues.length) {
-    body.innerHTML = `<div class="card"><div class="card-body" style="display:flex;align-items:center;gap:10px;color:var(--slate-500)"><i class="fas fa-circle-check" style="color:var(--ac-600);font-size:18px"></i><span>مفيش أي حاجة غريبة في البيانات دلوقتي — كل حاجة سليمة</span></div></div>`;
+    body.innerHTML = `<div class="card"><div class="card-body" style="display:flex;align-items:center;gap:10px;color:var(--slate-500)"><i class="fas fa-circle-check" style="color:var(--ac-600);font-size:18px"></i><span>لا توجد أي مشكلات في البيانات حاليًا — كل شيء سليم</span></div></div>`;
     return;
   }
   body.innerHTML = issues.map(iss=>`
@@ -2779,7 +2779,7 @@ window.migrateEmployeeCodes = async () => {
       await setDoc(doc(db,'employeeCodes', emp.code), { employeeId: d.id });
       synced++;
     }
-    let msg = `تمت المزامنة بنجاح: ${synced} موظف، ${skipped} من غير كود (متوقع لو مش محدد لهم).`;
+    let msg = `تمت المزامنة بنجاح: ${synced} موظف، و${skipped} بلا كود (وهذا متوقّع إن لم يكن قد تم تحديد كود لهم).`;
     if (duplicates.length) msg += ` ⚠️ تكرار في الأكواد لازم يتصلح يدوي: ${duplicates.join('، ')}`;
     resultEl.innerHTML = `<span style="color:${duplicates.length?'var(--danger-600)':'var(--ok-700)'}">${esc(msg)}</span>`;
     toast('تمت المزامنة', 'success');
@@ -2994,7 +2994,7 @@ function b64urlToBuf(str) {
 function randChallenge() { const b=new Uint8Array(32); crypto.getRandomValues(b); return b; }
 
 async function webauthnRegister(emp) {
-  if (!window.PublicKeyCredential) throw new Error('الجهاز/المتصفح ده مش بيدعم بصمة الدخول (WebAuthn)');
+  if (!window.PublicKeyCredential) throw new Error('هذا الجهاز أو المتصفح لا يدعم تسجيل الدخول بالبصمة (WebAuthn)');
   const cred = await navigator.credentials.create({ publicKey: {
     challenge: randChallenge(),
     rp: { id: location.hostname, name: 'الساقية - الشؤون الإدارية' },
@@ -3008,7 +3008,7 @@ async function webauthnRegister(emp) {
 }
 
 async function webauthnVerify(emp) {
-  if (!window.PublicKeyCredential) throw new Error('الجهاز/المتصفح ده مش بيدعم بصمة الدخول (WebAuthn)');
+  if (!window.PublicKeyCredential) throw new Error('هذا الجهاز أو المتصفح لا يدعم تسجيل الدخول بالبصمة (WebAuthn)');
   const allow = (emp.passkeys||[]).map(p=>({ id: b64urlToBuf(p.id), type:'public-key' }));
   const cred = await navigator.credentials.get({ publicKey: {
     challenge: randChallenge(), rpId: location.hostname, allowCredentials: allow, userVerification:'required', timeout:60000
@@ -3016,7 +3016,7 @@ async function webauthnVerify(emp) {
   if (!cred) throw new Error('فشل التحقق من البصمة');
   const gotId = bufToB64url(cred.rawId);
   const match = (emp.passkeys||[]).find(p=>p.id===gotId);
-  if (!match) throw new Error('البصمة دي مش متسجّلة لحسابك — كلم الأدمن');
+  if (!match) throw new Error('هذه البصمة غير مسجّلة على حسابك — يُرجى مراجعة الشؤون الإدارية');
   return true;
 }
 
@@ -3170,7 +3170,7 @@ async function kioskLoadStatus() {
     bodyHtml += `<div style="margin-top:12px;display:flex;flex-direction:column;gap:8px">
       <a href="javascript:void(0)" onclick="kioskShowLeaveForm()" style="font-size:12px;color:var(--ac-600);font-weight:700">طلب إجازة</a>
       <a href="javascript:void(0)" onclick="kioskShowMyLeaveRequests()" style="font-size:12px;color:var(--ac-600);font-weight:700">حالة طلبات إجازتي</a>
-      <a href="javascript:void(0)" onclick="kioskRenderCodeEntry()" style="font-size:11.5px;color:var(--slate-500)">مش أنا؟ رجوع</a>
+      <a href="javascript:void(0)" onclick="kioskRenderCodeEntry()" style="font-size:11.5px;color:var(--slate-500)">لست أنا؟ رجوع</a>
     </div>`;
     document.getElementById('kiosk-body').innerHTML = bodyHtml;
     return;
@@ -3203,7 +3203,7 @@ async function kioskLoadStatus() {
     bodyHtml += `<div style="margin-top:12px;display:flex;flex-direction:column;gap:8px">
       <a href="javascript:void(0)" onclick="kioskShowLeaveForm()" style="font-size:12px;color:var(--ac-600);font-weight:700">طلب إجازة</a>
       <a href="javascript:void(0)" onclick="kioskShowMyLeaveRequests()" style="font-size:12px;color:var(--ac-600);font-weight:700">حالة طلبات إجازتي</a>
-      <a href="javascript:void(0)" onclick="kioskRenderCodeEntry()" style="font-size:11.5px;color:var(--slate-500)">مش أنا؟ رجوع</a>
+      <a href="javascript:void(0)" onclick="kioskRenderCodeEntry()" style="font-size:11.5px;color:var(--slate-500)">لست أنا؟ رجوع</a>
     </div>`;
     document.getElementById('kiosk-body').innerHTML = bodyHtml;
     return;
@@ -3238,10 +3238,10 @@ async function kioskLoadStatus() {
             <div style="font-weight:800;font-size:15px">${esc(emp.name)}</div>
             <div style="font-size:12px;color:var(--slate-500);margin-top:2px">${esc(emp.jobTitle)||'—'} · ${esc(yShift.name)}</div>
           </div>
-          <div style="font-size:12px;color:var(--slate-600);margin-bottom:8px"><i class="fas fa-info-circle"></i> لسه مسجّل حضورك من ${esc(yesterday)} الساعة ${esc(yCheckin.time)} وما اتسجّلش انصرافك — مسموح تسجّله لحد الساعة ${graceEndHM}</div>
+          <div style="font-size:12px;color:var(--slate-600);margin-bottom:8px"><i class="fas fa-info-circle"></i> لا يزال حضورك مسجّلاً من ${esc(yesterday)} الساعة ${esc(yCheckin.time)} وما اتسجّلش انصرافك — مسموح تسجّله لحد الساعة ${graceEndHM}</div>
           <button class="auth-btn" id="kiosk-act-btn" onclick="kioskDoAction('checkout')"><i class="fas fa-fingerprint"></i>تسجيل انصراف</button>
           <div style="margin-top:12px;display:flex;flex-direction:column;gap:8px">
-            <a href="javascript:void(0)" onclick="kioskRenderCodeEntry()" style="font-size:11.5px;color:var(--slate-500)">مش أنا؟ رجوع</a>
+            <a href="javascript:void(0)" onclick="kioskRenderCodeEntry()" style="font-size:11.5px;color:var(--slate-500)">لست أنا؟ رجوع</a>
           </div>`;
         document.getElementById('kiosk-body').innerHTML = bodyHtml;
         return;
@@ -3280,7 +3280,7 @@ async function kioskLoadStatus() {
       <a href="javascript:void(0)" onclick="kioskShowMyLeaveRequests()" style="font-size:12px;color:var(--ac-600);font-weight:700">حالة طلبات إجازتي</a>
       <a href="javascript:void(0)" onclick="kioskShowPersonalPermissionForm()" style="font-size:12px;color:var(--ac-600);font-weight:700">طلب إذن شخصي (مستقبلي)</a>
       <a href="javascript:void(0)" onclick="kioskShowMyPersonalPermissionRequests()" style="font-size:12px;color:var(--ac-600);font-weight:700">حالة طلبات إذني الشخصي</a>
-      <a href="javascript:void(0)" onclick="kioskRenderCodeEntry()" style="font-size:11.5px;color:var(--slate-500)">مش أنا؟ رجوع</a>
+      <a href="javascript:void(0)" onclick="kioskRenderCodeEntry()" style="font-size:11.5px;color:var(--slate-500)">لست أنا؟ رجوع</a>
     </div>`;
     document.getElementById('kiosk-body').innerHTML = bodyHtml;
     return;
@@ -3307,7 +3307,7 @@ async function kioskLoadStatus() {
         <a href="javascript:void(0)" onclick="kioskShowProfile()" style="font-size:12px;color:var(--ac-600);font-weight:700">عرض سجلي السنوي</a>
         <a href="javascript:void(0)" onclick="kioskShowLeaveForm()" style="font-size:12px;color:var(--ac-600);font-weight:700">طلب إجازة</a>
         <a href="javascript:void(0)" onclick="kioskShowMyLeaveRequests()" style="font-size:12px;color:var(--ac-600);font-weight:700">حالة طلبات إجازتي</a>
-        <a href="javascript:void(0)" onclick="kioskRenderCodeEntry()" style="font-size:11.5px;color:var(--slate-500)">مش أنا؟ رجوع</a>
+        <a href="javascript:void(0)" onclick="kioskRenderCodeEntry()" style="font-size:11.5px;color:var(--slate-500)">لست أنا؟ رجوع</a>
       </div>`;
     document.getElementById('kiosk-body').innerHTML = bodyHtml;
     return;
@@ -3384,7 +3384,7 @@ async function kioskLoadStatus() {
     <a href="javascript:void(0)" onclick="kioskShowMyLeaveRequests()" style="font-size:12px;color:var(--ac-600);font-weight:700">حالة طلبات إجازتي</a>
     <a href="javascript:void(0)" onclick="kioskShowPersonalPermissionForm()" style="font-size:12px;color:var(--ac-600);font-weight:700">طلب إذن شخصي (مستقبلي)</a>
     <a href="javascript:void(0)" onclick="kioskShowMyPersonalPermissionRequests()" style="font-size:12px;color:var(--ac-600);font-weight:700">حالة طلبات إذني الشخصي</a>
-    <a href="javascript:void(0)" onclick="kioskRenderCodeEntry()" style="font-size:11.5px;color:var(--slate-500)">مش أنا؟ رجوع</a>
+    <a href="javascript:void(0)" onclick="kioskRenderCodeEntry()" style="font-size:11.5px;color:var(--slate-500)">لست أنا؟ رجوع</a>
   </div>`;
   document.getElementById('kiosk-body').innerHTML = bodyHtml;
 }
@@ -3740,7 +3740,7 @@ window.kioskShowMyLeaveRequests = async () => {
       </div>`).join('');
     document.getElementById('kiosk-body').innerHTML = `
       <div style="font-weight:800;font-size:14px;text-align:right;margin-bottom:10px">طلبات إجازتي</div>
-      ${rows || '<div class="empty"><p>لسه ما قدّمتش أي طلب إجازة</p></div>'}
+      ${rows || '<div class="empty"><p>لم تقدّم أي طلب إجازة بعد</p></div>'}
       <div style="margin-top:12px"><a href="javascript:void(0)" onclick="kioskLoadStatus()" style="font-size:11.5px;color:var(--slate-500)">→ رجوع</a></div>`;
   } catch(e) {
     body.innerHTML = `<div class="auth-err">${formatFirestoreError('خطأ', e)}</div><div style="margin-top:10px"><a href="javascript:void(0)" onclick="kioskLoadStatus()" style="font-size:11.5px">رجوع</a></div>`;
@@ -4161,7 +4161,7 @@ async function renderDaily() {
       if (endPerm && !co) {
         const windowEnd = hmToMin(effShift.checkoutFrom) - endPerm.minutes + 15;
         if (date < todayStr() || (isToday && nowM > windowEnd)) {
-          ppFlag = `<span class="badge bg-danger" title="عنده إذن شخصي معتمد بالمغادرة بدري ولسه مبصمش انصراف"><i class="fas fa-exclamation-triangle"></i> إذن شخصي مستخدمش</span>`;
+          ppFlag = `<span class="badge bg-danger" title="لديه إذن شخصي معتمد بالمغادرة المبكرة ولم يسجّل الانصراف بعد"><i class="fas fa-exclamation-triangle"></i> لم يُستخدم الإذن الشخصي</span>`;
         }
       }
       return `
@@ -4172,7 +4172,7 @@ async function renderDaily() {
           ${canDel?`<button class="btn btn-red btn-ic btn-xs" onclick="deleteAttendanceRecord('${chk.id}','${date}')"><i class="fas fa-trash"></i></button>`:''}
           ${co
             ? `<span class="badge bg-ac"><i class="fas fa-check-circle"></i> انصراف ${co.time}</span>${canDel?`<button class="btn btn-red btn-ic btn-xs" onclick="deleteAttendanceRecord('${co.id}','${date}')"><i class="fas fa-trash"></i></button>`:''}`
-            : `<span class="badge bg-slate"><i class="far fa-circle"></i> لسه ما سجلش انصراف</span>${manualBtn(e.id,'checkout')}`}
+            : `<span class="badge bg-slate"><i class="far fa-circle"></i> لم يسجّل الانصراف بعد</span>${manualBtn(e.id,'checkout')}`}
           ${ppFlag}
         </span>
       </div>`;
@@ -4185,7 +4185,7 @@ async function renderDaily() {
       if (startPerm) {
         const windowEnd = hmToMin(effShift.checkinTo) + startPerm.minutes + 15;
         if (date < todayStr() || (isToday && nowM > windowEnd)) {
-          ppFlag = `<span class="badge bg-danger" title="عنده إذن شخصي معتمد لتأخير الحضور ولسه مبصمش حضور"><i class="fas fa-exclamation-triangle"></i> إذن شخصي مستخدمش</span>`;
+          ppFlag = `<span class="badge bg-danger" title="لديه إذن شخصي معتمد لتأخير الحضور ولم يسجّل الحضور بعد"><i class="fas fa-exclamation-triangle"></i> لم يُستخدم الإذن الشخصي</span>`;
         }
       }
       if (mark) {
@@ -4339,7 +4339,7 @@ window.saveManualAttendance = async () => {
       } else {
         const shift = await getEffectiveShift(emp.shiftId, window._maDate, db);
         if (!shift) {
-          shiftWarning = 'تنبيه: وردية الموظف مش موجودة (يمكن اتحذفت)، فمقدرناش نحسب الوقت الإضافي أو التأخير تلقائيًا — الوقت اتسجّل بس من غير حساب.';
+          shiftWarning = 'تنبيه: وردية الموظف غير موجودة (ربما تم حذفها)، ولذلك لم يتم حساب الوقت الإضافي أو التأخير تلقائيًا — تم تسجيل الوقت فقط دون حساب.';
         } else {
         const tM = hmToMin(time);
         if (type==='checkin') {
@@ -4372,7 +4372,7 @@ window.saveManualAttendance = async () => {
     if (shiftWarning) {
       toast(shiftWarning, 'error');
     } else if (extra.pendingOvertimeMinutes) {
-      toast(`تم الحفظ — احتُسب ${overtimeDurationLabel(extra.pendingOvertimeMinutes)} وقت إضافي معلّق، هتلاقيها في "موافقات الوقت الإضافي"`, 'success');
+      toast(`تم الحفظ — تم احتساب ${overtimeDurationLabel(extra.pendingOvertimeMinutes)} وقتًا إضافيًا معلّقًا، ستجده في "موافقات الوقت الإضافي"`, 'success');
     } else {
       toast('تم حفظ البيانات بنجاح', 'success');
     }
@@ -4691,7 +4691,7 @@ async function commitMonthlySave(empId, period, options={}) {
 
     const wouldGoNegative = Object.values(empUpdates).some(v => v < 0);
     if (wouldGoNegative) {
-      if (options.silent) return { success:false, reason:'negative_balance', message:'رصيد الإجازة هيبقى سالب' };
+      if (options.silent) return { success:false, reason:'negative_balance', message:'سيصبح رصيد الإجازة سالبًا' };
       if (!(await confirmDialog('سيؤدي هذا التعديل إلى جعل رصيد إجازة الموظف سالبًا. هل ترغب في المتابعة؟'))) return { success:false, reason:'cancelled' };
     }
 
@@ -4725,7 +4725,7 @@ window.saveAllMonthlyRows = async () => {
   const period = document.getElementById('monthly-period').value;
   const activeEmps = _employees.filter(e=>e.category!=='rep' && e.category!=='driver' && employeeInPeriod(e,period));
   if (!activeEmps.length) { toast('لا يوجد موظفون لحفظهم في هذا الشهر', 'error'); return; }
-  if (!(await confirmDialog(`هيتم حفظ بيانات ${activeEmps.length} موظف دفعة واحدة. متابعة؟`))) return;
+  if (!(await confirmDialog(`سيتم حفظ بيانات ${activeEmps.length} موظف دفعة واحدة. هل تريد المتابعة؟`))) return;
 
   let okCount = 0;
   const skipped = [];
@@ -4738,9 +4738,12 @@ window.saveAllMonthlyRows = async () => {
   if (!skipped.length) {
     toast(`تم حفظ الكل بنجاح (${okCount} موظف)`, 'success');
   } else {
-    const list = skipped.map(s => `${s.name}: ${s.reason==='negative_balance' ? 'رصيد الإجازة هيبقى سالب' : (s.reason==='invalid_overtime' ? 'تنسيق الساعات غلط' : s.message||'خطأ')}`).join('\n');
+    const listHtml = skipped.map(s => {
+      const reasonLabel = s.reason==='negative_balance' ? 'سيصبح رصيد الإجازة سالبًا' : (s.reason==='invalid_overtime' ? 'تنسيق الساعات غير صحيح' : esc(s.message||'خطأ'));
+      return `<div style="padding:6px 0;border-bottom:1px solid var(--border)"><b>${esc(s.name)}</b> — ${reasonLabel}</div>`;
+    }).join('');
     toast(`تم حفظ ${okCount} موظف. اتخطى ${skipped.length}: راجع الرسالة التفصيلية`, 'error');
-    alert(`الموظفين اللي اتخطوا ولازم تحفظهم يدوي بعد المراجعة:\n\n${list}`);
+    await infoDialog(`<div style="font-weight:700;margin-bottom:10px">الموظفين اللي اتخطوا ولازم تحفظهم يدوي بعد المراجعة:</div>${listHtml}`);
   }
 };
 
@@ -5419,7 +5422,7 @@ window.renderReportResults = renderReportResults;
 
 function attendanceDayLabel(d) {
   if (d.checkinTime) {
-    return `حضر الساعة ${d.checkinTime}` + (d.checkoutTime ? ` — انصرف الساعة ${d.checkoutTime}` : ' (لسه ما سجّلش انصراف)');
+    return `حضر الساعة ${d.checkinTime}` + (d.checkoutTime ? ` — انصرف الساعة ${d.checkoutTime}` : ' (لم يسجّل الانصراف بعد)');
   }
   return d.status==='leave' ? 'إجازة من الرصيد' : d.status==='deduct' ? 'خصم يوم (جزاء)' : d.status==='absent' ? 'غياب بدون إذن' : 'لا يوجد سجل';
 }
@@ -5615,10 +5618,10 @@ async function renderLeaves() {
       </div>`;
 
     const extra = r.status==='approved'
-      ? `<div style="font-size:11.5px;color:var(--slate-500);margin-top:4px">من الرصيد: ${r.daysFromBalance} يوم${r.daysUnpaid>0?` — خصم من المرتب: ${r.daysUnpaid} يوم`:''}${r.sixMonthEligible===false && !r.sixMonthOverride?' (لسه ماكملش 6 شهور خدمة، فاتحسبت كلها بالخصم)':r.sixMonthOverride?' (اتصرفت من الرصيد بتجاوز شرط الـ6 شهور بقرار الأدمن)':''}</div>` : '';
+      ? `<div style="font-size:11.5px;color:var(--slate-500);margin-top:4px">من الرصيد: ${r.daysFromBalance} يوم${r.daysUnpaid>0?` — خصم من المرتب: ${r.daysUnpaid} يوم`:''}${r.sixMonthEligible===false && !r.sixMonthOverride?' (لم يكمل 6 أشهر خدمة بعد، فتم احتسابها بالكامل خصمًا من المرتب)':r.sixMonthOverride?' (تم الصرف من الرصيد بتجاوز شرط الـ6 أشهر بقرار الإدارة)':''}</div>` : '';
 
     const sixMonthsWarning = (emp && r.status==='pending' && !hasSixMonthsService(emp, r.dateFrom))
-      ? `<div style="font-size:11.5px;color:var(--warn-600);margin-top:4px"><i class="fas fa-exclamation-triangle"></i> الموظف لسه ماكملش 6 شهور خدمة في تاريخ الإجازة — هتتحسب بالخصم من المرتب مباشرة مش من الرصيد${CU.role==='admin'?`
+      ? `<div style="font-size:11.5px;color:var(--warn-600);margin-top:4px"><i class="fas fa-exclamation-triangle"></i> لم يكمل الموظف 6 أشهر خدمة حتى تاريخ الإجازة — ستُحتسب خصمًا مباشرًا من المرتب وليس من الرصيد${CU.role==='admin'?`
         <label style="display:inline-flex;align-items:center;gap:4px;margin-right:10px;cursor:pointer;font-weight:700"><input type="checkbox" id="lv-override-${r.id}"> تجاوز الشرط واصرفها من الرصيد</label>`:''}</div>` : '';
 
     let actions = '';
@@ -5781,7 +5784,7 @@ window.deleteLeaveRequest = async (id) => {
   if (!(await confirmDialog('هل أنت متأكد من حذف طلب الإجازة هذا نهائيًا؟ لو كان الطلب معتمد، هيترجع رصيد الموظف ويتصحح الكشف الشهري تلقائيًا.'))) return;
   try {
     const rdoc = await getDoc(doc(db,'leaveRequests',id));
-    if (!rdoc.exists()) { toast('الطلب مش موجود (يمكن اتحذف بالفعل)', 'error'); return; }
+    if (!rdoc.exists()) { toast('الطلب غير موجود (ربما تم حذفه بالفعل)', 'error'); return; }
     const r = rdoc.data();
     let restored = false;
     if (r.status === 'approved' && ((r.daysFromBalance||0) > 0 || (r.daysUnpaid||0) > 0)) {
@@ -6375,7 +6378,7 @@ window.saveUser = async () => {
   try {
     if (window._editUserId) {
       await updateDoc(doc(db,'users',window._editUserId), { displayName:name, role, departmentId, permissions });
-      toast('تم تحديث بيانات المستخدم' + (pass?' (كلمة المرور مش بتتغير من هنا، غيّرها من Firebase Console)':''), 'success');
+      toast('تم تحديث بيانات المستخدم' + (pass?' (لا يتم تغيير كلمة المرور من هنا، يُرجى تغييرها من Firebase Console)':''), 'success');
     } else {
       if (!pass || pass.length<6) { toast('يُرجى إدخال كلمة مرور لا تقل عن 6 أحرف للمستخدم الجديد', 'error'); return; }
       await signOut(secAuth).catch(()=>{});
@@ -6419,6 +6422,21 @@ window.confirmDialog = (message) => {
   return new Promise(resolve => {
     _confirmResolve = resolve;
     document.getElementById('confirm-message').textContent = message;
+    document.getElementById('confirm-cancel-btn').style.display = '';
+    document.getElementById('confirm-ok-btn').textContent = 'تأكيد';
+    openM('mo-confirm');
+    setTimeout(()=>document.getElementById('confirm-ok-btn')?.focus(), 30);
+  });
+};
+// نافذة معلومات (بدون إلغاء/تأكيد — زرار "حسنًا" بس) بنفس تصميم البرنامج، بدل alert() الافتراضية
+// بتاعة المتصفح. بتقبل HTML عشان تقدر تعرض قائمة منسّقة (مسؤولية المستدعي إنه يعمل esc() لأي
+// نص جاي من بيانات المستخدم قبل ما يحطه جوه الرسالة)
+window.infoDialog = (messageHtml) => {
+  return new Promise(resolve => {
+    _confirmResolve = () => resolve();
+    document.getElementById('confirm-message').innerHTML = messageHtml;
+    document.getElementById('confirm-cancel-btn').style.display = 'none';
+    document.getElementById('confirm-ok-btn').textContent = 'حسنًا';
     openM('mo-confirm');
     setTimeout(()=>document.getElementById('confirm-ok-btn')?.focus(), 30);
   });
