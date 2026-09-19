@@ -635,6 +635,8 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
         <div class="fg"><label class="fl">رصيد اعتيادية (يوم/سنة)</label><input class="fc" type="number" id="emp-leave-regular" placeholder="14"></div>
         <div class="fg"><label class="fl">رصيد عارضة (يوم/سنة)</label><input class="fc" type="number" id="emp-leave-casual" placeholder="7"></div>
         <div class="fg"><label class="fl">رصيد جواز (يُدار يدويًا)</label><input class="fc" type="number" id="emp-leave-marriage" placeholder="15"></div>
+        <div class="fg"><label class="fl">شهور استحقاق الإجازة من الرصيد (افتراضي 6)</label><input class="fc" type="number" id="emp-leave-eligibility-months" placeholder="6" min="0"></div>
+        <div class="fg"><label class="fl">ساعات الإذن الشخصي شهريًا (افتراضي 3)</label><input class="fc" type="number" id="emp-permission-hours" placeholder="3" min="0" step="0.5"></div>
       </div>
       <div class="frow c2">
         <div class="fg"><label class="fl">رقم الهاتف</label><input class="fc" id="emp-phone" placeholder="01xxxxxxxxx"></div>
@@ -655,8 +657,13 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
       <div id="emp-salary-preview" style="font-size:12.5px;color:var(--ac-700);font-weight:700;margin:-4px 0 10px"></div>
       <div id="emp-salary-history-btn-wrap" style="margin:-4px 0 12px"></div>
       <div class="frow c2">
-        <div class="fg"><label class="fl">الحالة</label><select class="fc" id="emp-status" onchange="document.getElementById('emp-resign-wrap').style.display = this.value==='resigned' ? '' : 'none'"><option value="active">شغال</option><option value="resigned">مستقيل</option></select></div>
+        <div class="fg"><label class="fl">الحالة</label><select class="fc" id="emp-status" onchange="onEmpStatusChange(this.value)"><option value="active">شغال</option><option value="resigned">مستقيل</option></select></div>
         <div class="fg" id="emp-resign-wrap" style="display:none"><label class="fl">تاريخ الاستقالة</label><input class="fc" type="date" id="emp-resign-date"></div>
+        <div class="fg" id="emp-rejoin-wrap" style="display:none">
+          <label class="fl">تاريخ الرجوع من الاستقالة</label>
+          <input class="fc" type="date" id="emp-rejoin-date">
+          <div style="font-size:11px;color:var(--slate-500);margin-top:4px">هيتم تجميد الشهور من تاريخ الاستقالة لحد التاريخ ده (متظهرش في السجلات)، رصيد إجازاته هيفضل زي ما كان وقت الاستقالة، وهيتطلب منه يسجل بصمة جديدة عند أول حضور</div>
+        </div>
       </div>
       <div class="frow c2">
         <div class="fg" style="display:flex;align-items:flex-end;padding-bottom:9px">
@@ -2249,6 +2256,8 @@ window.openEmpModal = (id=null) => {
   document.getElementById('emp-leave-regular').value = leaveBalanceOf(e,'regular');
   document.getElementById('emp-leave-casual').value = leaveBalanceOf(e,'casual');
   document.getElementById('emp-leave-marriage').value = leaveBalanceOf(e,'marriage');
+  document.getElementById('emp-leave-eligibility-months').value = e?.leaveEligibilityMonths ?? '';
+  document.getElementById('emp-permission-hours').value = (e?.permissionMinutesPerCycle != null) ? (e.permissionMinutesPerCycle/60) : '';
   document.getElementById('emp-socins').value = e?.socialInsurance ?? '';
   document.getElementById('emp-medins').value = e?.medicalInsurance ?? '';
   document.getElementById('emp-insurance-start').value = e?.insuranceStartDate || '';
@@ -2261,8 +2270,11 @@ window.openEmpModal = (id=null) => {
   document.getElementById('emp-phone').value = e?.phone || '';
   document.getElementById('emp-nid').value = e?.nationalId || '';
   document.getElementById('emp-status').value = e?.status || 'active';
+  window._editEmpOriginalStatus = e?.status || 'active';
   document.getElementById('emp-resign-date').value = e?.resignDate || '';
   document.getElementById('emp-resign-wrap').style.display = (e?.status==='resigned') ? '' : 'none';
+  document.getElementById('emp-rejoin-date').value = '';
+  document.getElementById('emp-rejoin-wrap').style.display = 'none';
   document.getElementById('emp-ismanager').checked = !!e?.isManager;
   const pkWrap = document.getElementById('emp-passkeys-wrap');
   if (id) {
@@ -2316,18 +2328,26 @@ function getSalaryConfigForDate(emp, dateStr) {
   return { salary: emp.salary||0, incomeTax: emp.incomeTax||0, incentiveBase: emp.incentiveBase||0, socialInsurance: emp.socialInsurance||0, medicalInsurance: emp.medicalInsurance||0 };
 }
 // إعدادات معاملات الحساب (الساعة الإضافية، اليوم الإضافي، الغياب) السارية فعليًا في تاريخ معيّن —
-// من سجل تعديلات إعدادات الشركة (settings/company.policyHistory) لو موجود، وإلا القيم الافتراضية
-// اللي كانت مكتوبة صلب الكود قبل ما ميزة الإعدادات دي تتضاف (1.7 / 2 / 2) — عشان أي شهر قديم
-// اتحسب قبل إضافة الميزة دي يفضل بالظبط زي ما هو، وأي شهر جديد ماتغيّرش سياسته يستخدم نفس الأرقام
-// من غير ما حد يحتاج يضيف سجل يدوي. القيم دي مش خاصة بموظف معيّن — بتخص الشركة كلها.
-function getPolicyConfigForDate(dateStr) {
+// دلوقتي قابلة للتخصيص لكل قسم لوحده (دفعة 7): بندوّر الأول على سجل القسم نفسه (departments/{id}.policyHistory)،
+// ولو القسم ملوش سجل خاص بيه (أو الموظف من غير قسم أصلاً)، نرجع لسجل الشركة العام
+// (settings/company.policyHistory) زي ما كان دايمًا — يعني أي قسم مش اتخصص له حاجة يفضل شغال
+// بالظبط زي ما هو من غير أي تغيير في السلوك. ولو مفيش سجل خالص في الحالتين، القيم الافتراضية
+// المكتوبة صلب الكود (1.7 / 2 / 2).
+function getPolicyConfigForDate(dateStr, departmentId) {
   const defaults = { overtimeMultiplier: 1.7, extraDayMultiplier: 2, absenceMultiplier: 2 };
-  const history = _companySettings && _companySettings.policyHistory;
-  if (Array.isArray(history) && history.length) {
+  const findBest = (history) => {
+    if (!Array.isArray(history) || !history.length) return null;
     let best = null;
     for (const h of history) { if (h.effectiveFrom <= dateStr && (!best || h.effectiveFrom > best.effectiveFrom)) best = h; }
-    if (best) return { ...defaults, ...best };
+    return best;
+  };
+  if (departmentId) {
+    const dept = _departments.find(d=>d.id===departmentId);
+    const deptBest = dept && findBest(dept.policyHistory);
+    if (deptBest) return { ...defaults, ...deptBest };
   }
+  const companyBest = findBest(_companySettings && _companySettings.policyHistory);
+  if (companyBest) return { ...defaults, ...companyBest };
   return defaults;
 }
 // بيحوّل أي تاريخ حقيقي لرقمه الافتراضي (1-30) جوه الدورة الشهرية اللي هو واقع فيها —
@@ -2344,8 +2364,23 @@ function daysWorkedRatioInCycle(emp, periodStr) {
   const { startDate, endDate } = cycleRangeForPeriod(periodStr);
   let startDay = 1;
   if (emp.hireDate && emp.hireDate >= startDate && emp.hireDate <= endDate) startDay = virtualCycleDayOf(emp.hireDate);
+  // ⚠️ دفعة 7: لو الموظف رجع من استقالة سابقة وتاريخ رجوعه واقع جوه نفس الدورة دي، نبدأ عدّ أيامه
+  // من يوم الرجوع نفسه، مش من أول الدورة (زي ما بنعمل بالظبط مع hireDate الأصلي)
+  if (Array.isArray(emp.employmentGaps)) {
+    for (const g of emp.employmentGaps) {
+      if (g.to && g.to >= startDate && g.to <= endDate) startDay = Math.max(startDay, virtualCycleDayOf(g.to));
+    }
+  }
   let endDay = 30;
   if (emp.status==='resigned' && emp.resignDate && emp.resignDate >= startDate && emp.resignDate <= endDate) endDay = virtualCycleDayOf(emp.resignDate);
+  // ⚠️ دفعة 7 (تصحيح): فجوة استقالة سابقة (اتقفلت بالرجوع بعد كده) ابتدت جوه نفس الدورة دي —
+  // لازم نقطع العدّ عند يوم الاستقالة القديم ده برضو، وإلا شهر الاستقالة القديم هيتحسب كامل غلط
+  // بعد ما resignDate بترجع تتصفّر عند الاسترجاع.
+  if (Array.isArray(emp.employmentGaps)) {
+    for (const g of emp.employmentGaps) {
+      if (g.from && g.from >= startDate && g.from <= endDate) endDay = Math.min(endDay, virtualCycleDayOf(g.from));
+    }
+  }
   const daysWorked = Math.max(0, endDay - startDay + 1);
   return daysWorked / 30;
 }
@@ -2373,7 +2408,7 @@ function computeIncentive(emp, evalScorePercent, periodStr) {
 function computeMonthlyDeduction(emp, sheet, periodStr) {
   if (!sheet) return 0;
   const asOfDate = periodStr ? cycleRangeForPeriod(periodStr).endDate : todayStr();
-  const policy = getPolicyConfigForDate(asOfDate);
+  const policy = getPolicyConfigForDate(asOfDate, emp.departmentId);
   const days = (sheet.absence||0)*policy.absenceMultiplier + (sheet.leaveUnpaid||0) + (sheet.penaltyDays||0);
   if (!days) return 0;
   const cfg = periodStr ? getSalaryConfigForDate(emp, asOfDate) : emp;
@@ -2385,7 +2420,7 @@ function computeExtraDaysAmount(emp, sheet, periodStr) {
   if (!sheet || !sheet.extraDays) return 0;
   const asOfDate = periodStr ? cycleRangeForPeriod(periodStr).endDate : todayStr();
   const cfg = periodStr ? getSalaryConfigForDate(emp, asOfDate) : emp;
-  const policy = getPolicyConfigForDate(asOfDate);
+  const policy = getPolicyConfigForDate(asOfDate, emp.departmentId);
   const dailyRate = (cfg.salary||0)/30;
   return Math.round(sheet.extraDays*dailyRate*policy.extraDayMultiplier*100)/100;
 }
@@ -2401,7 +2436,7 @@ function computeOvertimeAmount(emp, sheet, periodStr) {
   if (!sheet || !sheet.overtimeHours) return 0;
   const asOfDate = periodStr ? cycleRangeForPeriod(periodStr).endDate : todayStr();
   const cfg = periodStr ? getSalaryConfigForDate(emp, asOfDate) : emp;
-  const policy = getPolicyConfigForDate(asOfDate);
+  const policy = getPolicyConfigForDate(asOfDate, emp.departmentId);
   const hourlyRate = ((cfg.salary||0)/30/8)*policy.overtimeMultiplier;
   return Math.round(sheet.overtimeHours*hourlyRate*100)/100;
 }
@@ -2559,17 +2594,35 @@ window.deleteSalaryHistoryEntry = async (empId, index) => {
 };
 
 window.openPolicySettingsModal = () => {
+  window._policySettingsDeptId = null; // نبدأ دايمًا من "الإعدادات العامة للشركة"
   renderPolicySettingsModal();
   openM('mo-policy-settings');
 };
+window.onPolicySettingsDeptChange = (val) => {
+  window._policySettingsDeptId = val || null;
+  renderPolicySettingsModal();
+};
+// ⚠️ ميزة (دفعة 7): المعاملات بقت قابلة للتخصيص لكل قسم لوحده. اختيار "الإعدادات العامة للشركة"
+// (القيمة الفاضية) بيعدّل نفس settings/company.policyHistory القديم زي ما هو دايمًا — وأي قسم
+// ملوش سجل خاص بيه بيرثه تلقائيًا (زي ما getPolicyConfigForDate بتعمل). اختيار قسم معيّن بيعدّل
+// departments/{id}.policyHistory بتاعه هو بس، مستقل تمامًا عن باقي الأقسام والإعدادات العامة.
 function renderPolicySettingsModal() {
-  const history = Array.isArray(_companySettings && _companySettings.policyHistory) ? [..._companySettings.policyHistory] : [];
+  const deptId = window._policySettingsDeptId;
+  const dept = deptId ? _departments.find(d=>d.id===deptId) : null;
+  const history = deptId
+    ? (Array.isArray(dept && dept.policyHistory) ? [...dept.policyHistory] : [])
+    : (Array.isArray(_companySettings && _companySettings.policyHistory) ? [..._companySettings.policyHistory] : []);
   history.sort((a,b)=> a.effectiveFrom < b.effectiveFrom ? 1 : -1); // الأحدث فوق
   const canDelete = hasPerm('settings_manage');
 
+  const deptOptions = `<option value="">— الإعدادات العامة للشركة (الافتراضية) —</option>` +
+    _departments.map(d=>`<option value="${d.id}" ${deptId===d.id?'selected':''}>${esc(d.name)}</option>`).join('');
+
   let rowsHtml = '';
   if (!history.length) {
-    rowsHtml = `<div class="empty" style="padding:14px"><p>لا توجد تعديلات مسجّلة بعد — يتم تطبيق القيم الافتراضية (الساعة الإضافية ×1.7، اليوم الإضافي ×2، الغياب ×2) على جميع الفترات</p></div>`;
+    rowsHtml = deptId
+      ? `<div class="empty" style="padding:14px"><p>القسم ده مالوش سجل معاملات خاص بيه — شغال حاليًا بإعدادات الشركة العامة. أي تعديل هنا هيخصص القسم ده بس من غير ما يأثر على باقي الأقسام.</p></div>`
+      : `<div class="empty" style="padding:14px"><p>لا توجد تعديلات مسجّلة بعد — يتم تطبيق القيم الافتراضية (الساعة الإضافية ×1.7، اليوم الإضافي ×2، الغياب ×2) على كل الأقسام اللي مالهاش سجل خاص</p></div>`;
   } else {
     rowsHtml = `<div style="max-height:220px;overflow-y:auto;margin-bottom:14px">` + history.map((h,i)=>`
       <div style="border:1px solid var(--slate-200);border-radius:8px;padding:10px 12px;margin-bottom:6px;font-size:12px">
@@ -2588,9 +2641,12 @@ function renderPolicySettingsModal() {
   const cur = history.find(h=>h.effectiveFrom<=todayStr()) || { overtimeMultiplier:1.7, extraDayMultiplier:2, absenceMultiplier:2 };
   const body = document.getElementById('policy-settings-body');
   body.innerHTML = `
+    <div class="fg"><label class="fl">القسم</label>
+      <select class="fc" id="ps-dept" onchange="onPolicySettingsDeptChange(this.value)">${deptOptions}</select>
+    </div>
     ${rowsHtml}
     <div style="border-top:1px solid var(--slate-200);padding-top:12px;margin-top:4px">
-      <div style="font-weight:800;font-size:13px;margin-bottom:8px">تعديل جديد</div>
+      <div style="font-weight:800;font-size:13px;margin-bottom:8px">تعديل جديد ${dept?`— ${esc(dept.name)}`:'— عام للشركة'}</div>
       <div class="fg"><label class="fl">تاريخ السريان</label><input class="fc" type="date" id="ps-effective"></div>
       <div class="frow c2">
         <div class="fg"><label class="fl">معامل الساعة الإضافية</label><input class="fc" type="number" step="0.01" min="0" id="ps-overtime" value="${cur.overtimeMultiplier ?? 1.7}"></div>
@@ -2613,28 +2669,54 @@ window.savePolicyHistoryEntry = async () => {
     note: document.getElementById('ps-note').value.trim(),
     changedBy: CU.displayName||CU.email, changedAt: Date.now()
   };
-  const history = Array.isArray(_companySettings && _companySettings.policyHistory) ? [..._companySettings.policyHistory, newEntry] : [newEntry];
+  const deptId = window._policySettingsDeptId;
   try {
-    await setDoc(doc(db,'settings','company'), { policyHistory: history }, { merge: true });
-    _companySettings = { ..._companySettings, policyHistory: history };
-    await logAudit('تعديل معاملات حساب المرتب', 'company', 'إعدادات الشركة', { effectiveFrom, ...newEntry });
+    if (deptId) {
+      const dept = _departments.find(d=>d.id===deptId);
+      const history = Array.isArray(dept && dept.policyHistory) ? [...dept.policyHistory, newEntry] : [newEntry];
+      await updateDoc(doc(db,'departments',deptId), { policyHistory: history });
+      await logAudit('تعديل معاملات حساب المرتب (قسم)', deptId, dept?.name||'', { effectiveFrom, ...newEntry });
+    } else {
+      const history = Array.isArray(_companySettings && _companySettings.policyHistory) ? [..._companySettings.policyHistory, newEntry] : [newEntry];
+      await setDoc(doc(db,'settings','company'), { policyHistory: history }, { merge: true });
+      _companySettings = { ..._companySettings, policyHistory: history };
+      await logAudit('تعديل معاملات حساب المرتب (عام)', 'company', 'إعدادات الشركة', { effectiveFrom, ...newEntry });
+    }
     toast('تم حفظ التعديل بنجاح — الشهور السابقة لم تتأثر وبقيت كما هي', 'success');
     renderPolicySettingsModal();
   } catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
 window.deletePolicyHistoryEntry = async (index) => {
   if (!(await confirmDialog('هل أنت متأكد من حذف هذا التعديل من السجل التاريخي؟ سيؤثر ذلك على حسابات أي فترة كانت تعتمد عليه.'))) return;
-  const history = Array.isArray(_companySettings && _companySettings.policyHistory) ? [..._companySettings.policyHistory] : [];
+  const deptId = window._policySettingsDeptId;
+  const dept = deptId ? _departments.find(d=>d.id===deptId) : null;
+  const history = deptId
+    ? (Array.isArray(dept && dept.policyHistory) ? [...dept.policyHistory] : [])
+    : (Array.isArray(_companySettings && _companySettings.policyHistory) ? [..._companySettings.policyHistory] : []);
   const historySorted = [...history].sort((a,b)=> a.effectiveFrom < b.effectiveFrom ? 1 : -1);
   const toRemove = historySorted[index];
   const newHistory = history.filter(h => h !== toRemove);
   try {
-    await setDoc(doc(db,'settings','company'), { policyHistory: newHistory }, { merge: true });
-    _companySettings = { ..._companySettings, policyHistory: newHistory };
-    await logAudit('حذف سجل معاملات حساب مرتب', 'company', 'إعدادات الشركة', { removed: toRemove });
+    if (deptId) {
+      await updateDoc(doc(db,'departments',deptId), { policyHistory: newHistory });
+      await logAudit('حذف سجل معاملات حساب مرتب (قسم)', deptId, dept?.name||'', { removed: toRemove });
+    } else {
+      await setDoc(doc(db,'settings','company'), { policyHistory: newHistory }, { merge: true });
+      _companySettings = { ..._companySettings, policyHistory: newHistory };
+      await logAudit('حذف سجل معاملات حساب مرتب (عام)', 'company', 'إعدادات الشركة', { removed: toRemove });
+    }
     toast('تم الحذف بنجاح', 'success');
     renderPolicySettingsModal();
   } catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
+};
+
+// ⚠️ ميزة (دفعة 7): استرجاع موظف من الاستقالة — لما الحالة ترجع من "مستقيل" لـ"شغال" لموظف كان
+// أصلاً مستقيل (مش موظف جديد بيتسجل كـ"شغال" من الأول)، لازم يحدد تاريخ رجوع صريح بدل ما النظام
+// يفترض أي حاجة، عشان الشهور اللي كان غايب فيها تتجمّد وميتحسبش له/عليه فيها أي حاجة.
+window.onEmpStatusChange = (val) => {
+  document.getElementById('emp-resign-wrap').style.display = val==='resigned' ? '' : 'none';
+  const isReinstating = val==='active' && window._editEmpOriginalStatus==='resigned';
+  document.getElementById('emp-rejoin-wrap').style.display = isReinstating ? '' : 'none';
 };
 
 window.saveEmployee = async () => {
@@ -2646,6 +2728,12 @@ window.saveEmployee = async () => {
   if (code) {
     const dup = _employees.find(x=>x.code===code && x.id!==window._editEmpId);
     if (dup) { toast(`كود الموظف هذا مستخدم بالفعل مع "${esc(dup.name)}"`, 'error'); return; }
+  }
+  const newStatus = document.getElementById('emp-status').value;
+  const isReinstating = newStatus==='active' && window._editEmpOriginalStatus==='resigned';
+  const oldEmpForReinstate = isReinstating ? _employees.find(x=>x.id===window._editEmpId) : null;
+  if (isReinstating && !document.getElementById('emp-rejoin-date').value) {
+    toast('يُرجى تحديد تاريخ الرجوع من الاستقالة', 'error'); return;
   }
   const isManager = document.getElementById('emp-ismanager').checked;
   const data = {
@@ -2659,6 +2747,8 @@ window.saveEmployee = async () => {
     leaveBalanceRegular: parseFloat(document.getElementById('emp-leave-regular').value ?? 14),
     leaveBalanceCasual: parseFloat(document.getElementById('emp-leave-casual').value ?? 7),
     leaveBalanceMarriage: parseFloat(document.getElementById('emp-leave-marriage').value ?? 15),
+    leaveEligibilityMonths: document.getElementById('emp-leave-eligibility-months').value !== '' ? parseFloat(document.getElementById('emp-leave-eligibility-months').value) : null,
+    permissionMinutesPerCycle: document.getElementById('emp-permission-hours').value !== '' ? Math.round(parseFloat(document.getElementById('emp-permission-hours').value)*60) : null,
     socialInsurance: parseFloat(document.getElementById('emp-socins').value) || 0,
     medicalInsurance: parseFloat(document.getElementById('emp-medins').value) || 0,
     insuranceStartDate: document.getElementById('emp-insurance-start').value || null,
@@ -2666,10 +2756,22 @@ window.saveEmployee = async () => {
     incentiveBase: parseFloat(document.getElementById('emp-incentive').value) || 0,
     phone: document.getElementById('emp-phone').value.trim(),
     nationalId: document.getElementById('emp-nid').value.trim(),
-    status: document.getElementById('emp-status').value,
-    resignDate: document.getElementById('emp-status').value==='resigned' ? (document.getElementById('emp-resign-date').value || null) : null,
+    status: newStatus,
+    resignDate: newStatus==='resigned' ? (document.getElementById('emp-resign-date').value || null) : null,
     isManager
   };
+  // ⚠️ ميزة (دفعة 7): استرجاع من الاستقالة — بنقفل فترة الغياب دي في سجل تاريخي (employmentGaps)
+  // بدل ما نمسح تاريخ الاستقالة، عشان الشهور اللي بينهم تفضل متجمّدة تمامًا في كل الحسابات، حتى لو
+  // الموظف استقال ورجع أكتر من مرة عبر السنين. الرصيد مابيتلمسش خالص، وبصمته بتتمسح إجباريًا.
+  if (isReinstating && oldEmpForReinstate) {
+    const rejoinDate = document.getElementById('emp-rejoin-date').value;
+    const gaps = Array.isArray(oldEmpForReinstate.employmentGaps) ? [...oldEmpForReinstate.employmentGaps] : [];
+    if (oldEmpForReinstate.resignDate) gaps.push({ from: oldEmpForReinstate.resignDate, to: rejoinDate });
+    data.employmentGaps = gaps;
+    data.rejoinDate = rejoinDate;
+    data.resignDate = null; // اتقفلت كفجوة تاريخية في employmentGaps، مبقتش "استقالة حالية مفتوحة"
+    data.passkeys = [];
+  }
   try {
     let empId = window._editEmpId;
     const oldCode = empId ? (_employees.find(x=>x.id===empId)?.code || null) : null;
@@ -2899,19 +3001,28 @@ function leaveBalanceOf(emp, type) {
 // - مستقيل من غير تاريخ استقالة مسجّل: يُستبعد دائمًا (نفس السلوك القديم قبل إضافة الحقل، لحد ما يتسجل تاريخه)
 function employeeHiredBy(emp, dateStr) {
   if (emp.hireDate && emp.hireDate > dateStr) return false;
+  // ⚠️ دفعة 7: التاريخ ده واقع جوه فجوة استقالة سابقة اتقفلت بالرجوع — الموظف مش مُعتبر موجود فيها خالص
+  if (Array.isArray(emp.employmentGaps)) {
+    for (const g of emp.employmentGaps) {
+      if (g.from && g.to && dateStr > g.from && dateStr < g.to) return false;
+    }
+  }
   if (emp.status==='resigned') {
     if (!emp.resignDate) return false;
     if (emp.resignDate < dateStr) return false;
   }
   return true;
 }
-// هل الموظف أكمل 6 شهور خدمة في تاريخ معيّن؟ (شرط استحقاق الإجازة من الرصيد — الاعتيادية والعارضة والجواز)
-function hasSixMonthsService(emp, dateStr) {
+// هل الموظف أكمل مدة استحقاق الإجازة من الرصيد؟ (قابلة للتخصيص لكل موظف، افتراضي 6 شهور لو مش محددة)
+// إجازة الجواز مستثناة دايمًا من الشرط ده (متاحة فورًا بغض النظر عن مدة الخدمة)
+function hasSixMonthsService(emp, dateStr, leaveType) {
+  if (leaveType === 'marriage') return true;
   if (!emp.hireDate) return true; // بيانات قديمة من غير تاريخ تعيين مسجّل — نعتبره مستحق توافقاً مع الوضع الحالي
+  const months = (emp.leaveEligibilityMonths != null && emp.leaveEligibilityMonths !== '') ? Number(emp.leaveEligibilityMonths) : 6;
   const [hy,hm,hd] = emp.hireDate.split('-').map(Number);
-  let ty = hy, tm = hm + 6;
-  if (tm > 12) { tm -= 12; ty += 1; }
-  // لو الموظف اتعين يوم 29/30/31 وشهر الاستحقاق (6 شهور بعدها) عدد أيامه أقل، نثبّت على آخر يوم في الشهر
+  let ty = hy, tm = hm + months;
+  while (tm > 12) { tm -= 12; ty += 1; }
+  // لو الموظف اتعين يوم 29/30/31 وشهر الاستحقاق (بعد المدة دي) عدد أيامه أقل، نثبّت على آخر يوم في الشهر
   // بدل ما JavaScript يلف تلقائي لأيام في الشهر اللي بعده (زي 31 أغسطس ما ترجعش أول مارس غلط)
   const lastDayOfTargetMonth = new Date(ty, tm, 0).getDate();
   const eligibleDay = Math.min(hd, lastDayOfTargetMonth);
@@ -3025,31 +3136,46 @@ function b64urlToBuf(str) {
 }
 function randChallenge() { const b=new Uint8Array(32); crypto.getRandomValues(b); return b; }
 
+let _webauthnBusy = false;
 async function webauthnRegister(emp) {
-  if (!window.PublicKeyCredential) throw new Error('هذا الجهاز أو المتصفح لا يدعم تسجيل الدخول بالبصمة (WebAuthn)');
-  const cred = await navigator.credentials.create({ publicKey: {
-    challenge: randChallenge(),
-    rp: { id: location.hostname, name: 'الساقية - الشؤون الإدارية' },
-    user: { id: new TextEncoder().encode(emp.id), name: emp.code, displayName: emp.name },
-    pubKeyCredParams: [{type:'public-key',alg:-7},{type:'public-key',alg:-257}],
-    authenticatorSelection: { authenticatorAttachment:'platform', userVerification:'required', residentKey:'required', requireResidentKey:true },
-    timeout: 60000, attestation: 'none'
-  }});
-  if (!cred) throw new Error('اتلغى تسجيل البصمة');
-  return { id: bufToB64url(cred.rawId), label: 'جهاز مسجّل بتاريخ ' + new Date().toLocaleDateString('ar-EG'), createdAt: Date.now() };
+  // ⚠️ إصلاح باگ (دفعة 6): مفيش حاجة كانت بتمنع فتح طلب بصمة جديد (تسجيل أو تحقق) لو فيه طلب
+  // بصمة سابق لسه شغال ومستني رد المستخدم — زرار "تسجيل حضور/انصراف" بس كان بيتقفل وقت التنفيذ،
+  // لكن باقي الروابط (سجلي السنوي، طلب إجازة، إلخ) كانت فاضلة شغالة، فلو المستخدم ضغط على واحد
+  // منها وهو لسه مستني نافذة البصمة الأولى، المتصفح كان بيرفض الطلب التاني برسالته الخاصة
+  // "A request is already pending." من غير أي توضيح. العلم ده بيغطي كل نقاط الاستخدام السبعة
+  // في مكان واحد بدل ما نحمي كل زرار/رابط لوحده.
+  if (_webauthnBusy) throw new Error('في طلب بصمة سابق لسه شغال — استنى لحظة لغاية ما يخلص وحاول تاني');
+  _webauthnBusy = true;
+  try {
+    if (!window.PublicKeyCredential) throw new Error('هذا الجهاز أو المتصفح لا يدعم تسجيل الدخول بالبصمة (WebAuthn)');
+    const cred = await navigator.credentials.create({ publicKey: {
+      challenge: randChallenge(),
+      rp: { id: location.hostname, name: 'الساقية - الشؤون الإدارية' },
+      user: { id: new TextEncoder().encode(emp.id), name: emp.code, displayName: emp.name },
+      pubKeyCredParams: [{type:'public-key',alg:-7},{type:'public-key',alg:-257}],
+      authenticatorSelection: { authenticatorAttachment:'platform', userVerification:'required', residentKey:'required', requireResidentKey:true },
+      timeout: 60000, attestation: 'none'
+    }});
+    if (!cred) throw new Error('اتلغى تسجيل البصمة');
+    return { id: bufToB64url(cred.rawId), label: 'جهاز مسجّل بتاريخ ' + new Date().toLocaleDateString('ar-EG'), createdAt: Date.now() };
+  } finally { _webauthnBusy = false; }
 }
 
 async function webauthnVerify(emp) {
-  if (!window.PublicKeyCredential) throw new Error('هذا الجهاز أو المتصفح لا يدعم تسجيل الدخول بالبصمة (WebAuthn)');
-  const allow = (emp.passkeys||[]).map(p=>({ id: b64urlToBuf(p.id), type:'public-key' }));
-  const cred = await navigator.credentials.get({ publicKey: {
-    challenge: randChallenge(), rpId: location.hostname, allowCredentials: allow, userVerification:'required', timeout:60000
-  }});
-  if (!cred) throw new Error('فشل التحقق من البصمة');
-  const gotId = bufToB64url(cred.rawId);
-  const match = (emp.passkeys||[]).find(p=>p.id===gotId);
-  if (!match) throw new Error('هذه البصمة غير مسجّلة على حسابك — يُرجى مراجعة الشؤون الإدارية');
-  return true;
+  if (_webauthnBusy) throw new Error('في طلب بصمة سابق لسه شغال — استنى لحظة لغاية ما يخلص وحاول تاني');
+  _webauthnBusy = true;
+  try {
+    if (!window.PublicKeyCredential) throw new Error('هذا الجهاز أو المتصفح لا يدعم تسجيل الدخول بالبصمة (WebAuthn)');
+    const allow = (emp.passkeys||[]).map(p=>({ id: b64urlToBuf(p.id), type:'public-key' }));
+    const cred = await navigator.credentials.get({ publicKey: {
+      challenge: randChallenge(), rpId: location.hostname, allowCredentials: allow, userVerification:'required', timeout:60000
+    }});
+    if (!cred) throw new Error('فشل التحقق من البصمة');
+    const gotId = bufToB64url(cred.rawId);
+    const match = (emp.passkeys||[]).find(p=>p.id===gotId);
+    if (!match) throw new Error('هذه البصمة غير مسجّلة على حسابك — يُرجى مراجعة الشؤون الإدارية');
+    return true;
+  } finally { _webauthnBusy = false; }
 }
 
 // الكيوسك متصل بقاعدة بيانات منفصلة (secDb) عن لوحة الأدمن (db)، فمش بيشوف _companySettings
@@ -3104,11 +3230,16 @@ async function kioskCheckRememberedDevice() {
   document.getElementById('kiosk-body').innerHTML = `<div style="text-align:center;padding:30px 0;color:var(--slate-400)"><i class="fas fa-spinner fa-spin"></i></div>`;
   try {
     if (!secAuth.currentUser) await signInAnonymously(secAuth);
-    await getDoc(doc(secDb,'employees', rememberedId));
-    // لو القراءة نجحت، القاعدة بالفعل بتضمن إن الموظف ده نشط (القاعدة بترفض القراءة تمامًا للمستقيل)
+    const snap = await getDoc(doc(secDb,'employees', rememberedId));
+    // ⚠️ إصلاح (دفعة 7): لو الموظف اتمسح خالص (مش استقال بس)، المستند مبقاش موجود أصلاً — بعد
+    // إصلاح قاعدة الأمان، القراءة هنا بتنجح وترجع exists()=false بدل ما ترفض. لازم ننسى الجهاز
+    // القديم فورًا هنا عشان الجهاز يتعامل كأنه جديد تمامًا ويقدر يدخل بأي كود جديد عادي.
+    if (!snap.exists()) { localStorage.removeItem('elsaqia_kiosk_emp'); }
+    // لو القراءة نجحت والمستند موجود، القاعدة بالفعل بتضمن إن الموظف ده نشط (القاعدة بترفض القراءة تمامًا للمستقيل)
   } catch(e) {
-    // القاعدة بترفض قراءة موظف مستقيل أو محذوف برسالة "permission-denied" (مش "غير موجود" عادي) —
-    // ده التأكيد الوحيد الموثوق إنه فعلاً مستقيل/محذوف. أي خطأ تاني (شبكة، إلخ) بيسيب الشاشة العادية.
+    // القاعدة بترفض قراءة موظف مستقيل تحديدًا برسالة "permission-denied" — ده التأكيد الوحيد الموثوق
+    // إنه فعلاً مستقيل (بعد إصلاح دفعة 7، الموظف المحذوف خالص بقى بيرجع exists()=false مش رفض).
+    // أي خطأ تاني (شبكة، إلخ) بيسيب الشاشة العادية.
     if (e.code === 'permission-denied') { kioskRenderDeviceBlocked(); return; }
   }
   kioskRenderCodeEntry();
@@ -3406,7 +3537,7 @@ async function kioskLoadStatus() {
       if (alreadyUsedToday) {
         bodyHtml += `<div class="auth-err">تم استخدام طلب الإذن الشخصي لهذا اليوم بالفعل — لا يمكن تقديم أكثر من طلب واحد يوميًا</div>`;
       } else {
-        const remaining = await ppRemainingMinutes(secDb, emp.id, period);
+        const remaining = await ppRemainingMinutes(secDb, emp.id, period, emp.permissionMinutesPerCycle);
         if (remaining >= lateMins) {
           bodyHtml += `<div style="font-size:12px;color:var(--slate-600);margin-bottom:8px">لقد تأخرت عن موعد الوردية، ويمكنك تسجيل حضورك الآن باستخدام ${minutesToHoursLabel(lateMins)} من رصيد إذنك الشخصي (المتبقي: ${minutesToHoursLabel(remaining)})</div>
           <button class="auth-btn" onclick="kioskInstantPermissionCheckin(${lateMins})"><i class="fas fa-fingerprint"></i>تسجيل حضور بإذن شخصي</button>`;
@@ -3527,7 +3658,7 @@ async function kioskRenderProfileBody() {
 
     // رصيد الإذن الشخصي لدورة اليوم الحالية (26-25، مش الشهر الميلادي العادي)
     const ppPeriod = periodForDate(todayStr());
-    const ppRemaining = await ppRemainingMinutes(secDb, emp.id, ppPeriod);
+    const ppRemaining = await ppRemainingMinutes(secDb, emp.id, ppPeriod, emp.permissionMinutesPerCycle);
     const ppUsed = PERSONAL_PERMISSION_CYCLE_MINUTES - ppRemaining;
 
     // سجل تعديلات الراتب — مقارنة قبل/بعد لكل تعديل فعلي (أول قيد "0000-01-01" هو القيم الأصلية قبل أول تعديل)
@@ -3577,7 +3708,8 @@ async function kioskRenderProfileBody() {
         ${leaveRow('regular','رصيد الإجازة الاعتيادية')}
         ${leaveRow('casual','رصيد الإجازة العارضة')}
         ${leaveRow('marriage','رصيد إجازة الجواز')}
-        <div style="display:flex;justify-content:space-between;font-size:13px"><span>رصيد الإذن الشخصي (دورة ${esc(ppPeriod)})</span><span style="font-weight:800">${minutesToHoursLabel(ppRemaining)} من ${minutesToHoursLabel(PERSONAL_PERMISSION_CYCLE_MINUTES)}</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:13px"><span>رصيد الإذن الشخصي (دورة ${esc(ppPeriod)})</span><span style="font-weight:800">${minutesToHoursLabel(ppRemaining)} من ${minutesToHoursLabel(emp.permissionMinutesPerCycle||PERSONAL_PERMISSION_CYCLE_MINUTES)}</span></div>
+        <div style="font-size:11px;color:var(--slate-500)">أقصى إذن فوري واحد: ${minutesToHoursLabel(PERSONAL_PERMISSION_CYCLE_MINUTES)}</div>
         <div style="font-size:10.5px;color:var(--slate-500);margin-top:-4px;margin-bottom:2px">استهلكت ${minutesToHoursLabel(ppUsed)} من رصيد الإذن هذه الدورة</div>
         <div style="display:flex;justify-content:space-between;font-size:13px"><span>صافي الراتب الأساسي</span><span style="font-weight:800">${netSalary} ج.م</span></div>
         <div style="display:flex;justify-content:space-between;font-size:13px"><span>+ قيمة الأيام والساعات الإضافية هذا الشهر</span><span style="font-weight:800;color:var(--ok-600)">${extraAmount+otAmount} ج.م</span></div>
@@ -3626,7 +3758,7 @@ function kioskRenderLeaveFormBody() {
         <option value="marriage">إجازة جواز</option>
       </select>
     </div>
-    <div class="fg" style="text-align:right"><label class="fl">من تاريخ</label><input class="fc" type="date" id="kv-from"></div>
+    <div class="fg" style="text-align:right"><label class="fl">من تاريخ</label><input class="fc" type="date" id="kv-from" onchange="kioskUpdateLeaveTypeNote()"></div>
     <div class="fg" style="text-align:right"><label class="fl">حتى تاريخ</label><input class="fc" type="date" id="kv-to"></div>
     <div class="fg" style="text-align:right"><label class="fl">ملاحظات (اختياري)</label><textarea class="fc" id="kv-note" rows="2"></textarea></div>
     <div id="kv-err" class="auth-err"></div>
@@ -3654,7 +3786,9 @@ window.kioskUpdateLeaveTypeNote = () => {
   document.getElementById('kv-cap-note').innerHTML = (type==='marriage'
     ? '<i class="fas fa-info-circle"></i> ملحوظة: مسموح بطلب واحد بس في اليوم. رصيد إجازة الجواز محدود ومُدار من الإدارة'
     : '<i class="fas fa-info-circle"></i> ملحوظة: مسموح بطلب واحد بس في اليوم')
-    + (advanceDays>0 ? `<br>لازم تتقدّم بطلب ${LEAVE_TYPES[type].label} قبل تاريخها بيوم على الأقل` : '<br>ممكن تتقدّم بطلب إجازة عارضة في نفس اليوم لو الموضوع طارئ');
+    + (advanceDays>0 ? `<br>لازم تتقدّم بطلب ${LEAVE_TYPES[type].label} قبل تاريخها بيوم على الأقل` : '<br>ممكن تتقدّم بطلب إجازة عارضة في نفس اليوم لو الموضوع طارئ')
+    + (!hasSixMonthsService(emp, fromInput.value || todayStr(), type)
+        ? `<br><span style="color:var(--warn-600)"><i class="fas fa-exclamation-triangle"></i> لسه ما أكملتش ${emp.leaveEligibilityMonths||6} شهور خدمة — لو اتوافق على الطلب ده هيتخصم بالكامل من مرتبك، مش من رصيدك</span>` : '');
 };
 
 window.kioskSubmitLeaveRequest = async () => {
@@ -3836,7 +3970,7 @@ window.kioskShowPersonalPermissionForm = async () => {
       <div style="margin-top:12px"><a href="javascript:void(0)" onclick="kioskLoadStatus()" style="font-size:12px;color:var(--slate-500)">رجوع</a></div>`;
     return;
   }
-  const remaining = await ppRemainingMinutes(secDb, emp.id, period);
+  const remaining = await ppRemainingMinutes(secDb, emp.id, period, emp.permissionMinutesPerCycle);
   const maxHalfHours = Math.floor(remaining/30);
   let optionsHtml = '';
   for (let i=1;i<=maxHalfHours;i++) optionsHtml += `<option value="${i*30}">${minutesToHoursLabel(i*30)}</option>`;
@@ -3883,7 +4017,7 @@ window.kioskSubmitPersonalPermission = async () => {
       btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i>إرسال الطلب';
       return;
     }
-    const remaining = await ppRemainingMinutes(secDb, emp.id, period);
+    const remaining = await ppRemainingMinutes(secDb, emp.id, period, emp.permissionMinutesPerCycle);
     if (minutes > remaining) {
       err.textContent = `رصيدك المتبقي (${minutesToHoursLabel(remaining)}) أقل من المدة المطلوبة`;
       err.style.display = '';
@@ -4533,7 +4667,7 @@ async function renderOvertime() {
     const emp = _employees.find(e=>e.id===r.employeeId);
     const hours = Math.round(r.pendingOvertimeMinutes/60*100)/100;
     const durationLabel = overtimeDurationLabel(r.pendingOvertimeMinutes);
-    const rate = emp ? ((getSalaryConfigForDate(emp, r.date).salary||0)/30/8)*getPolicyConfigForDate(r.date).overtimeMultiplier : 0;
+    const rate = emp ? ((getSalaryConfigForDate(emp, r.date).salary||0)/30/8)*getPolicyConfigForDate(r.date, emp.departmentId).overtimeMultiplier : 0;
     const amount = Math.round(rate*hours*100)/100;
     return `<div class="card" style="margin-bottom:12px"><div class="card-body" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
       <div>
@@ -4597,6 +4731,13 @@ function cycleRangeForPeriod(periodStr) {
 function employeeInPeriod(emp, periodStr) {
   const { startDate, endDate } = cycleRangeForPeriod(periodStr);
   if (emp.hireDate && emp.hireDate > endDate) return false;
+  // ⚠️ دفعة 7: الدورة كلها واقعة جوه فجوة استقالة سابقة اتقفلت بالرجوع — تُستبعد بالكامل من كشف
+  // الشهر ده (لو الدورة بتتقاطع جزئيًا مع الفجوة، بتفضل تظهر وبتتحسب نسبتها في daysWorkedRatioInCycle)
+  if (Array.isArray(emp.employmentGaps)) {
+    for (const g of emp.employmentGaps) {
+      if (g.from && g.to && startDate > g.from && endDate < g.to) return false;
+    }
+  }
   if (emp.status==='resigned') {
     if (!emp.resignDate) return false;
     if (emp.resignDate < startDate) return false;
@@ -4871,9 +5012,6 @@ const MONTHLY_IMPORT_FIELDS = [
 window.exportMonthlyToExcel = async () => {
   const period = document.getElementById('monthly-period').value || currentPeriodStr();
   document.getElementById('monthly-period').value = period;
-  // معاملات الحساب (الساعة الإضافية، اليوم الإضافي، الغياب) السارية في نهاية الدورة دي — نفس القيمة
-  // لكل موظفي التصدير (مش بتختلف من موظف للتاني)، فبتتحسب مرة واحدة بس هنا
-  const exportPolicy = getPolicyConfigForDate(cycleRangeForPeriod(period).endDate);
   const activeEmps = _employees.filter(e=>e.category!=='rep' && e.category!=='driver' && employeeInPeriod(e,period));
   if (!activeEmps.length) { toast('لا يوجد موظفون مسجّلون لهذا الشهر', 'error'); return; }
 
@@ -4896,61 +5034,87 @@ window.exportMonthlyToExcel = async () => {
     'خصم الغياب والجزاءات (ج.م)','قيمة الأيام الإضافية (ج.م)','قيمة الساعات الإضافية (ج.م)','قيمة المكافآت (ج.م)',
     'الحافز المستحق (ج.م)','الصافي التقديري لهذا الشهر (ج.م)','خصم قسط السلفة (ج.م)','الإجمالي (الصافي + الحافز المستحق) (ج.م)','ملاحظات'];
 
-  const aoa = [headers];
-  activeEmps.forEach(e=>{
-    const s = sheets[e.id] || {};
-    const ev = evals[e.id];
-    const dept = _departments.find(d=>d.id===e.departmentId);
-    const cfg = getSalaryConfigForDate(e, cycleRangeForPeriod(period).endDate);
-    const advanceDeduction = computeAdvanceDeductionForPeriod(advancesByEmp[e.id]||[], period);
-    aoa.push([
-      e.code||'', e.name, e.jobTitle||'', dept?dept.name:'',
-      s.overtimeHours ?? 0, s.extraDays ?? 0, s.leaveFromBalance ?? 0, s.sickLeave ?? 0,
-      s.leaveUnpaid ?? 0, s.absence ?? 0, s.personalPermission ?? 0,
-      ev?.finalScore ?? '', s.penaltyDays ?? 0, s.rewardDays ?? 0,
-      cfg.salary||0, computeNetSalaryForPeriod(e,period), cfg.incentiveBase||0,
-      0,0,0,0,0,0, // R..W: أعمدة معادلات، بتتحط تحتها فورًا
-      advanceDeduction,
-      0, // Y: الإجمالي (الصافي + الحافز المستحق) — معادلة، بتتحط تحتها فورًا
-      s.notes||''
-    ]);
-  });
+  // ⚠️ إصلاح (دفعة 7): معامل الحساب بقى ممكن يختلف من قسم لقسم — بعد ما كان بيتحسب مرة واحدة بس
+  // لكل التصدير، دلوقتي بيتحسب لكل موظف لوحده حسب قسمه هو بالظبط، جوه بناء الشيت نفسه.
+  function buildSheetForEmployees(emps) {
+    const aoa = [headers];
+    emps.forEach(e=>{
+      const s = sheets[e.id] || {};
+      const ev = evals[e.id];
+      const dept = _departments.find(d=>d.id===e.departmentId);
+      const cfg = getSalaryConfigForDate(e, cycleRangeForPeriod(period).endDate);
+      const advanceDeduction = computeAdvanceDeductionForPeriod(advancesByEmp[e.id]||[], period);
+      aoa.push([
+        e.code||'', e.name, e.jobTitle||'', dept?dept.name:'',
+        s.overtimeHours ?? 0, s.extraDays ?? 0, s.leaveFromBalance ?? 0, s.sickLeave ?? 0,
+        s.leaveUnpaid ?? 0, s.absence ?? 0, s.personalPermission ?? 0,
+        ev?.finalScore ?? '', s.penaltyDays ?? 0, s.rewardDays ?? 0,
+        cfg.salary||0, computeNetSalaryForPeriod(e,period), cfg.incentiveBase||0,
+        0,0,0,0,0,0, // R..W: أعمدة معادلات، بتتحط تحتها فورًا
+        advanceDeduction,
+        0, // Y: الإجمالي (الصافي + الحافز المستحق) — معادلة، بتتحط تحتها فورًا
+        s.notes||''
+      ]);
+    });
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    for (let i=0;i<emps.length;i++) {
+      const r = i+2; // صف العناوين = 1
+      const e = emps[i];
+      const exportPolicy = getPolicyConfigForDate(cycleRangeForPeriod(period).endDate, e.departmentId);
+      const incentiveRatio = daysWorkedRatioInCycle(e, period);
+      ws[`R${r}`] = { t:'n', f:`(J${r}*${exportPolicy.absenceMultiplier}+I${r}+M${r})*O${r}/30` };
+      ws[`S${r}`] = { t:'n', f:`F${r}*O${r}/30*${exportPolicy.extraDayMultiplier}` };
+      ws[`T${r}`] = { t:'n', f:`E${r}*(O${r}/30/8)*${exportPolicy.overtimeMultiplier}` };
+      ws[`U${r}`] = { t:'n', f:`N${r}*O${r}/30` };
+      ws[`V${r}`] = { t:'n', f:`Q${r}*L${r}/100*${incentiveRatio}` };
+      ws[`W${r}`] = { t:'n', f:`P${r}-R${r}-X${r}+S${r}+T${r}+U${r}` };
+      ws[`Y${r}`] = { t:'n', f:`W${r}+V${r}` };
+    }
+    ws['!cols'] = [
+      {wch:12},{wch:20},{wch:16},{wch:12},
+      {wch:10},{wch:9},{wch:11},{wch:10},{wch:10},{wch:8},{wch:9},
+      {wch:10},{wch:10},{wch:10},
+      {wch:16},{wch:16},{wch:16},
+      {wch:14},{wch:14},{wch:14},{wch:13},
+      {wch:14},{wch:16},{wch:14},{wch:18},{wch:26}
+    ];
+    return ws;
+  }
+
+  // اسم شيت صالح لإكسيل: أقل من 31 حرف، من غير : \ / ? * [ ]، وفريد لو فيه تكرار
+  function safeSheetName(name, used) {
+    let s = String(name).replace(/[:\\/?*\[\]]/g,'').trim().slice(0,31) || 'قسم';
+    let base = s, n = 2;
+    while (used.has(s)) { s = (base.slice(0, 28) + '-' + n); n++; }
+    used.add(s);
+    return s;
+  }
 
   const wb = XLSX.utils.book_new();
   wb.Workbook = { Views: [{ RTL: true }] };
-  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  const usedNames = new Set();
 
-  // أعمدة الحسابات المالية بمعادلات Excel حقيقية (مش أرقام ثابتة) — لو غيّرت الراتب أو أي رقم في الصف،
-  // الأعمدة دي بتتحدث تلقائي جوه Excel نفسه، بنفس معادلات النظام بالظبط
-  for (let i=0;i<activeEmps.length;i++) {
-    const r = i+2; // صف العناوين = 1
-    const e = activeEmps[i];
-    // ⚠️ إصلاح (المراجعة الشاملة): معادلة الحافز كانت بتفترض إن الموظف اشتغل الدورة كاملة، فمكانتش
-    // بتراعي نسبة الأيام الفعلية لموظف اتعيّن أو استقال في نص الدورة — بعكس نفس الحساب في لوحة الأدمن
-    // و"سجلي السنوي" اللي بيراعيها فعليًا (computeIncentive). النسبة دي ثابتة لكل موظف/شهر (مبنية على
-    // تاريخ التعيين/الاستقالة المسجّل، مش رقم المفروض الأدمن يعدّله من جوه الإكسيل) فبتتحط كرقم جوه
-    // نص المعادلة نفسها، والمعادلة تفضل حيّة (بتتحدّث تلقائي لو الأدمن غيّر الحافز الأساسي أو نسبة
-    // التقييم من جوه الإكسيل).
-    const incentiveRatio = daysWorkedRatioInCycle(e, period);
-    ws[`R${r}`] = { t:'n', f:`(J${r}*${exportPolicy.absenceMultiplier}+I${r}+M${r})*O${r}/30` };   // خصم الغياب والإجازة بالخصم والجزاءات
-    ws[`S${r}`] = { t:'n', f:`F${r}*O${r}/30*${exportPolicy.extraDayMultiplier}` };               // قيمة الأيام الإضافية
-    ws[`T${r}`] = { t:'n', f:`E${r}*(O${r}/30/8)*${exportPolicy.overtimeMultiplier}` };         // قيمة الساعات الإضافية
-    ws[`U${r}`] = { t:'n', f:`N${r}*O${r}/30` };                 // قيمة المكافآت
-    ws[`V${r}`] = { t:'n', f:`Q${r}*L${r}/100*${incentiveRatio}` }; // الحافز المستحق = الحافز الأساسي × نسبة التقييم × نسبة أيام العمل الفعلية
-    ws[`W${r}`] = { t:'n', f:`P${r}-R${r}-X${r}+S${r}+T${r}+U${r}` };  // الصافي التقديري لهذا الشهر (بعد خصم قسط السلفة)
-    ws[`Y${r}`] = { t:'n', f:`W${r}+V${r}` };                    // الإجمالي (الصافي + الحافز المستحق)
+  // ١) شيت شامل يجمع كل الموظفين مع بعض
+  XLSX.utils.book_append_sheet(wb, buildSheetForEmployees(activeEmps), safeSheetName('كل الموظفين', usedNames));
+
+  // ٢) شيت مستقل لكل قسم بيه موظفين في الفترة دي
+  const byDept = {};
+  const noDept = [];
+  activeEmps.forEach(e=>{
+    if (e.departmentId) (byDept[e.departmentId] ||= []).push(e);
+    else noDept.push(e);
+  });
+  for (const dept of _departments) {
+    const list = byDept[dept.id];
+    if (list && list.length) {
+      XLSX.utils.book_append_sheet(wb, buildSheetForEmployees(list), safeSheetName(dept.name, usedNames));
+    }
+  }
+  // ٣) شيت مستقل للموظفين اللي من غير قسم أصلاً
+  if (noDept.length) {
+    XLSX.utils.book_append_sheet(wb, buildSheetForEmployees(noDept), safeSheetName('بدون قسم', usedNames));
   }
 
-  ws['!cols'] = [
-    {wch:12},{wch:20},{wch:16},{wch:12},
-    {wch:10},{wch:9},{wch:11},{wch:10},{wch:10},{wch:8},{wch:9},
-    {wch:10},{wch:10},{wch:10},
-    {wch:16},{wch:16},{wch:16},
-    {wch:14},{wch:14},{wch:14},{wch:13},
-    {wch:14},{wch:16},{wch:14},{wch:18},{wch:26}
-  ];
-
-  XLSX.utils.book_append_sheet(wb, ws, 'الكشف الشهري');
   XLSX.writeFile(wb, `الكشف-الشهري-${period}.xlsx`);
 };
 
@@ -4962,22 +5126,60 @@ window.importMonthlyFromExcel = async (event) => {
   try {
     const buf = await file.arrayBuffer();
     const wb = XLSX.read(buf, { type:'array' });
-    const sheet = wb.Sheets[wb.SheetNames[0]];
-    const rows = XLSX.utils.sheet_to_json(sheet, { header:1, raw:true, defval:'' });
-    if (!rows.length) { toast('الملف المُرفق فارغ', 'error'); return; }
 
-    const header = rows[0].map(h=>String(h||'').trim());
-    const idx = {}; header.forEach((h,i)=>{ idx[h]=i; });
-    const codeCol = idx['كود الموظف'], nameCol = idx['اسم الموظف'];
-    if (codeCol===undefined && nameCol===undefined) {
+    // ⚠️ إصلاح (دفعة 7): التصدير بقى بيقسّم البيانات على أكتر من شيت (شيت شامل + شيت لكل قسم) —
+    // كان الاستيراد بيقرا الشيت الأول بس (wb.SheetNames[0]) ويتجاهل الباقي تمامًا من غير أي تحذير،
+    // يعني رفع الملف بعد التعديل كان هيضيع بيانات كل الأقسام إلا الأول بصمت. دلوقتي بنمر على كل
+    // الشيتات مع بعض ونجمّعها. لو نفس الموظف ظهر في أكتر من شيت (زي الشيت الشامل + شيت قسمه)، آخر
+    // شيت هو اللي بيغلب — وترتيب التصدير عندنا بيحط الشيتات المتخصصة بالقسم بعد الشيت الشامل، يعني
+    // لو عدّلت في شيت قسم معيّن بس، تعديلك هو اللي هياخد الأولوية.
+    const empByCode = {}; _employees.forEach(e=>{ if (e.code) empByCode[e.code]=e; });
+    const empByName = {}; _employees.forEach(e=>{ empByName[e.name] = (e.name in empByName) ? null : e; });
+    const finalRowByEmpId = new Map();
+    const unmatchedSet = new Set(), ambiguousSet = new Set();
+    let anySheetHadValidColumns = false;
+
+    for (const sheetName of wb.SheetNames) {
+      const sheet = wb.Sheets[sheetName];
+      const rows = XLSX.utils.sheet_to_json(sheet, { header:1, raw:true, defval:'' });
+      if (!rows.length) continue;
+      const header = rows[0].map(h=>String(h||'').trim());
+      const idx = {}; header.forEach((h,i)=>{ idx[h]=i; });
+      const codeCol = idx['كود الموظف'], nameCol = idx['اسم الموظف'];
+      if (codeCol===undefined && nameCol===undefined) continue; // شيت مش من تصميم البرنامج، بيتجاهل بهدوء
+      const presentFields = MONTHLY_IMPORT_FIELDS.filter(([,label])=> idx[label]!==undefined);
+      if (!presentFields.length) continue;
+      anySheetHadValidColumns = true;
+
+      for (let r=1; r<rows.length; r++) {
+        const row = rows[r];
+        if (!row || !row.length) continue;
+        const codeVal = codeCol!==undefined ? String(row[codeCol]||'').trim() : '';
+        const nameVal = nameCol!==undefined ? String(row[nameCol]||'').trim() : '';
+        if (!codeVal && !nameVal) continue;
+
+        let emp = null;
+        if (codeVal && empByCode[codeVal]) emp = empByCode[codeVal];
+        else if (nameVal) {
+          if (empByName[nameVal] === null) { ambiguousSet.add(nameVal); continue; }
+          emp = empByName[nameVal] || null;
+        }
+        if (!emp) { unmatchedSet.add(codeVal || nameVal); continue; }
+
+        const values = {};
+        presentFields.forEach(([key,label])=>{
+          const raw = row[idx[label]];
+          values[key] = key==='notes' ? String(raw||'').trim() : (raw===''||raw==null ? 0 : (parseFloat(raw)||0));
+        });
+        const prevEntry = finalRowByEmpId.get(emp.id);
+        finalRowByEmpId.set(emp.id, { emp, values: { ...(prevEntry?.values||{}), ...values } });
+      }
+    }
+
+    if (!anySheetHadValidColumns) {
       toast('يجب أن يحتوي الملف على عمود "كود الموظف" أو "اسم الموظف" على الأقل لمطابقة بيانات الموظفين', 'error');
       return;
     }
-    const presentFields = MONTHLY_IMPORT_FIELDS.filter(([,label])=> idx[label]!==undefined);
-    if (!presentFields.length) { toast('لا يحتوي الملف على أي عمود من الأعمدة القابلة للاستيراد (ساعات إضافية، أيام إضافية، إجازة، غياب... إلخ)', 'error'); return; }
-
-    const empByCode = {}; _employees.forEach(e=>{ if (e.code) empByCode[e.code]=e; });
-    const empByName = {}; _employees.forEach(e=>{ empByName[e.name] = (e.name in empByName) ? null : e; });
 
     let existingSheets = {};
     try {
@@ -4985,32 +5187,20 @@ window.importMonthlyFromExcel = async (event) => {
       snap.docs.forEach(d=>{ existingSheets[d.data().employeeId] = { id:d.id, ...d.data() }; });
     } catch(e) { toast(formatFirestoreError('خطأ في قراءة البيانات الحالية', e), 'error'); return; }
 
-    const changes = [], unmatched = [], ambiguous = [];
-    for (let r=1; r<rows.length; r++) {
-      const row = rows[r];
-      if (!row || !row.length) continue;
-      const codeVal = codeCol!==undefined ? String(row[codeCol]||'').trim() : '';
-      const nameVal = nameCol!==undefined ? String(row[nameCol]||'').trim() : '';
-      if (!codeVal && !nameVal) continue;
-
-      let emp = null;
-      if (codeVal && empByCode[codeVal]) emp = empByCode[codeVal];
-      else if (nameVal) {
-        if (empByName[nameVal] === null) { ambiguous.push(nameVal); continue; }
-        emp = empByName[nameVal] || null;
-      }
-      if (!emp) { unmatched.push(codeVal || nameVal); continue; }
-
+    const changes = [];
+    for (const { emp, values } of finalRowByEmpId.values()) {
       const existing = existingSheets[emp.id] || {};
       const fieldChanges = [];
-      presentFields.forEach(([key,label])=>{
-        const raw = row[idx[label]];
-        const newVal = key==='notes' ? String(raw||'').trim() : (raw===''||raw==null ? 0 : (parseFloat(raw)||0));
+      MONTHLY_IMPORT_FIELDS.forEach(([key,label])=>{
+        if (!(key in values)) return;
+        const newVal = values[key];
         const oldVal = key==='notes' ? (existing.notes||'') : (existing[key] ?? 0);
         if (String(oldVal) !== String(newVal)) fieldChanges.push({ key, label, oldVal, newVal });
       });
       if (fieldChanges.length) changes.push({ emp, existingId: existing.id||null, fields: fieldChanges });
     }
+    const unmatched = [...unmatchedSet];
+    const ambiguous = [...ambiguousSet];
 
     if (!changes.length && !unmatched.length && !ambiguous.length) {
       toast('لا يوجد أي فرق بين الملف والبيانات الحالية لهذه الدورة', 'info');
@@ -5563,13 +5753,14 @@ function minutesToHoursLabel(mins) {
 }
 // الرصيد المتبقي بيتحسب حي من مجموع الطلبات المستهلكة (auto أو approved) في نفس الدورة —
 // مفيش حاجة مخزّنة على الموظف نفسه، عشان نتجنب مشاكل التزامن ونضمن الرقم دايمًا محدث فعليًا من مصدره
-async function ppRemainingMinutes(dbRef, employeeId, period) {
+async function ppRemainingMinutes(dbRef, employeeId, period, cycleCapMinutes) {
+  const cap = (cycleCapMinutes != null) ? cycleCapMinutes : PERSONAL_PERMISSION_CYCLE_MINUTES;
   const snap = await getDocs(query(collection(dbRef,'personalPermissionRequests'),
     where('employeeId','==',employeeId), where('kind','==','permission'), where('period','==',period)));
   const used = snap.docs.map(d=>d.data())
     .filter(r=>r.status==='auto'||r.status==='approved')
     .reduce((s,r)=>s+(r.minutes||0),0);
-  return Math.max(0, PERSONAL_PERMISSION_CYCLE_MINUTES - used);
+  return Math.max(0, cap - used);
 }
 // الموظف مسموحله بس بطلب إذن شخصي واحد فعّال في اليوم (فوري أو مستقبلي — مهما كان النوع)،
 // المرفوض بس مبيتحسبش عشان منمنعوش من إعادة المحاولة لو طلبه اتقفل
@@ -5678,10 +5869,10 @@ async function renderLeaves() {
       </div>`;
 
     const extra = r.status==='approved'
-      ? `<div style="font-size:11.5px;color:var(--slate-500);margin-top:4px">من الرصيد: ${r.daysFromBalance} يوم${r.daysUnpaid>0?` — خصم من المرتب: ${r.daysUnpaid} يوم`:''}${r.sixMonthEligible===false && !r.sixMonthOverride?' (لم يكمل 6 أشهر خدمة بعد، فتم احتسابها بالكامل خصمًا من المرتب)':r.sixMonthOverride?' (تم الصرف من الرصيد بتجاوز شرط الـ6 أشهر بقرار الإدارة)':''}</div>` : '';
+      ? `<div style="font-size:11.5px;color:var(--slate-500);margin-top:4px">من الرصيد: ${r.daysFromBalance} يوم${r.daysUnpaid>0?` — خصم من المرتب: ${r.daysUnpaid} يوم`:''}${r.sixMonthEligible===false && !r.sixMonthOverride?` (لم يكمل ${emp?.leaveEligibilityMonths||6} أشهر خدمة بعد، فتم احتسابها بالكامل خصمًا من المرتب)`:r.sixMonthOverride?' (تم الصرف من الرصيد بتجاوز شرط مدة الخدمة بقرار الإدارة)':''}</div>` : '';
 
-    const sixMonthsWarning = (emp && r.status==='pending' && !hasSixMonthsService(emp, r.dateFrom))
-      ? `<div style="font-size:11.5px;color:var(--warn-600);margin-top:4px"><i class="fas fa-exclamation-triangle"></i> لم يكمل الموظف 6 أشهر خدمة حتى تاريخ الإجازة — ستُحتسب خصمًا مباشرًا من المرتب وليس من الرصيد${CU.role==='admin'?`
+    const sixMonthsWarning = (emp && r.status==='pending' && !hasSixMonthsService(emp, r.dateFrom, r.leaveType))
+      ? `<div style="font-size:11.5px;color:var(--warn-600);margin-top:4px"><i class="fas fa-exclamation-triangle"></i> لم يكمل الموظف ${emp?.leaveEligibilityMonths||6} أشهر خدمة حتى تاريخ الإجازة — ستُحتسب خصمًا مباشرًا من المرتب وليس من الرصيد${CU.role==='admin'?`
         <label style="display:inline-flex;align-items:center;gap:4px;margin-right:10px;cursor:pointer;font-weight:700"><input type="checkbox" id="lv-override-${r.id}"> تجاوز الشرط واصرفها من الرصيد</label>`:''}</div>` : '';
 
     let actions = '';
@@ -5980,7 +6171,7 @@ async function settleLeaveStage(id, stage, approved, override=false) {
     const leaveType = r.leaveType || 'regular';
     const field = LEAVE_TYPES[leaveType].field;
     const emp = _employees.find(e=>e.id===r.employeeId);
-    const eligible = override || hasSixMonthsService(emp, r.dateFrom);
+    const eligible = override || hasSixMonthsService(emp, r.dateFrom, leaveType);
     let daysFromBalance, daysUnpaid;
     if (!eligible) {
       // لسه ما كملش 6 شهور خدمة — الإجازة كلها بالخصم من غير ما تمس رصيده
@@ -6018,7 +6209,7 @@ window.approveLeaveRequest = async (id, override) => {
     const leaveType = r.leaveType || 'regular';
     const field = LEAVE_TYPES[leaveType].field;
     const emp = _employees.find(e=>e.id===r.employeeId);
-    const eligible = override || hasSixMonthsService(emp, r.dateFrom);
+    const eligible = override || hasSixMonthsService(emp, r.dateFrom, leaveType);
     let daysFromBalance, daysUnpaid;
     if (!eligible) {
       daysFromBalance = 0;
