@@ -3135,6 +3135,18 @@ function b64urlToBuf(str) {
   return buf.buffer;
 }
 function randChallenge() { const b=new Uint8Array(32); crypto.getRandomValues(b); return b; }
+// ⚠️ إصلاح باگ (دفعة 8): لو نداء navigator.credentials.get/create نفسه "عَلَّق" في المتصفح ومارجعش
+// أي رد خالص (لا نجاح ولا فشل — ده بيحصل فعليًا على بعض الأجهزة/المتصفحات لأسباب متعلقة بدعم
+// WebAuthn في الجهاز نفسه)، كان علم _webauthnBusy بيفضل عالق على "شغال" للأبد لأنه بيترجع بس
+// جوه finally وقت ما الطلب يخلص — ولو مخلصش، أي محاولة تانية بعد كده (حتى بعد الخروج والدخول
+// تاني من غير Refresh كامل) هترفض فورًا برسالة "طلب سابق لسه شغال" رغم إن الطلب الأصلي مش شغال
+// فعليًا، بس النظام مش عارف إنه اتنسي. الحل: مهلة زمنية صريحة بنفرضها احنا (25 ثانية) — لو
+// المتصفح ماردش خلالها، بنعتبر الطلب فاشل ونفرّج العلم، بدل ما نستنى المتصفح للأبد.
+function withTimeout(promise, ms, timeoutMessage) {
+  let timer;
+  const timeout = new Promise((_, reject) => { timer = setTimeout(() => reject(new Error(timeoutMessage)), ms); });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
 
 let _webauthnBusy = false;
 async function webauthnRegister(emp) {
@@ -3148,14 +3160,14 @@ async function webauthnRegister(emp) {
   _webauthnBusy = true;
   try {
     if (!window.PublicKeyCredential) throw new Error('هذا الجهاز أو المتصفح لا يدعم تسجيل الدخول بالبصمة (WebAuthn)');
-    const cred = await navigator.credentials.create({ publicKey: {
+    const cred = await withTimeout(navigator.credentials.create({ publicKey: {
       challenge: randChallenge(),
       rp: { id: location.hostname, name: 'الساقية - الشؤون الإدارية' },
       user: { id: new TextEncoder().encode(emp.id), name: emp.code, displayName: emp.name },
       pubKeyCredParams: [{type:'public-key',alg:-7},{type:'public-key',alg:-257}],
       authenticatorSelection: { authenticatorAttachment:'platform', userVerification:'required', residentKey:'required', requireResidentKey:true },
       timeout: 60000, attestation: 'none'
-    }});
+    }}), 25000, 'انتهت مهلة تسجيل البصمة (25 ثانية) من غير أي رد من الجهاز — حاول تاني');
     if (!cred) throw new Error('اتلغى تسجيل البصمة');
     return { id: bufToB64url(cred.rawId), label: 'جهاز مسجّل بتاريخ ' + new Date().toLocaleDateString('ar-EG'), createdAt: Date.now() };
   } finally { _webauthnBusy = false; }
@@ -3167,9 +3179,9 @@ async function webauthnVerify(emp) {
   try {
     if (!window.PublicKeyCredential) throw new Error('هذا الجهاز أو المتصفح لا يدعم تسجيل الدخول بالبصمة (WebAuthn)');
     const allow = (emp.passkeys||[]).map(p=>({ id: b64urlToBuf(p.id), type:'public-key' }));
-    const cred = await navigator.credentials.get({ publicKey: {
+    const cred = await withTimeout(navigator.credentials.get({ publicKey: {
       challenge: randChallenge(), rpId: location.hostname, allowCredentials: allow, userVerification:'required', timeout:60000
-    }});
+    }}), 25000, 'انتهت مهلة التحقق من البصمة (25 ثانية) من غير أي رد من الجهاز — حاول تاني');
     if (!cred) throw new Error('فشل التحقق من البصمة');
     const gotId = bufToB64url(cred.rawId);
     const match = (emp.passkeys||[]).find(p=>p.id===gotId);
