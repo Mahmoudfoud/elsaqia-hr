@@ -3178,7 +3178,15 @@ async function webauthnVerify(emp) {
   _webauthnBusy = true;
   try {
     if (!window.PublicKeyCredential) throw new Error('هذا الجهاز أو المتصفح لا يدعم تسجيل الدخول بالبصمة (WebAuthn)');
-    const allow = (emp.passkeys||[]).map(p=>({ id: b64urlToBuf(p.id), type:'public-key' }));
+    // ⚠️ إصلاح باگ (دفعة 10): باگ حقيقي وموثّق في Chrome نفسه (crbug.com/555599813) موجود من
+    // إصدار 153.0.8010.36 لحد .46 — لو طلب navigator.credentials.get بعت وصف بصمة (descriptor)
+    // من غير "transports" محدد صراحة، Chrome بيملأها تلقائيًا بقيمة (smart-card) خدمة Google Play
+    // (اللي بتتحكم في البصمة على أندرويد) مش قادرة تفهمها، فالطلب كله بيعلّق للأبد من غير أي نافذة
+    // تظهر خالص ومن غير أي رفض حتى. جوجل أصلحته في 153.0.8010.47 (طلع منذ أيام)، لكن التحايل هنا
+    // بيحمينا حتى لو المستخدم لسه على إصدار Chrome قديم لسه ما استلمش التحديث: بنحدد transports
+    // بأنفسنا صراحة على كل بصمة، فـChrome مايحتاجش يملأها تلقائيًا بالقيمة اللي بتبوّظ الطلب.
+    const SAFE_TRANSPORTS = ['internal','hybrid','usb','ble','nfc'];
+    const allow = (emp.passkeys||[]).map(p=>({ id: b64urlToBuf(p.id), type:'public-key', transports: SAFE_TRANSPORTS }));
     const cred = await withTimeout(navigator.credentials.get({ publicKey: {
       challenge: randChallenge(), rpId: location.hostname, allowCredentials: allow, userVerification:'required', timeout:60000
     }}), 25000, 'انتهت مهلة التحقق من البصمة (25 ثانية) من غير أي رد من الجهاز — حاول تاني');
