@@ -2388,11 +2388,14 @@ function computeNetSalaryForPeriod(emp, periodStr) {
   const { endDate } = cycleRangeForPeriod(periodStr);
   const cfg = getSalaryConfigForDate(emp, endDate);
   const ratio = daysWorkedRatioInCycle(emp, periodStr);
-  const proratedSalary = Math.round((cfg.salary||0) * ratio * 100)/100;
   const insured = !emp.insuranceStartDate || emp.insuranceStartDate <= endDate;
   const social = insured ? (cfg.socialInsurance||0) : 0;
   const medical = insured ? (cfg.medicalInsurance||0) : 0;
-  return proratedSalary - social - medical - (cfg.incomeTax||0) - (cfg.incentiveBase||0);
+  // ⚠️ إصلاح (v55): الصافي الكامل (المرتب − التأمينات − الضريبة − الحافز الأساسي) هو اللي بيتقسّم على أيام الدورة،
+  // مش المرتب الأساسي وحده. قبل كده كانت التأمينات والضريبة والحافز الأساسي بتتخصم كاملة من مرتب متناسب بالأيام،
+  // فموظف اتعيّن أو استقال في نص الدورة كان صافيه بيطلع أقل بكتير من الحقيقي. موظف الدورة الكاملة (ratio=1) مالوش أي تغيير.
+  const fullNet = (cfg.salary||0) - social - medical - (cfg.incomeTax||0) - (cfg.incentiveBase||0);
+  return Math.round(fullNet * ratio * 100)/100;
 }
 // الحافز المستحق — حسب نسبة تقييم الشهر (بيتصرف يوم 15) — periodStr اختياري للتوافق الرجعي، لو مبعوتش بيستخدم آخر قيمة حالية من غير تناسب أيام
 function computeIncentive(emp, evalScorePercent, periodStr) {
