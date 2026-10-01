@@ -5053,7 +5053,8 @@ window.exportMonthlyToExcel = async () => {
   const headers = ['كود الموظف','اسم الموظف','المسمى الوظيفي','القسم',
     'ساعات إضافية','أيام إضافية','إجازة من الرصيد','إجازة مرضية','إجازة بالخصم','غياب','إذن شخصي',
     'نسبة التقييم %','جزاءات (أيام)','مكافآت (أيام)',
-    'الراتب الأساسي الإجمالي (ج.م)','صافي الراتب بعد الاستقطاعات (ج.م)','الحافز الأساسي المستهدف (ج.م)',
+    'الراتب الأساسي الإجمالي (ج.م)','صافي الراتب بعد الاستقطاعات وبنسبة أيام الشغل (ج.م)','الحافز الأساسي المستهدف (ج.م)',
+    'التأمين الاجتماعي (ج.م)','التأمين الطبي (ج.م)','ضريبة كسب العمل (ج.م)','أيام الشغل في الدورة (من 30)',
     'خصم الغياب والجزاءات (ج.م)','قيمة الأيام الإضافية (ج.م)','قيمة الساعات الإضافية (ج.م)','قيمة المكافآت (ج.م)',
     'الحافز المستحق (ج.م)','الصافي التقديري لهذا الشهر (ج.م)','خصم قسط السلفة (ج.م)','الإجمالي (الصافي + الحافز المستحق) (ج.م)','ملاحظات'];
 
@@ -5067,16 +5068,24 @@ window.exportMonthlyToExcel = async () => {
       const dept = _departments.find(d=>d.id===e.departmentId);
       const cfg = getSalaryConfigForDate(e, cycleRangeForPeriod(period).endDate);
       const advanceDeduction = computeAdvanceDeductionForPeriod(advancesByEmp[e.id]||[], period);
+      // ⚠️ (v56): نفس منطق computeNetSalaryForPeriod بالظبط — التأمين بيتحسب بس لو بدأ قبل نهاية الدورة،
+      // وأيام الشغل = نسبة الدورة × 30. القيم دي بتتكتب في الشيت عشان الصافي يبقى معادلة ظاهرة وقابلة للتتبع.
+      const exportEndDate = cycleRangeForPeriod(period).endDate;
+      const exportInsured = !e.insuranceStartDate || e.insuranceStartDate <= exportEndDate;
+      const exportSocial = exportInsured ? (cfg.socialInsurance||0) : 0;
+      const exportMedical = exportInsured ? (cfg.medicalInsurance||0) : 0;
+      const exportDaysWorked = Math.round(daysWorkedRatioInCycle(e, period) * 30 * 10000) / 10000;
       aoa.push([
         e.code||'', e.name, e.jobTitle||'', dept?dept.name:'',
         s.overtimeHours ?? 0, s.extraDays ?? 0, s.leaveFromBalance ?? 0, s.sickLeave ?? 0,
         s.leaveUnpaid ?? 0, s.absence ?? 0, s.personalPermission ?? 0,
         ev?.finalScore ?? '', s.penaltyDays ?? 0, s.rewardDays ?? 0,
-        cfg.salary||0, computeNetSalaryForPeriod(e,period), cfg.incentiveBase||0,
-        0,0,0,0,0,0, // R..W: أعمدة معادلات، بتتحط تحتها فورًا
-        advanceDeduction,
-        0, // Y: الإجمالي (الصافي + الحافز المستحق) — معادلة، بتتحط تحتها فورًا
-        s.notes||''
+        cfg.salary||0, 0, cfg.incentiveBase||0, // P: معادلة بتتحط تحتها فورًا
+        exportSocial, exportMedical, cfg.incomeTax||0, exportDaysWorked, // R..U
+        0,0,0,0,0,0, // V..AA: أعمدة معادلات، بتتحط تحتها فورًا
+        advanceDeduction, // AB
+        0, // AC: الإجمالي (الصافي + الحافز المستحق) — معادلة، بتتحط تحتها فورًا
+        s.notes||'' // AD
       ]);
     });
     const ws = XLSX.utils.aoa_to_sheet(aoa);
@@ -5084,20 +5093,24 @@ window.exportMonthlyToExcel = async () => {
       const r = i+2; // صف العناوين = 1
       const e = emps[i];
       const exportPolicy = getPolicyConfigForDate(cycleRangeForPeriod(period).endDate, e.departmentId);
-      const incentiveRatio = daysWorkedRatioInCycle(e, period);
-      ws[`R${r}`] = { t:'n', f:`(J${r}*${exportPolicy.absenceMultiplier}+I${r}+M${r})*O${r}/30` };
-      ws[`S${r}`] = { t:'n', f:`F${r}*O${r}/30*${exportPolicy.extraDayMultiplier}` };
-      ws[`T${r}`] = { t:'n', f:`E${r}*(O${r}/30/8)*${exportPolicy.overtimeMultiplier}` };
-      ws[`U${r}`] = { t:'n', f:`N${r}*O${r}/30` };
-      ws[`V${r}`] = { t:'n', f:`Q${r}*L${r}/100*${incentiveRatio}` };
-      ws[`W${r}`] = { t:'n', f:`P${r}-R${r}-X${r}+S${r}+T${r}+U${r}` };
-      ws[`Y${r}`] = { t:'n', f:`W${r}+V${r}` };
+      // الأعمدة: O الراتب | P الصافي | Q الحافز الأساسي | R اجتماعي | S طبي | T ضريبة | U أيام الشغل
+      //          V خصم الغياب | W قيمة أيام إضافية | X قيمة ساعات إضافية | Y قيمة مكافآت | Z الحافز المستحق
+      //          AA الصافي التقديري | AB قسط السلفة | AC الإجمالي | AD ملاحظات
+      ws[`P${r}`] = { t:'n', f:`ROUND((O${r}-R${r}-S${r}-T${r}-Q${r})*U${r}/30,2)` };
+      ws[`V${r}`] = { t:'n', f:`(J${r}*${exportPolicy.absenceMultiplier}+I${r}+M${r})*O${r}/30` };
+      ws[`W${r}`] = { t:'n', f:`F${r}*O${r}/30*${exportPolicy.extraDayMultiplier}` };
+      ws[`X${r}`] = { t:'n', f:`E${r}*(O${r}/30/8)*${exportPolicy.overtimeMultiplier}` };
+      ws[`Y${r}`] = { t:'n', f:`N${r}*O${r}/30` };
+      ws[`Z${r}`] = { t:'n', f:`Q${r}*L${r}/100*U${r}/30` };
+      ws[`AA${r}`] = { t:'n', f:`P${r}-V${r}-AB${r}+W${r}+X${r}+Y${r}` };
+      ws[`AC${r}`] = { t:'n', f:`AA${r}+Z${r}` };
     }
     ws['!cols'] = [
       {wch:12},{wch:20},{wch:16},{wch:12},
       {wch:10},{wch:9},{wch:11},{wch:10},{wch:10},{wch:8},{wch:9},
       {wch:10},{wch:10},{wch:10},
-      {wch:16},{wch:16},{wch:16},
+      {wch:16},{wch:22},{wch:16},
+      {wch:14},{wch:14},{wch:14},{wch:14},
       {wch:14},{wch:14},{wch:14},{wch:13},
       {wch:14},{wch:16},{wch:14},{wch:18},{wch:26}
     ];
