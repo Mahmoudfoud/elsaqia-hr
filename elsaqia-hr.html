@@ -3084,6 +3084,7 @@ function nowHM() { const d=new Date(); return String(d.getHours()).padStart(2,'0
 // ⚠️ ساعة الكيوسك (قفل التلاعب بساعة التليفون): كل حسابات الحضور/الانصراف في الكيوسك بتتحسب من Date.now()
 // (الوقت الفعلي بالـ UTC) ومحوّلة صراحةً لتوقيت القاهرة — فتغيير "المنطقة الزمنية" في التليفون ما بيأثرش.
 // أما تغيير الساعة نفسها فبتمنعه قواعد Firestore (فرق createdAt عن ساعة السيرفر أكتر من 3 دقايق = رفض الكتابة).
+const KIOSK_CLOCK_MSG = 'ساعة جهازك غير مضبوطة، فعّل الضبط التلقائي للوقت. وإن استمرت المشكلة يُرجى التواصل مع الشؤون الإدارية.';
 let _kioskTimeFmt = null;
 function _kioskParts(ms) {
   try {
@@ -3630,7 +3631,7 @@ window.kioskShowProfile = async () => {
 
 async function kioskRenderProfileBody() {
   const emp = window._kioskEmp;
-  const year = new Date().getFullYear();
+  const year = Number(kioskToday().slice(0,4));
   const body = document.getElementById('kiosk-body');
   body.innerHTML = '<div class="empty"><i class="fas fa-spinner fa-spin"></i><p>جاري التحميل...</p></div>';
   try {
@@ -3819,8 +3820,7 @@ window.kioskUpdateLeaveTypeNote = () => {
   const overflowNote = (emp.category==='rep'||emp.category==='driver') ? '' : ' — لو الطلب أكتر من رصيدك، الفرق بيتخصم من راتبك بعد الموافقة';
   document.getElementById('kv-balance-note').textContent = `رصيدك الحالي من ${LEAVE_TYPES[type].label}: ${balance} يوم${overflowNote}`;
   const advanceDays = LEAVE_TYPES[type].advanceDays || 0;
-  const minD = new Date(); minD.setDate(minD.getDate() + advanceDays);
-  const minDateStr = minD.toISOString().slice(0,10);
+  const minDateStr = addDaysToDateStr(kioskToday(), advanceDays);
   const fromInput = document.getElementById('kv-from');
   fromInput.min = minDateStr;
   if (fromInput.value && fromInput.value < minDateStr) fromInput.value = '';
@@ -3828,7 +3828,7 @@ window.kioskUpdateLeaveTypeNote = () => {
     ? '<i class="fas fa-info-circle"></i> ملحوظة: مسموح بطلب واحد بس في اليوم. رصيد إجازة الجواز محدود ومُدار من الإدارة'
     : '<i class="fas fa-info-circle"></i> ملحوظة: مسموح بطلب واحد بس في اليوم')
     + (advanceDays>0 ? `<br>لازم تتقدّم بطلب ${LEAVE_TYPES[type].label} قبل تاريخها بيوم على الأقل` : '<br>ممكن تتقدّم بطلب إجازة عارضة في نفس اليوم لو الموضوع طارئ')
-    + (!hasSixMonthsService(emp, fromInput.value || todayStr(), type)
+    + (!hasSixMonthsService(emp, fromInput.value || kioskToday(), type)
         ? `<br><span style="color:var(--warn-600)"><i class="fas fa-exclamation-triangle"></i> لسه ما أكملتش ${emp.leaveEligibilityMonths||6} شهور خدمة — لو اتوافق على الطلب ده هيتخصم بالكامل من مرتبك، مش من رصيدك</span>` : '');
 };
 
@@ -3842,12 +3842,12 @@ window.kioskSubmitLeaveRequest = async () => {
   if (!dateFrom || !dateTo) { err.textContent = 'يُرجى تحديد تاريخ البداية والنهاية'; return; }
   if (dateTo < dateFrom) { err.textContent = 'يجب أن يكون تاريخ النهاية بعد تاريخ البداية'; return; }
 
-  const today = todayStr();
+  const _ms = Date.now(); // لقطة وقت واحدة: منها تاريخ اليوم و requestedAt (القواعد بتقارنه بساعة السيرفر)
+  const today = kioskToday(_ms);
   if (dateFrom < today) { err.textContent = 'لا يمكن طلب إجازة لتاريخ سابق — يجب أن يكون تاريخ الطلب من اليوم أو بعده.'; return; }
   const advanceDays = LEAVE_TYPES[leaveType].advanceDays || 0;
   if (advanceDays > 0) {
-    const minD = new Date(); minD.setDate(minD.getDate() + advanceDays);
-    const minDateStr = minD.toISOString().slice(0,10);
+    const minDateStr = addDaysToDateStr(today, advanceDays);
     if (dateFrom < minDateStr) {
       err.textContent = `يجب تقديم طلب ${LEAVE_TYPES[leaveType].label} قبل تاريخها بيوم على الأقل — أقرب تاريخ يمكن طلبه هو ${minDateStr}. في الحالات الطارئة، يمكن تقديم إجازة عارضة في نفس اليوم.`;
       return;
@@ -3883,7 +3883,7 @@ window.kioskSubmitLeaveRequest = async () => {
     const myReqs = mySnap.docs.map(d=>d.data());
 
     // 1) حد طلب واحد في اليوم — بنمنع أي طلب جديد لو قدّم طلب (أي حالة/نوع) النهاردة بالفعل
-    const submittedToday = myReqs.some(r => r.requestedAt && new Date(r.requestedAt).toISOString().slice(0,10) === today);
+    const submittedToday = myReqs.some(r => r.requestedAt && kioskToday(r.requestedAt) === today);
     if (submittedToday) {
       err.textContent = 'تم تقديم طلب إجازة اليوم بالفعل — يُسمح بطلب واحد فقط في اليوم. يُرجى انتظار رد المدير أو المحاولة غدًا.';
       btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i>إرسال الطلب';
@@ -3923,7 +3923,7 @@ window.kioskSubmitLeaveRequest = async () => {
       employeeId: emp.id, employeeName: emp.name, departmentId: emp.departmentId||null,
       leaveType, dateFrom, dateTo, daysCount, billableDates, note, status:'pending', source:'kiosk',
       managerApproved: null, hrApproved: null, authCode: emp.code,
-      requestedAt: Date.now(), requestedBy: 'kiosk:'+(emp.code||emp.id)
+      requestedAt: _ms, requestedBy: 'kiosk:'+(emp.code||emp.id)
     });
     document.getElementById('kiosk-body').innerHTML = `
       <div style="text-align:center;padding:20px 0">
@@ -3933,7 +3933,7 @@ window.kioskSubmitLeaveRequest = async () => {
       </div>`;
     setTimeout(()=>kioskRenderCodeEntry(), 3000);
   } catch(e) {
-    err.innerHTML = formatFirestoreError('حدث خطأ', {message: e.message||e.code});
+    err.innerHTML = formatFirestoreError('حدث خطأ', {message: (e && e.code==='permission-denied') ? KIOSK_CLOCK_MSG : (e.message||e.code)});
     btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i>إرسال الطلب';
   }
 };
@@ -4041,7 +4041,8 @@ window.kioskShowPersonalPermissionForm = async () => {
 
 window.kioskSubmitPersonalPermission = async () => {
   const emp = window._kioskEmp;
-  const today = kioskToday();
+  const _ms = Date.now(); // لقطة وقت واحدة: منها تاريخ اليوم و requestedAt
+  const today = kioskToday(_ms);
   const period = periodForDate(today);
   const position = document.getElementById('pp-position').value;
   const minutes = parseInt(document.getElementById('pp-minutes').value, 10);
@@ -4069,7 +4070,7 @@ window.kioskSubmitPersonalPermission = async () => {
       employeeId: emp.id, employeeName: emp.name, departmentId: emp.departmentId||null,
       kind: 'permission', mode: 'planned', period, date: today, position, minutes,
       status: 'pending', managerApproved: null, hrApproved: null, note, authCode: emp.code,
-      requestedAt: Date.now(), requestedBy: 'kiosk:'+(emp.code||emp.id)
+      requestedAt: _ms, requestedBy: 'kiosk:'+(emp.code||emp.id)
     });
     document.getElementById('kiosk-body').innerHTML = `
       <div style="text-align:center;padding:20px 0">
@@ -4079,7 +4080,7 @@ window.kioskSubmitPersonalPermission = async () => {
       </div>`;
     setTimeout(()=>kioskRenderCodeEntry(), 3500);
   } catch(e) {
-    err.innerHTML = formatFirestoreError('حدث خطأ', e); err.style.display = '';
+    err.innerHTML = formatFirestoreError('حدث خطأ', (e && e.code==='permission-denied') ? {message: KIOSK_CLOCK_MSG} : e); err.style.display = '';
     btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i>إرسال الطلب';
   }
 };
@@ -4248,7 +4249,7 @@ window.kioskDoAction = async (type) => {
     });
     } catch(werr) {
       // رفض القواعد لتسجيل حضور/انصراف (permission-denied) = غالبًا فرق بين ساعة الجهاز وساعة السيرفر أكتر من 3 دقايق
-      if (werr && werr.code==='permission-denied') throw new Error('ساعة جهازك غير مضبوطة، فعّل الضبط التلقائي للوقت. وإن استمرت المشكلة يُرجى التواصل مع الشؤون الإدارية.');
+      if (werr && werr.code==='permission-denied') throw new Error(KIOSK_CLOCK_MSG);
       throw werr;
     }
     window._kioskCarryoverCheckin = null;
