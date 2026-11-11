@@ -3081,6 +3081,24 @@ async function logAudit(action, employeeId, employeeName, details) {
 function hmToMin(hm) { const [h,m]=hm.split(':').map(Number); return h*60+m; }
 function nowMin() { const d=new Date(); return d.getHours()*60+d.getMinutes(); }
 function nowHM() { const d=new Date(); return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
+// ⚠️ ساعة الكيوسك (قفل التلاعب بساعة التليفون): كل حسابات الحضور/الانصراف في الكيوسك بتتحسب من Date.now()
+// (الوقت الفعلي بالـ UTC) ومحوّلة صراحةً لتوقيت القاهرة — فتغيير "المنطقة الزمنية" في التليفون ما بيأثرش.
+// أما تغيير الساعة نفسها فبتمنعه قواعد Firestore (فرق createdAt عن ساعة السيرفر أكتر من 3 دقايق = رفض الكتابة).
+let _kioskTimeFmt = null;
+function _kioskParts(ms) {
+  try {
+    if (!_kioskTimeFmt) _kioskTimeFmt = new Intl.DateTimeFormat('en-GB', { timeZone:'Africa/Cairo', hourCycle:'h23', year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' });
+    const o = {};
+    _kioskTimeFmt.formatToParts(new Date(ms)).forEach(p => { if (p.type !== 'literal') o[p.type] = p.value; });
+    if (o.year && o.month && o.day && o.hour != null && o.minute != null) { o.hour = String(Number(o.hour)%24).padStart(2,'0'); return o; }
+  } catch(e) {}
+  // احتياطي لو المتصفح ما بيدعمش المنطقة الزمنية: ساعة الجهاز المحلية (زي السلوك القديم)
+  const d = new Date(ms);
+  return { year:String(d.getFullYear()), month:String(d.getMonth()+1).padStart(2,'0'), day:String(d.getDate()).padStart(2,'0'), hour:String(d.getHours()).padStart(2,'0'), minute:String(d.getMinutes()).padStart(2,'0') };
+}
+function kioskToday(ms) { const p=_kioskParts(ms==null?Date.now():ms); return p.year+'-'+p.month+'-'+p.day; }
+function kioskNowMin(ms) { const p=_kioskParts(ms==null?Date.now():ms); return Number(p.hour)*60+Number(p.minute); }
+function kioskNowHM(ms) { const p=_kioskParts(ms==null?Date.now():ms); return p.hour+':'+p.minute; }
 function minToHM(total) { total=((total%1440)+1440)%1440; const h=Math.floor(total/60), m=total%60; return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0'); }
 // عرض مدة الوقت الإضافي كـ"X ساعة وY دقيقة" بدل رقم عشري (3.88) — للعرض بس، الحساب المالي بيفضل يستخدم الرقم العشري الدقيق
 function overtimeDurationLabel(totalMinutes) {
@@ -3348,7 +3366,7 @@ window.kioskAckPenalties = async () => {
 
 async function kioskLoadStatus() {
   const emp = window._kioskEmp;
-  const today = todayStr();
+  const today = kioskToday();
   window._kioskCarryoverCheckin = null;
   const penaltyBanner = await kioskPenaltyBanner(emp);
 
@@ -3435,7 +3453,7 @@ async function kioskLoadStatus() {
       const graceHours = yShift.overtimeGraceHours!=null ? yShift.overtimeGraceHours : 10;
       const shiftEndAbsMin = hmToMin(yShift.end); // بالنسبة لتاريخ أمس (يوم الحضور)
       const graceEndAbsMin = shiftEndAbsMin + graceHours*60; // ممتد على اليوم التالي (النهاردة) طبيعي
-      const nowAbsMin = 1440 + nowMin(); // النهاردة = يوم أمس + 1
+      const nowAbsMin = 1440 + kioskNowMin(); // النهاردة = يوم أمس + 1
       if (nowAbsMin <= graceEndAbsMin) {
         window._kioskCarryoverCheckin = { ...yCheckin, shift: yShift };
         window._kioskHasCheckin = true; window._kioskHasCheckout = false;
@@ -3476,7 +3494,7 @@ async function kioskLoadStatus() {
       <div class="auth-err" style="color:var(--slate-600)"><i class="fas fa-info-circle"></i> اليوم إجازة ${esc(LEAVE_TYPES[todayLeave.leaveType]?.label||'')} بالنسبة لك (من ${esc(todayLeave.dateFrom)} إلى ${esc(todayLeave.dateTo)})</div>`;
     if (window._kioskHasCheckin) {
       bodyHtml += `<div style="font-size:12px;color:var(--ok-700);margin-top:8px"><i class="fas fa-check-circle"></i> تم تسجيل حضورك اليوم بالفعل وتم قطع إجازتك</div>`;
-    } else if (nowMin() < from) {
+    } else if (kioskNowMin() < from) {
       bodyHtml += `<div class="auth-err" style="margin-top:8px">لم يحن موعد الوردية بعد (تبدأ الساعة ${shift.checkinFrom}) — يُرجى المحاولة لاحقًا إذا كنت ترغب في العمل وقطع إجازتك</div>`;
     } else {
       bodyHtml += `<button class="auth-btn" onclick="kioskLeaveCutCheckin()"><i class="fas fa-briefcase"></i>أرغب في العمل اليوم وقطع إجازتي</button>`;
@@ -3536,7 +3554,7 @@ async function kioskLoadStatus() {
   window._kioskApprovedEndPerm = approvedEndPerm||null;
   window._kioskApprovedStartPerm = approvedStartPerm||null;
 
-  const now = nowMin();
+  const now = kioskNowMin();
   let bodyHtml = penaltyBanner + `
     <div style="text-align:right;background:var(--slate-100);border-radius:10px;padding:14px 16px;margin:16px 0">
       <div style="font-weight:800;font-size:15px">${esc(emp.name)}</div>
@@ -3680,7 +3698,7 @@ async function kioskRenderProfileBody() {
       </div>` : '';
 
     // رصيد الإذن الشخصي لدورة اليوم الحالية (26-25، مش الشهر الميلادي العادي)
-    const ppPeriod = periodForDate(todayStr());
+    const ppPeriod = periodForDate(kioskToday());
     const ppRemaining = await ppRemainingMinutes(secDb, emp.id, ppPeriod, emp.permissionMinutesPerCycle);
     const ppUsed = PERSONAL_PERMISSION_CYCLE_MINUTES - ppRemaining;
 
@@ -3983,7 +4001,7 @@ window.kioskShowPersonalPermissionForm = async () => {
   body.innerHTML = '<div class="empty"><i class="fas fa-fingerprint fa-spin"></i><p>ضع بصمتك للتأكد من هويتك...</p></div>';
   try { await webauthnVerify(emp); }
   catch(e) { body.innerHTML = `<div class="auth-err">${formatFirestoreError('فشل التحقق من البصمة', e)}</div><div style="margin-top:10px"><a href="javascript:void(0)" onclick="kioskLoadStatus()" style="font-size:11.5px">→ رجوع</a></div>`; return; }
-  const today = todayStr();
+  const today = kioskToday();
   const period = periodForDate(today);
   document.getElementById('kiosk-body').innerHTML = '<div class="empty"><i class="fas fa-spinner fa-spin"></i><p>جاري التحميل...</p></div>';
   const alreadyUsedToday = await hasActivePersonalPermissionToday(secDb, emp.id, today);
@@ -4023,7 +4041,7 @@ window.kioskShowPersonalPermissionForm = async () => {
 
 window.kioskSubmitPersonalPermission = async () => {
   const emp = window._kioskEmp;
-  const today = todayStr();
+  const today = kioskToday();
   const period = periodForDate(today);
   const position = document.getElementById('pp-position').value;
   const minutes = parseInt(document.getElementById('pp-minutes').value, 10);
@@ -4172,18 +4190,20 @@ window.kioskDoAction = async (type) => {
     const pos = best.pos;
 
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التسجيل...';
+    // لقطة وقت واحدة لكل عملية التسجيل — منها بيتحسب الوقت والتاريخ والإضافي و createdAt (اللي القواعد بتقارنه بساعة السيرفر)
+    const _ms = Date.now();
     let extra = {};
-    let recordDate = todayStr();
+    let recordDate = kioskToday(_ms);
     const carryover = window._kioskCarryoverCheckin;
     if (!isRep && !isDriver) {
       if (type==='checkin') {
-        const nowM = nowMin();
+        const nowM = kioskNowMin(_ms);
         extra.lateMinutes = Math.max(0, nowM - hmToMin(shift.checkinTo));
       } else if (carryover) {
         // انصراف بيقفل حضور "أمس" — بنحسب الوقت المشتغول بفرق مطلق (تاريخ+وقت) عشان يعدّي نص الليل صح
         const cShift = carryover.shift || shift;
         const ciAbsMin = hmToMin(carryover.time);
-        const nowAbsMin = 1440 + nowMin(); // النهاردة = يوم الحضور + 1
+        const nowAbsMin = 1440 + kioskNowMin(_ms); // النهاردة = يوم الحضور + 1
         const worked = Math.max(0, nowAbsMin - ciAbsMin);
         const shiftMinutes = Math.max(1, hmToMin(cShift.end) - hmToMin(cShift.start));
         extra.workedMinutes = worked;
@@ -4192,7 +4212,7 @@ window.kioskDoAction = async (type) => {
         extra.overtimeApproved = false;
         recordDate = carryover.date; // نسجل الانصراف بنفس تاريخ الحضور عشان يترابطوا صح في المتابعة اليومية
       } else {
-        const nowM = nowMin();
+        const nowM = kioskNowMin(_ms);
         const shiftEndMin = hmToMin(shift.end);
         const checkoutToMin = hmToMin(shift.checkoutTo);
         if (nowM > checkoutToMin) {
@@ -4203,41 +4223,47 @@ window.kioskDoAction = async (type) => {
     }
     if (isDriver && type==='checkout') {
       // وجبة: لو الانصراف بعد الساعة 12 بالليل (من نص الليل وحتى الفجر)
-      const h = new Date().getHours();
+      const h = Math.floor(kioskNowMin(_ms)/60);
       extra.mealEligible = (h >= 0 && h < 6);
       if (window._kioskDriverOpenCheckinTime) {
         const ciTime = window._kioskDriverOpenCheckinTime;
         const ciDate = window._kioskDriverOpenCheckinDate;
-        const coDate = todayStr();
+        const coDate = kioskToday(_ms);
         // بنحسب فرق الأيام الفعلي بين تاريخ الحضور والانصراف (مش افتراض يوم واحد بس)،
         // عشان لو السائق نسي يسجل انصراف كذا يوم ورا بعض، الفرق يتحسب صح برضو
         const daysDiff = ciDate ? Math.round((new Date(coDate+'T00:00:00') - new Date(ciDate+'T00:00:00')) / 86400000) : 0;
         const dayOffset = Math.max(0, daysDiff) * 1440;
-        const worked = Math.max(0, (hmToMin(nowHM()) + dayOffset) - hmToMin(ciTime));
+        const worked = Math.max(0, (hmToMin(kioskNowHM(_ms)) + dayOffset) - hmToMin(ciTime));
         extra.workedMinutes = worked;
         extra.regularMinutes = Math.min(worked, 480);
         extra.overtimeMinutes = Math.max(0, worked - 480);
       }
     }
+    try {
     await addDoc(collection(secDb,'attendance'), {
       employeeId: emp.id, employeeName: emp.name, departmentId: emp.departmentId||null,
-      shiftId: shift?.id||null, type, date: recordDate, time: nowHM(), isRep, isDriver,
+      shiftId: shift?.id||null, type, date: recordDate, time: kioskNowHM(_ms), isRep, isDriver,
       location: { lat: pos.coords.latitude, lng: pos.coords.longitude }, distanceMeters: Math.round(dist), locationName: best.loc.name||null,
-      createdAt: Date.now(), authCode: emp.code, ...extra
+      createdAt: _ms, authCode: emp.code, ...extra
     });
+    } catch(werr) {
+      // رفض القواعد لتسجيل حضور/انصراف (permission-denied) = غالبًا فرق بين ساعة الجهاز وساعة السيرفر أكتر من 3 دقايق
+      if (werr && werr.code==='permission-denied') throw new Error('ساعة جهازك غير مضبوطة، فعّل الضبط التلقائي للوقت. وإن استمرت المشكلة يُرجى التواصل مع الشؤون الإدارية.');
+      throw werr;
+    }
     window._kioskCarryoverCheckin = null;
 
     let extraMsgHtml = '';
     if (type==='checkin' && window._kioskLeaveCutContext && shift) {
       const lr = window._kioskLeaveCutContext.leaveReq;
       const shiftTotalMinutes = Math.max(1, hmToMin(shift.end) - hmToMin(shift.start));
-      const estWorkedMinutes = Math.max(0, hmToMin(shift.end) - nowMin());
+      const estWorkedMinutes = Math.max(0, hmToMin(shift.end) - kioskNowMin(_ms));
       await addDoc(collection(secDb,'personalPermissionRequests'), {
         employeeId: emp.id, employeeName: emp.name, departmentId: emp.departmentId||null,
-        kind: 'leaveCut', date: todayStr(), leaveRequestId: lr.id, leaveType: lr.leaveType,
-        checkinAt: nowHM(), shiftTotalMinutes, estWorkedMinutes, authCode: emp.code,
+        kind: 'leaveCut', date: kioskToday(_ms), leaveRequestId: lr.id, leaveType: lr.leaveType,
+        checkinAt: kioskNowHM(_ms), shiftTotalMinutes, estWorkedMinutes, authCode: emp.code,
         suggestedRefundFraction: Math.round((estWorkedMinutes/shiftTotalMinutes)*100)/100,
-        status: 'pending_hr_decision', requestedAt: Date.now(), requestedBy: 'kiosk:'+(emp.code||emp.id)
+        status: 'pending_hr_decision', requestedAt: _ms, requestedBy: 'kiosk:'+(emp.code||emp.id)
       });
       extraMsgHtml += `<div style="font-size:12px;color:var(--ac-700);margin-top:8px">تم قطع إجازتك اليوم — سيتم إبلاغ الشؤون الإدارية وستقرر استرجاع رصيدك من عدمه</div>`;
       window._kioskLeaveCutContext = null;
@@ -4246,9 +4272,9 @@ window.kioskDoAction = async (type) => {
       const mins = window._kioskInstantPermContext.minutes;
       await addDoc(collection(secDb,'personalPermissionRequests'), {
         employeeId: emp.id, employeeName: emp.name, departmentId: emp.departmentId||null,
-        kind: 'permission', mode: 'instant', period: periodForDate(todayStr()), date: todayStr(),
+        kind: 'permission', mode: 'instant', period: periodForDate(kioskToday(_ms)), date: kioskToday(_ms),
         position: 'start', minutes: mins, status: 'auto', authCode: emp.code,
-        note: 'تسجيل حضور متأخر تلقائي', requestedAt: Date.now(), requestedBy: 'kiosk:'+(emp.code||emp.id)
+        note: 'تسجيل حضور متأخر تلقائي', requestedAt: _ms, requestedBy: 'kiosk:'+(emp.code||emp.id)
       });
       extraMsgHtml += `<div style="font-size:12px;color:var(--ac-700);margin-top:8px">اتخصم ${esc(minutesToHoursLabel(mins))} من رصيد إذنك الشخصي</div>`;
       window._kioskInstantPermContext = null;
@@ -4260,7 +4286,7 @@ window.kioskDoAction = async (type) => {
     document.getElementById('kiosk-body').innerHTML = `
       <div style="text-align:center;padding:20px 0">
         <div class="kiosk-check-pop" style="font-size:40px;color:var(--ok-600);margin-bottom:10px"><i class="fas fa-check-circle"></i></div>
-        <div style="font-weight:800;font-size:15px">تم تسجيل ${type==='checkin'?'حضورك':'انصرافك'} الساعة ${nowHM()}</div>
+        <div style="font-weight:800;font-size:15px">تم تسجيل ${type==='checkin'?'حضورك':'انصرافك'} الساعة ${kioskNowHM(_ms)}</div>
         <div style="font-size:12.5px;color:var(--ac-700);margin-top:8px;font-weight:600">${warmMsg}</div>
         ${extra.pendingOvertimeMinutes ? `<div style="font-size:12px;color:var(--warn-600);margin-top:8px">وقت إضافي معلّق (${overtimeDurationLabel(extra.pendingOvertimeMinutes)}) — محتاج موافقة المدير</div>` : ''}
         ${extra.mealEligible ? `<div style="font-size:12px;color:var(--ac-700);margin-top:8px">مستحق وجبة</div>` : ''}
