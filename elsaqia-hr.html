@@ -1059,6 +1059,7 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, signInAnonymously, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { initializeFirestore, collection, doc, getDoc, getDocs, setDoc, addDoc, updateDoc, deleteDoc, onSnapshot, query, where, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { initializeAppCheck, ReCaptchaEnterpriseProvider } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app-check.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDEK9oIQQYWy2btXVQWIB64cQGUsjMf6j8",
@@ -1068,7 +1069,17 @@ const firebaseConfig = {
   messagingSenderId: "456385817910",
   appId: "1:456385817910:web:c890a984bc41f200949797"
 };
+// App Check (Fraud Defense / reCAPTCHA Enterprise) — المفتاح عام (Site key) وليس سرًّا.
+// في وضع المراقبة: يرسل توكن مع كل طلب فقط. لا يرفض شيئًا إلا بعد تفعيل الفرض (Enforce) من Firebase Console.
+// أي فشل في التهيئة يُسجَّل تحذيرًا في الكونسول ولا يوقف التطبيق.
+const APPCHECK_SITE_KEY = "6Lce4CAuAAAAAJ9bqeRRT1G1OtcIF63bzlYg-66d";
+function _initAppCheck(app, label) {
+  try {
+    initializeAppCheck(app, { provider: new ReCaptchaEnterpriseProvider(APPCHECK_SITE_KEY), isTokenAutoRefreshEnabled: true });
+  } catch (e) { console.warn('[AppCheck] init failed (' + label + '):', e); }
+}
 const fbApp = initializeApp(firebaseConfig);
+_initAppCheck(fbApp, 'main');
 const auth  = getAuth(fbApp);
 // ⚠️ بحث موسّع (أغسطس 2026) لقى باگ موثّق ومفتوح لسه في Firebase نفسها: Safari 26.4 فأعلى (آيفون وماك)
 // بطيء جدًا مع Firestore تحديدًا (GitHub firebase-js-sdk#9789) — طلبات كانت أقل من ثانية بقت ~10 ثواني.
@@ -1092,6 +1103,7 @@ const APP_LOGO_B64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAKAAAABwCAYA
 // تطبيق Firebase ثانوي منفصل تماماً — يستخدمه الكيوسك (Anonymous Auth) وعملية إنشاء مستخدمين جدد،
 // حتى لا يؤثر على جلسة دخول الأدمن الحالية في نفس المتصفح
 const secApp  = initializeApp(firebaseConfig, 'secondary');
+_initAppCheck(secApp, 'secondary');
 const secAuth = getAuth(secApp);
 const secDb   = initializeFirestore(secApp, _fsSettings);
 
