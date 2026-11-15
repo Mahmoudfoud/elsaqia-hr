@@ -368,13 +368,13 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
       </div>
       <div class="card">
         <div class="card-body" style="font-size:12.5px">
-          <div style="font-weight:800;margin-bottom:6px"><i class="fas fa-calculator"></i> معاملات حساب المرتب</div>
+          <div style="font-weight:800;margin-bottom:6px"><i class="fas fa-calculator"></i> معاملات حساب الراتب</div>
           <div style="color:var(--slate-600);margin-bottom:10px">التحكم في معامل الساعة الإضافية، معامل اليوم الإضافي، ومعامل خصم الغياب. أي تغيير له تاريخ سريان — الشهور السابقة لتاريخ السريان تفضل محسوبة بالمعامل القديم كما هي، بدون أي تأثير رجعي.</div>
           <button class="btn btn-ghost btn-sm" onclick="openPolicySettingsModal()"><i class="fas fa-history"></i>عرض/تعديل معاملات الحساب (سجل تاريخي)</button>
         </div>
       </div>
       <div class="card"><div class="card-body" style="font-size:12px;color:var(--slate-500)">
-        كل موظف تقدر تحدد له فرع معيّن من "بيانات الموظف" فيتحقق النظام إنه داخل نطاق الفرع ده بس وقت تسجيل الحضور/الانصراف. لو مافيش فرع محدد لموظف، النظام هيقبل تسجيله من أي فرع من الفروع المسجّلة هنا.
+        يمكنك تحديد فرع معيّن لكل موظف من "بيانات الموظف"، فيتحقق النظام من أنه داخل نطاق هذا الفرع فقط وقت تسجيل الحضور/الانصراف. وإذا لم يُحدَّد فرع لموظف، يقبل النظام تسجيله من أي فرع من الفروع المسجّلة هنا.
       </div></div>
       <div class="card"><table class="tbl">
         <thead><tr><th>اسم الفرع</th><th>الإحداثيات</th><th>النطاق المسموح (متر)</th><th></th></tr></thead>
@@ -434,7 +434,7 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
         </div>
       </div>
       <div class="card" id="monthly-scroll-wrap" style="overflow:auto;max-height:65vh"><table class="tbl" id="monthly-table">
-        <thead><tr><th>الاسم</th><th>الوظيفة</th><th>ساعات إضافية</th><th>أيام إضافية</th><th>إجازة من الرصيد</th><th>إجازة مرضية</th><th>إجازة بالخصم</th><th title="اكتب عدد أيام الغياب الحقيقي — النظام يخصم يومين من المرتب تلقائيًا عن كل يوم غياب">غياب ⓘ</th><th>إذن شخصي</th><th>الحافز %</th><th>جزاءات (أيام)</th><th>مكافآت (أيام)</th><th>ملاحظات</th><th></th></tr></thead>
+        <thead><tr><th>الاسم</th><th>الوظيفة</th><th>ساعات إضافية</th><th>أيام إضافية</th><th>إجازة من الرصيد</th><th>إجازة مرضية</th><th>إجازة بالخصم</th><th title="اكتب عدد أيام الغياب الحقيقي — النظام يخصم يومين من الراتب تلقائيًا عن كل يوم غياب">غياب ⓘ</th><th>إذن شخصي</th><th>الحافز %</th><th>جزاءات (أيام)</th><th>مكافآت (أيام)</th><th>ملاحظات</th><th></th></tr></thead>
         <tbody id="monthly-body"></tbody>
       </table></div>
       <style>
@@ -485,7 +485,7 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
         <div class="frow c2">
           <div class="fg">
             <label class="fl">الموظف</label>
-            <input class="fc" type="text" id="rep-emp-search" placeholder="اكتب اسم الموظف — سيب الخانة فاضية لكل الموظفين" autocomplete="off" oninput="resolveEmployeeSearch('rep-emp-search','rep-emp',{allowAll:true})">
+            <input class="fc" type="text" id="rep-emp-search" placeholder="اكتب اسم الموظف — اترك الخانة فارغة لكل الموظفين" autocomplete="off" oninput="resolveEmployeeSearch('rep-emp-search','rep-emp',{allowAll:true})">
             <input type="hidden" id="rep-emp" value="__all__">
           </div>
           <div class="fg"></div>
@@ -580,7 +580,7 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
       </table></div>
       <div class="card" style="margin-top:16px"><div class="card-body">
         <div style="font-weight:700;font-size:13px;margin-bottom:6px"><i class="fas fa-database"></i> النسخة الاحتياطية</div>
-        <div style="font-size:12px;color:var(--slate-500);margin-bottom:10px">بيصدّر كل بيانات النظام (الموظفين، الرواتب، الحضور، الإجازات، السلف... كل حاجة) في ملف واحد تقدر تنزّله وتحتفظ بيه. النسخة يدوية — يُنصح بعملها بشكل دوري (أسبوعيًا مثلًا) والاحتفاظ بأكتر من نسخة بتواريخ مختلفة.</div>
+        <div style="font-size:12px;color:var(--slate-500);margin-bottom:10px">يصدّر كل بيانات النظام (الموظفين، الرواتب، الحضور، الإجازات، السلف... وغيرها) في ملف واحد يمكنك تنزيله والاحتفاظ به. النسخة يدوية — يُنصح بعملها بشكل دوري (أسبوعيًا مثلًا) والاحتفاظ بأكثر من نسخة بتواريخ مختلفة.</div>
         <button class="btn btn-ghost btn-sm" id="btn-backup-now" onclick="backupNow()"><i class="fas fa-download"></i>نسخة احتياطية الآن</button>
       </div></div>
     </div>
@@ -648,7 +648,7 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
         <div class="fg"><label class="fl">التأمين الطبي (ج.م)</label><input class="fc" type="number" id="emp-medins" placeholder="0" oninput="updateSalaryPreview()"></div>
       </div>
       <div class="frow c2">
-        <div class="fg"><label class="fl">تاريخ بداية التأمين <span style="color:var(--slate-500);font-weight:400">(سيبه فاضي لو بيبدأ من أول تعيينه)</span></label><input class="fc" type="date" id="emp-insurance-start"></div>
+        <div class="fg"><label class="fl">تاريخ بداية التأمين <span style="color:var(--slate-500);font-weight:400">(اتركه فارغًا إذا كان يبدأ من أول تعيينه)</span></label><input class="fc" type="date" id="emp-insurance-start"></div>
       </div>
       <div class="frow c2">
         <div class="fg"><label class="fl">ضريبة كسب العمل (ج.م)</label><input class="fc" type="number" id="emp-tax" placeholder="0" oninput="updateSalaryPreview()"></div>
@@ -662,14 +662,14 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
         <div class="fg" id="emp-rejoin-wrap" style="display:none">
           <label class="fl">تاريخ الرجوع من الاستقالة</label>
           <input class="fc" type="date" id="emp-rejoin-date">
-          <div style="font-size:11px;color:var(--slate-500);margin-top:4px">هيتم تجميد الشهور من تاريخ الاستقالة لحد التاريخ ده (متظهرش في السجلات)، رصيد إجازاته هيفضل زي ما كان وقت الاستقالة، وهيتطلب منه يسجل بصمة جديدة عند أول حضور</div>
+          <div style="font-size:11px;color:var(--slate-500);margin-top:4px">سيتم تجميد الشهور من تاريخ الاستقالة حتى هذا التاريخ (ولن تظهر في السجلات)، وسيبقى رصيد إجازاته كما كان وقت الاستقالة، وسيُطلب منه تسجيل بصمة جديدة عند أول حضور</div>
         </div>
       </div>
       <div class="frow c2">
         <div class="fg" style="display:flex;align-items:flex-end;padding-bottom:9px">
           <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--navy-900);cursor:pointer">
             <input type="checkbox" id="emp-ismanager" style="width:16px;height:16px;cursor:pointer">
-            مدير القسم ده؟
+            مدير هذا القسم؟
           </label>
         </div>
       </div>
@@ -719,7 +719,7 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
       <div class="fg">
         <label class="fl">سماحية الوقت الإضافي (ساعات بعد انتهاء الوردية)</label>
         <input class="fc" type="number" min="1" max="23" step="0.5" id="shift-ot-grace" placeholder="10">
-        <div style="font-size:11px;color:var(--slate-500);margin-top:3px">المدة اللي بصمة الانصراف تفضل مفتوحة خلالها بعد معاد انتهاء الوردية — لو الموظف قعد أكتر منها من غير ما يبصم، هيتطلب تدخل الأدمن يدويًا</div>
+        <div style="font-size:11px;color:var(--slate-500);margin-top:3px">المدة التي تظل فيها بصمة الانصراف مفتوحة بعد موعد انتهاء الوردية — إذا تجاوزها الموظف دون تسجيل بصمة، فسيلزم تدخّل الأدمن يدويًا</div>
       </div>
       <div class="fg">
         <label class="fl">أيام العمل بالنسبة لهذه الوردية</label>
@@ -782,7 +782,7 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
         <div class="fg"><label class="fl">تقييد مكان الحضور</label><select class="fc" id="driver-checkin-loc"></select></div>
         <div class="fg"><label class="fl">تقييد مكان الانصراف</label><select class="fc" id="driver-checkout-loc"></select></div>
       </div>
-      <div style="font-size:11px;color:var(--slate-500);margin-top:-6px;margin-bottom:10px">لو سيبت أي خانة "بدون تقييد"، السائق يقدر يسجّل من أي مكان في الاتجاه ده.</div>
+      <div style="font-size:11px;color:var(--slate-500);margin-top:-6px;margin-bottom:10px">إذا تركت أي خانة على "بدون تقييد"، يستطيع السائق التسجيل من أي مكان في هذا الاتجاه.</div>
       <div class="frow c2">
         <div class="fg"><label class="fl">رصيد اعتيادية</label><input class="fc" type="number" id="driver-leave-regular" placeholder="14"></div>
         <div class="fg"><label class="fl">رصيد عارضة</label><input class="fc" type="number" id="driver-leave-casual" placeholder="7"></div>
@@ -832,7 +832,7 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
   <div class="modal" style="max-width:440px">
     <div class="mh"><span class="mh-title">تعديل وردية ليوم محدد</span><button class="mclose" onclick="closeM('mo-shift-override')">×</button></div>
     <div class="mb">
-      <div style="font-size:12px;color:var(--slate-500);margin-bottom:12px">المواعيد دي هتطبّق على اليوم ده بس، وبعد ما اليوم يخلص المواعيد الأساسية للوردية بترجع تاني تلقائي.</div>
+      <div style="font-size:12px;color:var(--slate-500);margin-bottom:12px">ستُطبَّق هذه المواعيد على هذا اليوم فقط، وبعد انتهائه تعود المواعيد الأساسية للوردية تلقائيًا.</div>
       <div class="frow c2">
         <div class="fg"><label class="fl">الوردية</label><select class="fc" id="so-shift" onchange="onOverrideShiftChange()"></select></div>
         <div class="fg"><label class="fl">التاريخ</label><input class="fc" type="date" id="so-date"></div>
@@ -852,7 +852,7 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
     </div>
     <div class="mf">
       <button class="btn btn-ghost" onclick="closeM('mo-shift-override')">إلغاء</button>
-      <button class="btn btn-ac" onclick="saveShiftOverride()"><i class="fas fa-save"></i>حفظ لليوم ده بس</button>
+      <button class="btn btn-ac" onclick="saveShiftOverride()"><i class="fas fa-save"></i>حفظ لهذا اليوم فقط</button>
     </div>
   </div>
 </div>
@@ -883,7 +883,7 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
     <div class="mh"><span class="mh-title">تسجيل حضور/انصراف يدوي</span><button class="mclose" onclick="closeM('mo-manualatt')">×</button></div>
     <div class="mb">
       <div id="ma-emp-name" style="font-weight:800;margin-bottom:4px"></div>
-      <div style="font-size:12px;color:var(--slate-500);margin-bottom:12px">للحالات اللي الموظف معرفش يسجل حضوره أو انصرافه بنفسه لأي سبب (تليفونه ضاع، مشكلة في النت، إلخ)</div>
+      <div style="font-size:12px;color:var(--slate-500);margin-bottom:12px">للحالات التي لم يستطع فيها الموظف تسجيل حضوره أو انصرافه بنفسه لأي سبب (ضياع الهاتف، مشكلة في الإنترنت، إلخ)</div>
       <div class="fg"><label class="fl">النوع</label>
         <select class="fc" id="ma-type">
           <option value="checkin">تسجيل حضور</option>
@@ -1024,7 +1024,7 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
 
 <div class="overlay" id="mo-policy-settings">
   <div class="modal" style="max-width:640px">
-    <div class="mh"><span class="mh-title">معاملات حساب المرتب — سجل تاريخي</span><button class="mclose" onclick="closeM('mo-policy-settings')">×</button></div>
+    <div class="mh"><span class="mh-title">معاملات حساب الراتب — سجل تاريخي</span><button class="mclose" onclick="closeM('mo-policy-settings')">×</button></div>
     <div class="mb" id="policy-settings-body"></div>
   </div>
 </div>
@@ -1404,7 +1404,7 @@ function refreshCombinedLeavesBadge() {
 const PAGE_PERM = { employees:'employees_manage', departments:'departments_manage', shifts:'shifts_manage', reps:'reps_manage', drivers:'drivers_manage', settings:'settings_manage', daily:'daily_view', dailymark:'daily_view', overtime:'overtime_approve', monthly:'monthly_manage', evaluation:'eval_manager', profile:'profiles_view', reports:'reports_view', leaves:'leaves_manage', penalties:'penalties_rewards_manage', holidays:'holidays_manage', advances:'advances_manage' };
 window.goPage = async (name) => {
   if (_page==='monthly' && name!=='monthly' && _monthlyDirtyRows.size>0) {
-    const offlineNote = window._fsOffline ? ' — تنبيه: أنت غير متصل بالخادم حاليًا، وأي حفظ سابق قد يكون لسه معلّق ولم يصل فعليًا' : '';
+    const offlineNote = window._fsOffline ? ' — تنبيه: أنت غير متصل بالخادم حاليًا، وأي حفظ سابق قد يكون لا يزال معلّقًا ولم يصل فعليًا' : '';
     if (!(await confirmDialog(`لديك تعديلات غير محفوظة لـ${_monthlyDirtyRows.size} موظف في الكشف الشهري، وستفقدها إذا غادرت هذه الصفحة الآن.${offlineNote} هل أنت متأكد من المتابعة؟`))) return;
     _monthlyDirtyRows.clear();
   }
@@ -1514,7 +1514,7 @@ async function renderHealthCheck() {
 
   // 5) موظف نشط بصمته اتمسحت أو ماسجلش بصمة خالص — مش هيقدر يستخدم الكيوسك
   const noPasskey = _employees.filter(e=>e.status!=='resigned' && e.category!=='rep' && e.category!=='driver' && (!e.passkeys || !e.passkeys.length));
-  if (noPasskey.length) issues.push({ title:'موظفون نشطون بلا بصمة مسجّلة (لن يتمكّنوا من تسجيل الحضور)', icon:'fa-fingerprint', severity:'warning',
+  if (noPasskey.length) issues.push({ title:'موظفون نشطون لم يسجّلوا بصمتهم بعد (ستُسجَّل تلقائيًا عند أول حضور)', icon:'fa-fingerprint', severity:'warning',
     items: noPasskey.map(e=>e.name) });
 
   if (!issues.length) {
@@ -1647,7 +1647,7 @@ window.saveShift = async () => {
   if (!workDays.length) { toast('يُرجى تحديد يوم عمل واحد على الأقل', 'error'); return; }
   if (hmToMin(checkinFrom) >= hmToMin(checkinTo)) { toast('يجب أن يكون وقت "الحضور من" قبل وقت "الحضور حتى"', 'error'); return; }
   if (hmToMin(checkoutFrom) >= hmToMin(checkoutTo)) { toast('يجب أن يكون وقت "الانصراف من" قبل وقت "الانصراف حتى"', 'error'); return; }
-  if (overtimeGraceHours<=0 || overtimeGraceHours>23) { toast('سماحية الوقت الإضافي لازم تكون بين 1 و23 ساعة', 'error'); return; }
+  if (overtimeGraceHours<=0 || overtimeGraceHours>23) { toast('يجب أن تكون سماحية الوقت الإضافي بين 1 و23 ساعة', 'error'); return; }
   const data = { name, start, end, checkinFrom, checkinTo, checkoutFrom, checkoutTo, workDays, overtimeGraceHours };
   try {
     if (window._editShiftId) {
@@ -2069,7 +2069,7 @@ window.saveShiftOverride = async () => {
   if (!shiftId || !date || Object.values(data).some(v=>!v)) { toast('يُرجى استكمال جميع الحقول المطلوبة', 'error'); return; }
   try {
     await setDoc(doc(db,'shiftOverrides', `${shiftId}_${date}`), { ...data, createdAt:Date.now(), createdBy: CU.email });
-    toast('تم حفظ التعديل — هيتطبق يوم ' + date + ' بس', 'success');
+    toast('تم حفظ التعديل — سيُطبَّق يوم ' + date + ' بس', 'success');
     closeM('mo-shift-override');
     renderShiftOverrides();
   } catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
@@ -2543,7 +2543,7 @@ function renderSalaryHistoryModal(empId) {
       <div style="font-weight:800;font-size:13px;margin-bottom:8px">تعديل جديد</div>
       <div class="frow c2">
         <div class="fg"><label class="fl">تاريخ السريان</label><input class="fc" type="date" id="sh-effective"></div>
-        <div class="fg"><label class="fl">المرتب الأساسي (ج.م)</label><input class="fc" type="number" id="sh-salary" value="${emp.salary||0}"></div>
+        <div class="fg"><label class="fl">الراتب الأساسي (ج.م)</label><input class="fc" type="number" id="sh-salary" value="${emp.salary||0}"></div>
       </div>
       <div class="frow c2">
         <div class="fg"><label class="fl">ضريبة كسب العمل (ج.م)</label><input class="fc" type="number" id="sh-tax" value="${emp.incomeTax||0}"></div>
@@ -2636,8 +2636,8 @@ function renderPolicySettingsModal() {
   let rowsHtml = '';
   if (!history.length) {
     rowsHtml = deptId
-      ? `<div class="empty" style="padding:14px"><p>القسم ده مالوش سجل معاملات خاص بيه — شغال حاليًا بإعدادات الشركة العامة. أي تعديل هنا هيخصص القسم ده بس من غير ما يأثر على باقي الأقسام.</p></div>`
-      : `<div class="empty" style="padding:14px"><p>لا توجد تعديلات مسجّلة بعد — يتم تطبيق القيم الافتراضية (الساعة الإضافية ×1.7، اليوم الإضافي ×2، الغياب ×2) على كل الأقسام اللي مالهاش سجل خاص</p></div>`;
+      ? `<div class="empty" style="padding:14px"><p>هذا القسم ليس له سجل معاملات خاص به — يعمل حاليًا بإعدادات الشركة العامة. أي تعديل هنا سيخصّص هذا القسم فقط دون التأثير على باقي الأقسام.</p></div>`
+      : `<div class="empty" style="padding:14px"><p>لا توجد تعديلات مسجّلة بعد — يتم تطبيق القيم الافتراضية (الساعة الإضافية ×1.7، اليوم الإضافي ×2، الغياب ×2) على كل الأقسام التي ليس لها سجل خاص</p></div>`;
   } else {
     rowsHtml = `<div style="max-height:220px;overflow-y:auto;margin-bottom:14px">` + history.map((h,i)=>`
       <div style="border:1px solid var(--slate-200);border-radius:8px;padding:10px 12px;margin-bottom:6px;font-size:12px">
@@ -2929,7 +2929,7 @@ window.migrateEmployeeCodes = async () => {
       synced++;
     }
     let msg = `تمت المزامنة بنجاح: ${synced} موظف، و${skipped} بلا كود (وهذا متوقّع إن لم يكن قد تم تحديد كود لهم).`;
-    if (duplicates.length) msg += ` ⚠️ تكرار في الأكواد لازم يتصلح يدوي: ${duplicates.join('، ')}`;
+    if (duplicates.length) msg += ` ⚠️ تكرار في الأكواد يجب إصلاحه يدويًا: ${duplicates.join('، ')}`;
     resultEl.innerHTML = `<span style="color:${duplicates.length?'var(--danger-600)':'var(--ok-700)'}">${esc(msg)}</span>`;
     toast('تمت المزامنة', 'success');
   } catch(e) {
@@ -3141,7 +3141,7 @@ function parseClockOvertimeInput(rawStr) {
     const mm = parseInt(parts[1], 10);
     minutes = isNaN(mm) ? 0 : mm;
   }
-  if (minutes < 0 || minutes > 59) return { valid:false, error:'عدد الدقائق لازم يكون من 0 لحد 59', hours, minutes };
+  if (minutes < 0 || minutes > 59) return { valid:false, error:'يجب أن يكون عدد الدقائق من 0 إلى 59', hours, minutes };
   return { valid:true, decimalHours: hours + minutes/60, hours, minutes };
 }
 window.parseClockOvertimeInput = parseClockOvertimeInput;
@@ -3190,7 +3190,7 @@ async function webauthnRegister(emp) {
   // منها وهو لسه مستني نافذة البصمة الأولى، المتصفح كان بيرفض الطلب التاني برسالته الخاصة
   // "A request is already pending." من غير أي توضيح. العلم ده بيغطي كل نقاط الاستخدام السبعة
   // في مكان واحد بدل ما نحمي كل زرار/رابط لوحده.
-  if (_webauthnBusy) throw new Error('في طلب بصمة سابق لسه شغال — استنى لحظة لغاية ما يخلص وحاول تاني');
+  if (_webauthnBusy) throw new Error('يوجد طلب بصمة سابق لم ينتهِ بعد — انتظر لحظة حتى ينتهي ثم حاول مرة أخرى');
   _webauthnBusy = true;
   try {
     if (!window.PublicKeyCredential) throw new Error('هذا الجهاز أو المتصفح لا يدعم تسجيل الدخول بالبصمة (WebAuthn)');
@@ -3201,14 +3201,14 @@ async function webauthnRegister(emp) {
       pubKeyCredParams: [{type:'public-key',alg:-7},{type:'public-key',alg:-257}],
       authenticatorSelection: { authenticatorAttachment:'platform', userVerification:'required', residentKey:'required', requireResidentKey:true },
       timeout: 60000, attestation: 'none'
-    }}), 25000, 'انتهت مهلة تسجيل البصمة (25 ثانية) من غير أي رد من الجهاز — حاول تاني');
+    }}), 25000, 'انتهت مهلة تسجيل البصمة (25 ثانية) دون أي استجابة من الجهاز — حاول مرة أخرى');
     if (!cred) throw new Error('اتلغى تسجيل البصمة');
     return { id: bufToB64url(cred.rawId), label: 'جهاز مسجّل بتاريخ ' + new Date().toLocaleDateString('ar-EG'), createdAt: Date.now() };
   } finally { _webauthnBusy = false; }
 }
 
 async function webauthnVerify(emp) {
-  if (_webauthnBusy) throw new Error('في طلب بصمة سابق لسه شغال — استنى لحظة لغاية ما يخلص وحاول تاني');
+  if (_webauthnBusy) throw new Error('يوجد طلب بصمة سابق لم ينتهِ بعد — انتظر لحظة حتى ينتهي ثم حاول مرة أخرى');
   _webauthnBusy = true;
   try {
     if (!window.PublicKeyCredential) throw new Error('هذا الجهاز أو المتصفح لا يدعم تسجيل الدخول بالبصمة (WebAuthn)');
@@ -3223,7 +3223,7 @@ async function webauthnVerify(emp) {
     const allow = (emp.passkeys||[]).map(p=>({ id: b64urlToBuf(p.id), type:'public-key', transports: SAFE_TRANSPORTS }));
     const cred = await withTimeout(navigator.credentials.get({ publicKey: {
       challenge: randChallenge(), rpId: location.hostname, allowCredentials: allow, userVerification:'required', timeout:60000
-    }}), 25000, 'انتهت مهلة التحقق من البصمة (25 ثانية) من غير أي رد من الجهاز — حاول تاني');
+    }}), 25000, 'انتهت مهلة التحقق من البصمة (25 ثانية) دون أي استجابة من الجهاز — حاول مرة أخرى');
     if (!cred) throw new Error('فشل التحقق من البصمة');
     const gotId = bufToB64url(cred.rawId);
     const match = (emp.passkeys||[]).find(p=>p.id===gotId);
@@ -3329,9 +3329,9 @@ window.kioskSubmitCode = async () => {
   try {
     if (!secAuth.currentUser) await signInAnonymously(secAuth);
     const codeDoc = await getDoc(doc(secDb,'employeeCodes', code));
-    if (!codeDoc.exists()) { kioskRenderCodeEntry('الكود ده غلط أو غير موجود'); return; }
+    if (!codeDoc.exists()) { kioskRenderCodeEntry('هذا الكود غير صحيح أو غير موجود'); return; }
     const empDoc = await getDoc(doc(secDb,'employees', codeDoc.data().employeeId));
-    if (!empDoc.exists() || empDoc.data().status === 'resigned') { kioskRenderCodeEntry('الكود ده غلط أو غير موجود'); return; }
+    if (!empDoc.exists() || empDoc.data().status === 'resigned') { kioskRenderCodeEntry('هذا الكود غير صحيح أو غير موجود'); return; }
     window._kioskEmp = { id: empDoc.id, ...empDoc.data() };
     localStorage.setItem('elsaqia_kiosk_emp', empDoc.id);
     // ⚠️ إصلاح أمان (دفعة 4): ربط جهاز الكيوسك الحالي بالموظف صاحب الكود — بيسمح بعد كده لقواعد
@@ -3476,7 +3476,7 @@ async function kioskLoadStatus() {
             <div style="font-weight:800;font-size:15px">${esc(emp.name)}</div>
             <div style="font-size:12px;color:var(--slate-500);margin-top:2px">${esc(emp.jobTitle)||'—'} · ${esc(yShift.name)}</div>
           </div>
-          <div style="font-size:12px;color:var(--slate-600);margin-bottom:8px"><i class="fas fa-info-circle"></i> لا يزال حضورك مسجّلاً من ${esc(yesterday)} الساعة ${esc(yCheckin.time)} وما اتسجّلش انصرافك — مسموح تسجّله لحد الساعة ${graceEndHM}</div>
+          <div style="font-size:12px;color:var(--slate-600);margin-bottom:8px"><i class="fas fa-info-circle"></i> لا يزال حضورك مسجّلاً من ${esc(yesterday)} الساعة ${esc(yCheckin.time)} ولم يُسجَّل انصرافك — يُسمح لك بتسجيله حتى الساعة ${graceEndHM}</div>
           <button class="auth-btn" id="kiosk-act-btn" onclick="kioskDoAction('checkout')"><i class="fas fa-fingerprint"></i>تسجيل انصراف</button>
           <div style="margin-top:12px;display:flex;flex-direction:column;gap:8px">
             <a href="javascript:void(0)" onclick="kioskRenderCodeEntry()" style="font-size:11.5px;color:var(--slate-500)">لست أنا؟ رجوع</a>
@@ -3632,7 +3632,7 @@ window.kioskShowProfile = async () => {
   const emp = window._kioskEmp;
   const body = document.getElementById('kiosk-body');
   if (!(emp.passkeys||[]).length) {
-    body.innerHTML = `<div class="auth-err">لازم تسجل بصمتك الأول — سجّل حضور أو انصراف عادي مرة، وبعدها هتقدر تشوف بياناتك ببصمتك.</div><div style="margin-top:10px"><a href="javascript:void(0)" onclick="kioskLoadStatus()" style="font-size:11.5px">→ رجوع</a></div>`;
+    body.innerHTML = `<div class="auth-err">يجب تسجيل بصمتك أولًا — سجّل حضورًا أو انصرافًا عاديًا مرة واحدة، وبعدها يمكنك الاطلاع على بياناتك ببصمتك.</div><div style="margin-top:10px"><a href="javascript:void(0)" onclick="kioskLoadStatus()" style="font-size:11.5px">→ رجوع</a></div>`;
     return;
   }
   body.innerHTML = '<div class="empty"><i class="fas fa-fingerprint fa-spin"></i><p>ضع بصمتك للتأكد من هويتك...</p></div>';
@@ -3788,7 +3788,7 @@ window.kioskShowLeaveForm = async () => {
   const emp = window._kioskEmp;
   const body = document.getElementById('kiosk-body');
   if (!(emp.passkeys||[]).length) {
-    body.innerHTML = `<div class="auth-err">لازم تسجل بصمتك الأول — سجّل حضور أو انصراف عادي مرة، وبعدها هتقدر تطلب إجازة ببصمتك.</div><div style="margin-top:10px"><a href="javascript:void(0)" onclick="kioskLoadStatus()" style="font-size:11.5px">→ رجوع</a></div>`;
+    body.innerHTML = `<div class="auth-err">يجب تسجيل بصمتك أولًا — سجّل حضورًا أو انصرافًا عاديًا مرة واحدة، وبعدها يمكنك طلب إجازة ببصمتك.</div><div style="margin-top:10px"><a href="javascript:void(0)" onclick="kioskLoadStatus()" style="font-size:11.5px">→ رجوع</a></div>`;
     return;
   }
   body.innerHTML = '<div class="empty"><i class="fas fa-fingerprint fa-spin"></i><p>ضع بصمتك للتأكد من هويتك...</p></div>';
@@ -3839,9 +3839,9 @@ window.kioskUpdateLeaveTypeNote = () => {
   document.getElementById('kv-cap-note').innerHTML = (type==='marriage'
     ? '<i class="fas fa-info-circle"></i> ملحوظة: مسموح بطلب واحد بس في اليوم. رصيد إجازة الجواز محدود ومُدار من الإدارة'
     : '<i class="fas fa-info-circle"></i> ملحوظة: مسموح بطلب واحد بس في اليوم')
-    + (advanceDays>0 ? `<br>لازم تتقدّم بطلب ${LEAVE_TYPES[type].label} قبل تاريخها بيوم على الأقل` : '<br>ممكن تتقدّم بطلب إجازة عارضة في نفس اليوم لو الموضوع طارئ')
+    + (advanceDays>0 ? `<br>يجب التقدّم بطلب ${LEAVE_TYPES[type].label} قبل تاريخها بيوم على الأقل` : '<br>يمكنك التقدّم بطلب إجازة عارضة في اليوم نفسه إذا كان الأمر طارئًا')
     + (!hasSixMonthsService(emp, fromInput.value || kioskToday(), type)
-        ? `<br><span style="color:var(--warn-600)"><i class="fas fa-exclamation-triangle"></i> لسه ما أكملتش ${emp.leaveEligibilityMonths||6} شهور خدمة — لو اتوافق على الطلب ده هيتخصم بالكامل من مرتبك، مش من رصيدك</span>` : '');
+        ? `<br><span style="color:var(--warn-600)"><i class="fas fa-exclamation-triangle"></i> لم تكمل ${emp.leaveEligibilityMonths||6} أشهر خدمة بعد — إذا تمت الموافقة على هذا الطلب فسيُخصم بالكامل من راتبك وليس من رصيدك</span>` : '');
 };
 
 window.kioskSubmitLeaveRequest = async () => {
@@ -3885,7 +3885,7 @@ window.kioskSubmitLeaveRequest = async () => {
     // مايصحش يكون عنده حضور فعلي مسجّل (بصمة دخول أو انصراف) وإجازة معتمدة في نفس اليوم مع بعض
     const conflictDate = await findAttendanceConflictDate(emp.id, billableDates, secDb);
     if (conflictDate) {
-      err.textContent = `عندك سجل حضور فعلي بالفعل في تاريخ ${conflictDate} — مايصحش تطلب إجازة على يوم اتسجّل فيه حضورك.`;
+      err.textContent = `لديك سجل حضور فعلي بالفعل بتاريخ ${conflictDate} — لا يجوز طلب إجازة عن يوم سُجِّل فيه حضورك.`;
       btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i>إرسال الطلب';
       return;
     }
@@ -3941,7 +3941,7 @@ window.kioskSubmitLeaveRequest = async () => {
       <div style="text-align:center;padding:20px 0">
         <div style="font-size:40px;color:var(--ok-600);margin-bottom:10px"><i class="fas fa-check-circle"></i></div>
         <div style="font-weight:800;font-size:15px">تم إرسال طلب الإجازة</div>
-        <div style="font-size:12px;color:var(--slate-500);margin-top:6px">لازم موافقة مديرك المباشر وموافقة الشؤون قبل ما يتقبل نهائيًا — هتقدر تشوف حالته من "حالة طلبات إجازتي"</div>
+        <div style="font-size:12px;color:var(--slate-500);margin-top:6px">يلزم موافقة مديرك المباشر وموافقة الشؤون قبل قبوله نهائيًا — يمكنك الاطلاع على حالته من "حالة طلبات إجازتي"</div>
       </div>`;
     setTimeout(()=>kioskRenderCodeEntry(), 3000);
   } catch(e) {
@@ -3954,7 +3954,7 @@ window.kioskShowMyLeaveRequests = async () => {
   const emp = window._kioskEmp;
   const body = document.getElementById('kiosk-body');
   if (!(emp.passkeys||[]).length) {
-    body.innerHTML = `<div class="auth-err">لازم تسجل بصمتك الأول — سجّل حضور أو انصراف عادي مرة، وبعدها هتقدر تشوف حالة طلباتك ببصمتك.</div><div style="margin-top:10px"><a href="javascript:void(0)" onclick="kioskLoadStatus()" style="font-size:11.5px">→ رجوع</a></div>`;
+    body.innerHTML = `<div class="auth-err">يجب تسجيل بصمتك أولًا — سجّل حضورًا أو انصرافًا عاديًا مرة واحدة، وبعدها يمكنك الاطلاع على حالة طلباتك ببصمتك.</div><div style="margin-top:10px"><a href="javascript:void(0)" onclick="kioskLoadStatus()" style="font-size:11.5px">→ رجوع</a></div>`;
     return;
   }
   body.innerHTML = '<div class="empty"><i class="fas fa-fingerprint fa-spin"></i><p>ضع بصمتك للتأكد من هويتك...</p></div>';
@@ -4007,7 +4007,7 @@ window.kioskShowPersonalPermissionForm = async () => {
   const emp = window._kioskEmp;
   const body = document.getElementById('kiosk-body');
   if (!(emp.passkeys||[]).length) {
-    body.innerHTML = `<div class="auth-err">لازم تسجل بصمتك الأول — سجّل حضور أو انصراف عادي مرة، وبعدها هتقدر تطلب إذن شخصي ببصمتك.</div><div style="margin-top:10px"><a href="javascript:void(0)" onclick="kioskLoadStatus()" style="font-size:11.5px">→ رجوع</a></div>`;
+    body.innerHTML = `<div class="auth-err">يجب تسجيل بصمتك أولًا — سجّل حضورًا أو انصرافًا عاديًا مرة واحدة، وبعدها يمكنك طلب إذن شخصي ببصمتك.</div><div style="margin-top:10px"><a href="javascript:void(0)" onclick="kioskLoadStatus()" style="font-size:11.5px">→ رجوع</a></div>`;
     return;
   }
   body.innerHTML = '<div class="empty"><i class="fas fa-fingerprint fa-spin"></i><p>ضع بصمتك للتأكد من هويتك...</p></div>';
@@ -4029,13 +4029,13 @@ window.kioskShowPersonalPermissionForm = async () => {
   for (let i=1;i<=maxHalfHours;i++) optionsHtml += `<option value="${i*30}">${minutesToHoursLabel(i*30)}</option>`;
   document.getElementById('kiosk-body').innerHTML = `
     <div style="font-weight:800;font-size:15px;margin-bottom:4px">طلب إذن شخصي</div>
-    <div style="font-size:12px;color:var(--slate-500);margin-bottom:12px">رصيدك المتبقي هذه الدورة: ${minutesToHoursLabel(remaining)} — الطلب لازم يكون لنفس اليوم بس</div>
+    <div style="font-size:12px;color:var(--slate-500);margin-bottom:12px">رصيدك المتبقي هذه الدورة: ${minutesToHoursLabel(remaining)} — يجب أن يكون الطلب لليوم نفسه فقط</div>
     ${remaining<=0 ? `<div class="auth-err">انتهى رصيدك لهذه الدورة، ولا يمكن تقديم طلب جديد</div>` : `
     <div style="margin-bottom:10px">
-      <label style="font-size:12.5px;font-weight:700;display:block;margin-bottom:4px">هتاخد الإذن فين؟</label>
+      <label style="font-size:12.5px;font-weight:700;display:block;margin-bottom:4px">في أي موضع من الوردية تريد الإذن؟</label>
       <select class="fc" id="pp-position" style="width:100%">
-        <option value="start">أول الوردية (هوصل متأخر)</option>
-        <option value="end">آخر الوردية (همشي بدري)</option>
+        <option value="start">أول الوردية (سأصل متأخرًا)</option>
+        <option value="end">آخر الوردية (سأنصرف مبكرًا)</option>
       </select>
     </div>
     <div style="margin-bottom:10px">
@@ -4101,7 +4101,7 @@ window.kioskShowMyPersonalPermissionRequests = async () => {
   const emp = window._kioskEmp;
   const body = document.getElementById('kiosk-body');
   if (!(emp.passkeys||[]).length) {
-    body.innerHTML = `<div class="auth-err">لازم تسجل بصمتك الأول — سجّل حضور أو انصراف عادي مرة، وبعدها هتقدر تشوف حالة طلباتك ببصمتك.</div><div style="margin-top:10px"><a href="javascript:void(0)" onclick="kioskLoadStatus()" style="font-size:11.5px">→ رجوع</a></div>`;
+    body.innerHTML = `<div class="auth-err">يجب تسجيل بصمتك أولًا — سجّل حضورًا أو انصرافًا عاديًا مرة واحدة، وبعدها يمكنك الاطلاع على حالة طلباتك ببصمتك.</div><div style="margin-top:10px"><a href="javascript:void(0)" onclick="kioskLoadStatus()" style="font-size:11.5px">→ رجوع</a></div>`;
     return;
   }
   body.innerHTML = '<div class="empty"><i class="fas fa-fingerprint fa-spin"></i><p>ضع بصمتك للتأكد من هويتك...</p></div>';
@@ -4196,7 +4196,7 @@ window.kioskDoAction = async (type) => {
         if (!best || d < best.dist) best = { loc, dist: d, pos };
       }
       if (best.dist > (best.loc.radius||200)) {
-        throw new Error(`لازم تكون داخل نطاق ${candidateLocations.length>1?'أحد فروع الشركة':'مقر الشركة'} لتتمكن من التسجيل (أنت على بعد ${Math.round(best.dist)} متر تقريباً من أقرب فرع${best.loc.name?' — '+esc(best.loc.name):''})`);
+        throw new Error(`يجب أن تكون داخل نطاق ${candidateLocations.length>1?'أحد فروع الشركة':'مقر الشركة'} لتتمكن من التسجيل (أنت على بعد ${Math.round(best.dist)} متر تقريباً من أقرب فرع${best.loc.name?' — '+esc(best.loc.name):''})`);
       }
     }
     const dist = best.dist;
@@ -4369,7 +4369,7 @@ async function renderDaily() {
   const byShift = {};
   activeEmps.forEach(e=>{ (byShift[e.shiftId] = byShift[e.shiftId]||[]).push(e); });
 
-  const holidayBanner = holiday ? `<div class="card" style="margin-bottom:16px;border-color:var(--ac-500)"><div class="card-body" style="font-size:12.5px;color:var(--ac-700);font-weight:700"><i class="fas fa-flag"></i> اليوم إجازة رسمية (${esc(holiday.title)}) — الموظفين دول مستثنين ومطلوب يحضروا</div></div>` : '';
+  const holidayBanner = holiday ? `<div class="card" style="margin-bottom:16px;border-color:var(--ac-500)"><div class="card-body" style="font-size:12.5px;color:var(--ac-700);font-weight:700"><i class="fas fa-flag"></i> اليوم إجازة رسمية (${esc(holiday.title)}) — هؤلاء الموظفون مستثنون ومطلوب حضورهم</div></div>` : '';
 
   // نجيب المواعيد الفعلية لكل وردية (بتاخد في الاعتبار أي تعديل مؤقت shiftOverrides لهذا اليوم بالذات)
   const effShifts = await Promise.all(_shifts.map(shift => getEffectiveShift(shift.id, date, db)));
@@ -4541,10 +4541,10 @@ window.saveDailyMark = async () => {
   const empId = window._dmEmpId, dateStr = window._dmDate;
   try {
     if (status==='leave') {
-      if (!hasPerm('leaves_manage')) throw new Error('محتاج صلاحية "إدارة الإجازات" عشان تسجّل إجازة من الرصيد');
+      if (!hasPerm('leaves_manage')) throw new Error('يلزم صلاحية "إدارة الإجازات" لتسجيل إجازة من الرصيد');
       await applyLeaveFromBalanceCascade(empId, dateStr);
     } else if (status==='deduct') {
-      if (!hasPerm('penalties_rewards_manage')) throw new Error('محتاج صلاحية "إدارة الجزاءات والمكافآت" عشان تسجّل خصم يوم');
+      if (!hasPerm('penalties_rewards_manage')) throw new Error('يلزم صلاحية "إدارة الجزاءات والمكافآت" لتسجيل خصم يوم');
       const emp = _employees.find(x=>x.id===empId);
       if (!emp) throw new Error('الموظف غير موجود');
       const dailyRate = (getSalaryConfigForDate(emp, dateStr).salary||0)/30;
@@ -4591,7 +4591,7 @@ window.saveManualAttendance = async () => {
     let shiftWarning = '';
     if (emp && emp.category!=='rep' && emp.category!=='driver') {
       if (!emp.shiftId) {
-        shiftWarning = 'تنبيه: الموظف ده مالوش وردية متعيّنة له، فمقدرناش نحسب الوقت الإضافي أو التأخير تلقائيًا — الوقت اتسجّل بس من غير حساب.';
+        shiftWarning = 'تنبيه: هذا الموظف ليس له وردية معيّنة، لذلك لم نتمكن من احتساب الوقت الإضافي أو التأخير تلقائيًا — سُجِّل الوقت فقط دون احتساب.';
       } else {
         const shift = await getEffectiveShift(emp.shiftId, window._maDate, db);
         if (!shift) {
@@ -4703,7 +4703,7 @@ async function renderOvertime() {
 
   const body = document.getElementById('overtime-body');
   body.innerHTML = '<div class="empty"><i class="fas fa-spinner fa-spin"></i><p>جاري التحميل...</p></div>';
-  if (dateTo < dateFrom) { body.innerHTML = '<div class="empty"><p>تاريخ النهاية لازم يكون بعد تاريخ البداية</p></div>'; return; }
+  if (dateTo < dateFrom) { body.innerHTML = '<div class="empty"><p>يجب أن يكون تاريخ النهاية بعد تاريخ البداية</p></div>'; return; }
 
   let snap;
   try {
@@ -5006,7 +5006,7 @@ window.saveAllMonthlyRows = async () => {
       return `<div style="padding:6px 0;border-bottom:1px solid var(--border)"><b>${esc(s.name)}</b> — ${reasonLabel}</div>`;
     }).join('');
     toast(`تم حفظ ${okCount} موظف. اتخطى ${skipped.length}: راجع الرسالة التفصيلية`, 'error');
-    await infoDialog(`<div style="font-weight:700;margin-bottom:10px">الموظفين اللي اتخطوا ولازم تحفظهم يدوي بعد المراجعة:</div>${listHtml}`);
+    await infoDialog(`<div style="font-weight:700;margin-bottom:10px">الموظفون الذين تم تخطيهم ويجب حفظهم يدويًا بعد المراجعة:</div>${listHtml}`);
   }
 };
 
@@ -5292,7 +5292,7 @@ window.importMonthlyFromExcel = async (event) => {
 function renderMonthlyImportPreview(unmatched, ambiguous, period) {
   const { changes } = window._monthlyImportPending;
   const body = document.getElementById('import-monthly-body');
-  let html = `<div style="font-size:13px;margin-bottom:10px">الدورة المستهدفة: <b>${esc(period)}</b> (نفس الفترة المحددة في الصفحة) — عدد الموظفين اللي فيهم تغيير: <b>${changes.length}</b></div>`;
+  let html = `<div style="font-size:13px;margin-bottom:10px">الدورة المستهدفة: <b>${esc(period)}</b> (نفس الفترة المحددة في الصفحة) — عدد الموظفين الذين طرأ عليهم تغيير: <b>${changes.length}</b></div>`;
   if (unmatched.length) html += `<div class="auth-err" style="margin-bottom:8px">تعذّر إيجاد ${unmatched.length} في النظام: ${esc(unmatched.join('، '))} — سيتم تجاهلهم.</div>`;
   if (ambiguous.length) html += `<div class="auth-err" style="margin-bottom:8px">أسماء متكررة في النظام (لا يمكن تحديد المقصود بالاسم فقط): ${esc(ambiguous.join('، '))} — سيتم تجاهلهم، يُرجى استخدام عمود "كود الموظف" في حال الحاجة لتعديلهم.</div>`;
   if (!changes.length) {
@@ -5584,7 +5584,7 @@ async function renderProfile() {
     </div></div>
     ${leavesHtml}
     <div class="card" style="overflow-x:auto"><table class="tbl">
-      <thead><tr><th>الشهر</th><th>ساعات إضافية</th><th>أيام إضافية</th><th>إجازة من الرصيد</th><th>إجازة مرضية</th><th>إجازة بالخصم</th><th title="عدد أيام الغياب الحقيقي — كل يوم بيتخصم منه يومين من المرتب">غياب ⓘ</th><th>إذن شخصي</th><th>الحافز %</th><th>جزاءات (أيام)</th><th>مكافآت (أيام)</th><th>ملاحظات</th></tr></thead>
+      <thead><tr><th>الشهر</th><th>ساعات إضافية</th><th>أيام إضافية</th><th>إجازة من الرصيد</th><th>إجازة مرضية</th><th>إجازة بالخصم</th><th title="عدد أيام الغياب الحقيقي — يُخصم عن كل يوم يومان من الراتب">غياب ⓘ</th><th>إذن شخصي</th><th>الحافز %</th><th>جزاءات (أيام)</th><th>مكافآت (أيام)</th><th>ملاحظات</th></tr></thead>
       <tbody>${rows}</tbody>
     </table></div>
     ${penaltyRewardsHtml}`;
@@ -5944,10 +5944,10 @@ async function renderLeaves() {
       </div>`;
 
     const extra = r.status==='approved'
-      ? `<div style="font-size:11.5px;color:var(--slate-500);margin-top:4px">من الرصيد: ${r.daysFromBalance} يوم${r.daysUnpaid>0?` — خصم من المرتب: ${r.daysUnpaid} يوم`:''}${r.sixMonthEligible===false && !r.sixMonthOverride?` (لم يكمل ${emp?.leaveEligibilityMonths||6} أشهر خدمة بعد، فتم احتسابها بالكامل خصمًا من المرتب)`:r.sixMonthOverride?' (تم الصرف من الرصيد بتجاوز شرط مدة الخدمة بقرار الإدارة)':''}</div>` : '';
+      ? `<div style="font-size:11.5px;color:var(--slate-500);margin-top:4px">من الرصيد: ${r.daysFromBalance} يوم${r.daysUnpaid>0?` — خصم من الراتب: ${r.daysUnpaid} يوم`:''}${r.sixMonthEligible===false && !r.sixMonthOverride?` (لم يكمل ${emp?.leaveEligibilityMonths||6} أشهر خدمة بعد، فتم احتسابها بالكامل خصمًا من الراتب)`:r.sixMonthOverride?' (تم الصرف من الرصيد بتجاوز شرط مدة الخدمة بقرار الإدارة)':''}</div>` : '';
 
     const sixMonthsWarning = (emp && r.status==='pending' && !hasSixMonthsService(emp, r.dateFrom, r.leaveType))
-      ? `<div style="font-size:11.5px;color:var(--warn-600);margin-top:4px"><i class="fas fa-exclamation-triangle"></i> لم يكمل الموظف ${emp?.leaveEligibilityMonths||6} أشهر خدمة حتى تاريخ الإجازة — ستُحتسب خصمًا مباشرًا من المرتب وليس من الرصيد${CU.role==='admin'?`
+      ? `<div style="font-size:11.5px;color:var(--warn-600);margin-top:4px"><i class="fas fa-exclamation-triangle"></i> لم يكمل الموظف ${emp?.leaveEligibilityMonths||6} أشهر خدمة حتى تاريخ الإجازة — ستُحتسب خصمًا مباشرًا من الراتب وليس من الرصيد${CU.role==='admin'?`
         <label style="display:inline-flex;align-items:center;gap:4px;margin-right:10px;cursor:pointer;font-weight:700"><input type="checkbox" id="lv-override-${r.id}"> تجاوز الشرط واصرفها من الرصيد</label>`:''}</div>` : '';
 
     let actions = '';
@@ -6177,7 +6177,7 @@ window.saveLeaveRequest = async () => {
 
     // مايصحش يكون عنده حضور فعلي مسجّل (بصمة دخول أو انصراف) وإجازة معتمدة في نفس اليوم مع بعض
     const conflictDate = await findAttendanceConflictDate(employeeId, billableDates, db);
-    if (conflictDate) { toast(`الموظف عنده سجل حضور فعلي بالفعل في تاريخ ${conflictDate} — لا يمكن تسجيل إجازة على يوم اتسجّل فيه حضوره`, 'error'); return; }
+    if (conflictDate) { toast(`الموظف لديه سجل حضور فعلي بالفعل بتاريخ ${conflictDate} — لا يمكن تسجيل إجازة عن يوم سُجِّل فيه حضوره`, 'error'); return; }
 
     await addDoc(collection(db,'leaveRequests'), {
       employeeId, employeeName: emp.name, departmentId: emp.departmentId||null,
@@ -6194,8 +6194,8 @@ window.saveLeaveRequest = async () => {
 // موافقة/رفض على مرحلة واحدة (مدير القسم أو الشؤون) — والقبول النهائي بيحصل لما الاتنين يوافقوا
 window.approveLeaveRequestStage = async (id, stage, override) => {
   const msg = override
-    ? 'متأكد من الموافقة على طلب الإجازة ده؟ هتتصرف من الرصيد بتجاوز شرط الـ6 شهور خدمة.'
-    : 'متأكد من الموافقة على طلب الإجازة ده؟';
+    ? 'هل أنت متأكد من الموافقة على طلب الإجازة هذا؟ سيُصرف من الرصيد بتجاوز شرط مدة الخدمة المطلوبة.'
+    : 'هل أنت متأكد من الموافقة على طلب الإجازة هذا؟';
   if (!(await confirmDialog(msg))) return;
   try { await settleLeaveStage(id, stage, true, !!override); toast('تم تسجيل الموافقة بنجاح', 'success'); renderLeaves(); }
   catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
@@ -6270,8 +6270,8 @@ async function settleLeaveStage(id, stage, approved, override=false) {
 // نسخة قديمة (موافقة مرحلة واحدة) — لسه شغالة بس للطلبات القديمة قبل تفعيل الموافقة المزدوجة
 window.approveLeaveRequest = async (id, override) => {
   const msg = override
-    ? 'متأكد من الموافقة على طلب الإجازة ده؟ هتتصرف من الرصيد بتجاوز شرط الـ6 شهور خدمة.'
-    : 'متأكد من الموافقة على طلب الإجازة ده؟';
+    ? 'هل أنت متأكد من الموافقة على طلب الإجازة هذا؟ سيُصرف من الرصيد بتجاوز شرط مدة الخدمة المطلوبة.'
+    : 'هل أنت متأكد من الموافقة على طلب الإجازة هذا؟';
   if (!(await confirmDialog(msg))) return;
   try {
     const rdoc = await getDoc(doc(db,'leaveRequests',id));
@@ -6399,11 +6399,11 @@ async function reconcileHolidayImpact(holidayDate, exemptEmployeeIds, holidayTit
           await updateDoc(doc(db,'employees',r.employeeId), { [field]: leaveBalanceOf(emp, r.leaveType||'regular') + 1 });
         }
         await bumpMonthlySheet(r.employeeId, period, { leaveFromBalance: -1 },
-          `تصحيح تلقائي: يوم ${holidayDate} بقى إجازة رسمية (${holidayTitle}) — اترجع لرصيد الموظف`);
+          `تصحيح تلقائي: يوم ${holidayDate} أصبح إجازة رسمية (${holidayTitle}) — أُعيد إلى رصيد الموظف`);
       } else {
         patch.daysUnpaid = Math.max(0, (r.daysUnpaid||0) - 1);
         await bumpMonthlySheet(r.employeeId, period, { leaveUnpaid: -1 },
-          `تصحيح تلقائي: يوم ${holidayDate} بقى إجازة رسمية (${holidayTitle})`);
+          `تصحيح تلقائي: يوم ${holidayDate} أصبح إجازة رسمية (${holidayTitle})`);
       }
     }
     await updateDoc(r.ref, patch);
@@ -6717,7 +6717,7 @@ window.saveUser = async () => {
     closeM('mo-user');
     renderUsers();
   } catch(e) {
-    const msg = e.code==='auth/email-already-in-use' ? 'الإيميل ده مستخدم بالفعل' : (e.message||e.code);
+    const msg = e.code==='auth/email-already-in-use' ? 'هذا البريد الإلكتروني مستخدم بالفعل' : (e.message||e.code);
     toast('خطأ: '+msg, 'error');
   }
 };
