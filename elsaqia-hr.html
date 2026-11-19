@@ -413,7 +413,7 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
         <div class="ph-acts" style="align-items:center">
           <span style="font-size:12px;color:var(--slate-500)">من</span>
           <input class="fc" type="date" id="ot-from" style="width:150px" onchange="renderOvertime()">
-          <span style="font-size:12px;color:var(--slate-500)">لحد</span>
+          <span style="font-size:12px;color:var(--slate-500)">حتى</span>
           <input class="fc" type="date" id="ot-to" style="width:150px" onchange="renderOvertime()">
         </div>
       </div>
@@ -526,7 +526,7 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
           <input class="fc" id="lv-search-name" type="text" placeholder="بحث باسم الموظف..." style="width:170px" oninput="renderLeaves()">
           <span style="font-size:12px;color:var(--slate-500)">من</span>
           <input class="fc" type="date" id="lv-from" style="width:150px" onchange="renderLeaves()">
-          <span style="font-size:12px;color:var(--slate-500)">لحد</span>
+          <span style="font-size:12px;color:var(--slate-500)">حتى</span>
           <input class="fc" type="date" id="lv-to" style="width:150px" onchange="renderLeaves()">
           <button class="btn btn-ghost btn-sm" onclick="document.getElementById('lv-search-name').value='';document.getElementById('lv-from').value='';document.getElementById('lv-to').value='';renderLeaves()"><i class="fas fa-times"></i>مسح الفلتر</button>
           <button class="btn btn-ghost btn-sm" id="btn-renew-balances" onclick="renewAllBalances()"><i class="fas fa-redo"></i>تجديد كل الأرصدة (بداية سنة)</button>
@@ -537,7 +537,16 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
 
       <div class="ph" style="margin-top:24px">
         <div><div class="ph-title" style="font-size:16px">طلبات الإذن الشخصي</div><div class="ph-sub">3 ساعات لكل موظف في كل دورة شهرية — الطلبات المستقبلية (المخطط لها) تحتاج إلى موافقة مدير القسم والشؤون، أما الاستهلاك الفوري (تأخير حصل بالفعل أو قطع إجازة) فيظهر هنا للعلم فقط</div></div>
+        <div class="ph-acts" style="align-items:center">
+          <input class="fc" id="pp-search-name" type="text" placeholder="بحث باسم الموظف..." style="width:170px" oninput="paintPersonalPermissionAdmin()">
+          <span style="font-size:12px;color:var(--slate-500)">من</span>
+          <input class="fc" type="date" id="pp-from" style="width:150px" onchange="paintPersonalPermissionAdmin()">
+          <span style="font-size:12px;color:var(--slate-500)">حتى</span>
+          <input class="fc" type="date" id="pp-to" style="width:150px" onchange="paintPersonalPermissionAdmin()">
+          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('pp-search-name').value='';document.getElementById('pp-from').value='';document.getElementById('pp-to').value='';paintPersonalPermissionAdmin()"><i class="fas fa-times"></i>مسح الفلتر</button>
+        </div>
       </div>
+      <div id="pp-balance-body"></div>
       <div id="pp-admin-body"></div>
     </div>
 
@@ -563,7 +572,7 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
         </div>
       </div>
       <div class="card"><table class="tbl">
-        <thead><tr><th>الموظف</th><th>المبلغ الإجمالي</th><th>القسط الشهري</th><th>من دورة</th><th>لحد دورة</th><th>المسدد</th><th>المتبقي</th><th>الحالة</th><th></th></tr></thead>
+        <thead><tr><th>الموظف</th><th>المبلغ الإجمالي</th><th>القسط الشهري</th><th>من دورة</th><th>حتى دورة</th><th>المسدد</th><th>المتبقي</th><th>الحالة</th><th></th></tr></thead>
         <tbody id="advances-body"></tbody>
       </table></div>
     </div>
@@ -657,7 +666,7 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
       <div id="emp-salary-preview" style="font-size:12.5px;color:var(--ac-700);font-weight:700;margin:-4px 0 10px"></div>
       <div id="emp-salary-history-btn-wrap" style="margin:-4px 0 12px"></div>
       <div class="frow c2">
-        <div class="fg"><label class="fl">الحالة</label><select class="fc" id="emp-status" onchange="onEmpStatusChange(this.value)"><option value="active">شغال</option><option value="resigned">مستقيل</option></select></div>
+        <div class="fg"><label class="fl">الحالة</label><select class="fc" id="emp-status" onchange="onEmpStatusChange(this.value)"><option value="active">يعمل</option><option value="resigned">مستقيل</option></select></div>
         <div class="fg" id="emp-resign-wrap" style="display:none"><label class="fl">تاريخ الاستقالة</label><input class="fc" type="date" id="emp-resign-date"></div>
         <div class="fg" id="emp-rejoin-wrap" style="display:none">
           <label class="fl">تاريخ الرجوع من الاستقالة</label>
@@ -751,7 +760,7 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
         <div class="fg"><label class="fl">رصيد عارضة</label><input class="fc" type="number" id="rep-leave-casual" placeholder="7"></div>
       </div>
       <div class="fg"><label class="fl">رصيد جواز (يُدار يدويًا)</label><input class="fc" type="number" id="rep-leave-marriage" placeholder="15"></div>
-      <div class="fg"><label class="fl">الحالة</label><select class="fc" id="rep-status"><option value="active">شغال</option><option value="resigned">مستقيل</option></select></div>
+      <div class="fg"><label class="fl">الحالة</label><select class="fc" id="rep-status"><option value="active">يعمل</option><option value="resigned">مستقيل</option></select></div>
       <div class="fg" id="rep-passkeys-wrap" style="display:none">
         <label class="fl">بصمات الدخول المسجّلة (WebAuthn)</label>
         <div id="rep-passkeys-list" style="font-size:12.5px;color:var(--slate-500);display:flex;flex-direction:column;gap:6px"></div>
@@ -788,7 +797,7 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
         <div class="fg"><label class="fl">رصيد عارضة</label><input class="fc" type="number" id="driver-leave-casual" placeholder="7"></div>
       </div>
       <div class="fg"><label class="fl">رصيد جواز (يُدار يدويًا)</label><input class="fc" type="number" id="driver-leave-marriage" placeholder="15"></div>
-      <div class="fg"><label class="fl">الحالة</label><select class="fc" id="driver-status"><option value="active">شغال</option><option value="resigned">مستقيل</option></select></div>
+      <div class="fg"><label class="fl">الحالة</label><select class="fc" id="driver-status"><option value="active">يعمل</option><option value="resigned">مستقيل</option></select></div>
       <div class="fg" id="driver-passkeys-wrap" style="display:none">
         <label class="fl">بصمات الدخول المسجّلة (WebAuthn)</label>
         <div id="driver-passkeys-list" style="font-size:12.5px;color:var(--slate-500);display:flex;flex-direction:column;gap:6px"></div>
@@ -1440,26 +1449,26 @@ function renderAttentionWidget() {
   if (!el) return;
   const items = [];
   if (hasPerm('leaves_manage') || hasPerm('leaves_dept_approve')) {
-    if (_leavesActionableCount>0) items.push({ label:'طلب إجازة بحاجة إلى موافقتك', count:_leavesActionableCount, page:'leaves', icon:'fa-calendar-day' });
-    if (_ppPlannedCount>0) items.push({ label:'طلب إذن شخصي بحاجة إلى قرار', count:_ppPlannedCount, page:'leaves', icon:'fa-user-clock' });
-    if (_ppLeaveCutCount>0) items.push({ label:'قرار "قطع إجازة" بحاجة إلى تحديد', count:_ppLeaveCutCount, page:'leaves', icon:'fa-scissors' });
+    if (_leavesActionableCount>0) items.push({ label:'طلبات الإجازة بانتظار موافقتك', count:_leavesActionableCount, page:'leaves', icon:'fa-calendar-day' });
+    if (_ppPlannedCount>0) items.push({ label:'طلبات الإذن الشخصي بانتظار القرار', count:_ppPlannedCount, page:'leaves', icon:'fa-user-clock' });
+    if (_ppLeaveCutCount>0) items.push({ label:'قرارات "قطع الإجازة" بانتظار التحديد', count:_ppLeaveCutCount, page:'leaves', icon:'fa-scissors' });
   }
   if (hasPerm('overtime_approve') && _overtimeActionableCount>0) {
-    items.push({ label:'طلب وقت إضافي بحاجة إلى اعتماد', count:_overtimeActionableCount, page:'overtime', icon:'fa-business-time' });
+    items.push({ label:'طلبات الوقت الإضافي بانتظار الاعتماد', count:_overtimeActionableCount, page:'overtime', icon:'fa-business-time' });
   }
   if (!items.length) {
     el.innerHTML = `<div class="card"><div class="card-body" style="display:flex;align-items:center;gap:10px;color:var(--slate-500)"><i class="fas fa-circle-check" style="color:var(--ac-600);font-size:18px"></i><span>لا توجد أي طلبات تحتاج إلى اهتمامك حاليًا — جميع الطلبات متابَعة</span></div></div>`;
     return;
   }
   el.innerHTML = `<div class="card" style="border-inline-start:4px solid var(--danger-600)"><div class="card-body">
-    <div style="font-weight:800;font-size:14px;margin-bottom:10px;color:var(--danger-600)"><i class="fas fa-bell"></i> يحتاج انتباهك (${items.reduce((s,i)=>s+i.count,0)})</div>
+    <div style="font-weight:800;font-size:14px;margin-bottom:10px;color:var(--danger-600)"><i class="fas fa-bell"></i> بانتظار قرارك (${items.reduce((s,i)=>s+i.count,0)})</div>
     ${items.map(i=>`
       <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border)">
         <div style="display:flex;align-items:center;gap:9px">
           <i class="fas ${i.icon}" style="color:var(--slate-500);width:16px;text-align:center"></i>
           <span style="font-size:13.5px">${i.label}</span>
         </div>
-        <button class="btn btn-ghost btn-sm" onclick="goPage('${i.page}')"><span class="badge" style="background:var(--danger-600);color:#fff;margin-inline-end:6px">${i.count}</span>روح لهناك</button>
+        <button class="btn btn-ghost btn-sm" onclick="goPage('${i.page}')"><span class="badge" style="background:var(--danger-600);color:#fff;margin-inline-end:6px">${i.count}</span>مراجعة</button>
       </div>`).join('')}
   </div></div>`;
 }
@@ -1536,11 +1545,11 @@ function renderDashboard() {
   const activeReps = _employees.filter(e=>e.status!=='resigned' && e.category==='rep');
   const activeDrivers = _employees.filter(e=>e.status!=='resigned' && e.category==='driver');
   document.getElementById('dash-stats').innerHTML = `
-    <div class="stat-card"><div class="stat-ic bg-ac"><i class="fas fa-id-card"></i></div><div class="stat-val">${active.length}</div><div class="stat-lbl">موظف شغال</div></div>
-    <div class="stat-card"><div class="stat-ic bg-slate"><i class="fas fa-sitemap"></i></div><div class="stat-val">${_departments.length}</div><div class="stat-lbl">قسم</div></div>
-    <div class="stat-card"><div class="stat-ic bg-ac"><i class="fas fa-route"></i></div><div class="stat-val">${activeReps.length}</div><div class="stat-lbl">مندوب</div></div>
-    <div class="stat-card"><div class="stat-ic bg-ac"><i class="fas fa-truck"></i></div><div class="stat-val">${activeDrivers.length}</div><div class="stat-lbl">سائق</div></div>
-    <div class="stat-card"><div class="stat-ic bg-danger"><i class="fas fa-user-slash"></i></div><div class="stat-val">${_employees.filter(e=>e.status==='resigned').length}</div><div class="stat-lbl">مستقيل</div></div>
+    <div class="stat-card"><div class="stat-ic bg-ac"><i class="fas fa-id-card"></i></div><div class="stat-val">${active.length}</div><div class="stat-lbl">موظف يعمل</div></div>
+    <div class="stat-card"><div class="stat-ic bg-slate"><i class="fas fa-sitemap"></i></div><div class="stat-val">${_departments.length}</div><div class="stat-lbl">أقسام</div></div>
+    <div class="stat-card"><div class="stat-ic bg-ac"><i class="fas fa-route"></i></div><div class="stat-val">${activeReps.length}</div><div class="stat-lbl">مناديب</div></div>
+    <div class="stat-card"><div class="stat-ic bg-ac"><i class="fas fa-truck"></i></div><div class="stat-val">${activeDrivers.length}</div><div class="stat-lbl">سائقون</div></div>
+    <div class="stat-card"><div class="stat-ic bg-danger"><i class="fas fa-user-slash"></i></div><div class="stat-val">${_employees.filter(e=>e.status==='resigned').length}</div><div class="stat-lbl">مستقيلون</div></div>
   `;
   const rows = _departments.map(d=>{
     const cnt = _employees.filter(e=>e.departmentId===d.id && e.status!=='resigned' && e.category!=='rep' && e.category!=='driver').length;
@@ -2235,7 +2244,7 @@ function renderEmployees() {
   document.getElementById('emp-body').innerHTML = list.map(e=>{
     const dept = _departments.find(d=>d.id===e.departmentId);
     const shift = _shifts.find(s=>s.id===e.shiftId);
-    const statusBadge = e.status==='resigned' ? '<span class="badge bg-danger">مستقيل</span>' : '<span class="badge bg-ok">شغال</span>';
+    const statusBadge = e.status==='resigned' ? '<span class="badge bg-danger">مستقيل</span>' : '<span class="badge bg-ok">يعمل</span>';
     return `<tr>
       <td style="font-weight:700">${esc(e.name)}${e.isManager?' <span class="badge bg-ac" style="margin-right:4px"><i class="fas fa-star"></i> مدير</span>':''}</td>
       <td>${esc(e.jobTitle)||'—'}</td>
@@ -3713,7 +3722,7 @@ async function kioskRenderProfileBody() {
     // رصيد الإذن الشخصي لدورة اليوم الحالية (26-25، مش الشهر الميلادي العادي)
     const ppPeriod = periodForDate(kioskToday());
     const ppRemaining = await ppRemainingMinutes(secDb, emp.id, ppPeriod, emp.permissionMinutesPerCycle);
-    const ppUsed = PERSONAL_PERMISSION_CYCLE_MINUTES - ppRemaining;
+    const ppUsed = ((emp.permissionMinutesPerCycle != null) ? emp.permissionMinutesPerCycle : PERSONAL_PERMISSION_CYCLE_MINUTES) - ppRemaining;
 
     // سجل تعديلات الراتب — مقارنة قبل/بعد لكل تعديل فعلي (أول قيد "0000-01-01" هو القيم الأصلية قبل أول تعديل)
     const salaryHistorySorted = Array.isArray(emp.salaryHistory) ? [...emp.salaryHistory].sort((a,b)=> a.effectiveFrom < b.effectiveFrom ? -1 : 1) : [];
@@ -4301,7 +4310,7 @@ window.kioskDoAction = async (type) => {
         <div class="kiosk-check-pop" style="font-size:40px;color:var(--ok-600);margin-bottom:10px"><i class="fas fa-check-circle"></i></div>
         <div style="font-weight:800;font-size:15px">تم تسجيل ${type==='checkin'?'حضورك':'انصرافك'} الساعة ${kioskNowHM(_ms)}</div>
         <div style="font-size:12.5px;color:var(--ac-700);margin-top:8px;font-weight:600">${warmMsg}</div>
-        ${extra.pendingOvertimeMinutes ? `<div style="font-size:12px;color:var(--warn-600);margin-top:8px">وقت إضافي معلّق (${overtimeDurationLabel(extra.pendingOvertimeMinutes)}) — محتاج موافقة المدير</div>` : ''}
+        ${extra.pendingOvertimeMinutes ? `<div style="font-size:12px;color:var(--warn-600);margin-top:8px">وقت إضافي معلّق (${overtimeDurationLabel(extra.pendingOvertimeMinutes)}) — بحاجة إلى موافقة المدير</div>` : ''}
         ${extra.mealEligible ? `<div style="font-size:12px;color:var(--ac-700);margin-top:8px">مستحق وجبة</div>` : ''}
         ${extraMsgHtml}
       </div>`;
@@ -5913,6 +5922,7 @@ async function renderLeaves() {
       : _leavesShowAll
       ? '<div class="empty"><i class="fas fa-calendar-minus"></i><p>لا توجد طلبات إجازة بعد</p></div>'
       : '<div class="empty"><i class="fas fa-calendar-minus"></i><p>لا توجد طلبات إجازة في آخر 6 شهور</p><button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="toggleLeavesShowAll()">عرض كل التاريخ</button></div>';
+    renderPersonalPermissionAdmin();
     return;
   }
 
@@ -5984,80 +5994,168 @@ async function renderLeaves() {
 }
 window.renderLeaves = renderLeaves;
 
+// ══════════════════════════════════════════════
+// الإذن الشخصي (عرض الأدمن) — نفس أسلوب صفحة الإجازات: بحث وفلتر وكروت وعرض كل التاريخ + جدول رصيد كل موظف
+// ══════════════════════════════════════════════
+let _ppAdminReqs = [];
+let _ppShowAll = false;
+let _ppBalPeriod = null;
+
+// رصيد كل موظف في دورة معيّنة — نفس منطق ppRemainingMinutes بالظبط:
+// الحد = حد الموظف الخاص (لو محدد) وإلا 180 دقيقة، والمستهلك = الطلبات auto/approved فقط من نوع permission في نفس الدورة
+function ppBalanceRows(reqs, employees, period) {
+  const used = new Map();
+  reqs.forEach(r=>{
+    if (r.kind!=='permission' || r.period!==period) return;
+    if (r.status!=='auto' && r.status!=='approved') return;
+    used.set(r.employeeId, (used.get(r.employeeId)||0) + (r.minutes||0));
+  });
+  return employees
+    .filter(e=>e.status!=='resigned')
+    .map(e=>{
+      const cap = (e.permissionMinutesPerCycle != null) ? e.permissionMinutesPerCycle : PERSONAL_PERMISSION_CYCLE_MINUTES;
+      const u = used.get(e.id)||0;
+      return { id:e.id, name:e.name, cap, used:u, remaining:Math.max(0, cap-u) };
+    })
+    .sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ar'));
+}
+window.ppBalanceRows = ppBalanceRows;
+
+function ppPeriodLabel(p) {
+  const [y,m] = String(p).split('-').map(Number);
+  let py=y, pm=m-1; if (pm===0) { pm=12; py=y-1; }
+  return `دورة ${p} (من ${py}-${String(pm).padStart(2,'0')}-26 حتى ${y}-${String(m).padStart(2,'0')}-25)`;
+}
+function ppSixMonthsAgoStr() {
+  const d = new Date(); d.setMonth(d.getMonth()-6);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+
+function ppCardHtml(r) {
+  const isCut = r.kind==='leaveCut';
+  const fromKiosk = String(r.requestedBy||'').startsWith('kiosk:');
+  const decisionLabels = { full:'رجّع اليوم كامل', partial:'رجّع نسبيًا', none:'من غير استرجاع' };
+  let badge, detail, extra = '', approvalLine = '', actions = '';
+  if (isCut) {
+    const typeLabel = LEAVE_TYPES[r.leaveType]?.label || '';
+    const pending = r.status==='pending_hr_decision';
+    badge = pending ? '<span class="badge bg-warn">بانتظار قرار الشؤون</span>' : '<span class="badge bg-ok">تم اتخاذ القرار</span>';
+    detail = pending
+      ? `عاد إلى العمل وقطع إجازته (${esc(typeLabel)}) — ${esc(r.date)}`
+      : `قطع إجازة (${esc(typeLabel)}) — ${esc(r.date)} — القرار: ${esc(decisionLabels[r.refundDecision]||decisionLabels.none)}`;
+    if (pending) {
+      const pct = Math.round((r.suggestedRefundFraction||0)*100);
+      extra = `<div style="font-size:11.5px;color:var(--slate-500);margin-top:4px">سجّل حضوره الساعة ${esc(r.checkinAt)} — نسبة الوقت المتوقع لعمله من الوردية: ${pct}%</div>`;
+      if (hasPerm('leaves_manage')) {
+        actions = `<button class="btn btn-ac btn-sm" onclick="resolveLeaveCut('${r.id}','full')"><i class="fas fa-check"></i>رجّع اليوم كامل</button>
+          <button class="btn btn-ghost btn-sm" onclick="resolveLeaveCut('${r.id}','partial')"><i class="fas fa-percent"></i>رجّع نسبيًا (${pct}%)</button>
+          <button class="btn btn-ghost btn-sm" onclick="resolveLeaveCut('${r.id}','none')"><i class="fas fa-ban"></i>من غير استرجاع</button>`;
+      } else {
+        extra += `<div style="font-size:11.5px;color:var(--slate-500);margin-top:4px">قرار قطع الإجازة مقصور على الشؤون فقط</div>`;
+      }
+    }
+  } else {
+    badge = r.status==='approved' ? '<span class="badge bg-ok">موافق عليه نهائيًا</span>'
+      : r.status==='auto' ? '<span class="badge bg-slate">مستهلك تلقائيًا</span>'
+      : r.status==='rejected' ? '<span class="badge bg-danger">مرفوض</span>'
+      : '<span class="badge bg-warn">قيد المراجعة</span>';
+    detail = `${r.mode==='instant'?'تأخير فوري':'طلب مستقبلي'} — ${esc(r.date)} — ${r.position==='start'?'أول الوردية':'آخر الوردية'} — ${esc(minutesToHoursLabel(r.minutes))}`;
+    if (r.mode==='planned' && r.status!=='rejected') {
+      const stage = (label, v) => `<span style="color:${v===true?'var(--ok-700)':v===false?'var(--danger-600)':'var(--slate-500)'}"><i class="fas ${v===true?'fa-check-circle':v===false?'fa-times-circle':'fa-hourglass-half'}"></i> ${label}: ${v===true?'موافق':v===false?'رافض':'قيد الانتظار'}</span>`;
+      approvalLine = `<div style="display:flex;gap:14px;margin-top:5px;font-size:11.5px;flex-wrap:wrap">${stage('مدير القسم', r.managerApproved)}${stage('الشؤون', r.hrApproved)}</div>`;
+    }
+    if (r.mode==='planned' && r.status==='pending') {
+      const mgrDone = r.managerApproved===true;
+      if (hasPerm('leaves_manage')) {
+        actions = `<button class="btn btn-red btn-sm" onclick="rejectPersonalPermissionRequest('${r.id}')"><i class="fas fa-times"></i> رفض</button>
+          <button class="btn btn-ac btn-sm" onclick="approvePersonalPermissionStage('${r.id}','manager',true);approvePersonalPermissionStage('${r.id}','hr',true)"><i class="fas fa-check"></i> موافقة (أدمن/شؤون كاملة)</button>`;
+      } else if (hasPerm('leaves_dept_approve') && !mgrDone) {
+        actions = `<button class="btn btn-red btn-sm" onclick="rejectPersonalPermissionRequest('${r.id}')"><i class="fas fa-times"></i> رفض</button>
+          <button class="btn btn-ac btn-sm" onclick="approvePersonalPermissionStage('${r.id}','manager',true)"><i class="fas fa-check"></i> موافقة (مدير)</button>`;
+      }
+    }
+    if (hasPerm('data_delete')) actions += `<button class="btn btn-red btn-ic btn-sm" onclick="deletePersonalPermissionRequest('${r.id}')"><i class="fas fa-trash"></i></button>`;
+  }
+  return `<div class="card" style="margin-bottom:12px"><div class="card-body" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+      <div>
+        <div style="font-weight:800">${esc(r.employeeName)} ${badge}${fromKiosk?' <span class="badge bg-slate"><i class="fas fa-fingerprint"></i> من الكيوسك</span>':''}</div>
+        <div style="font-size:12.5px;color:var(--slate-500);margin-top:3px">${detail}</div>
+        ${r.note?`<div style="font-size:12px;color:var(--slate-500);margin-top:3px">ملاحظة: ${esc(r.note)}</div>`:''}
+        ${approvalLine}
+        ${extra}
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">${actions}</div>
+    </div></div>`;
+}
+
+function paintPersonalPermissionAdmin() {
+  const body = document.getElementById('pp-admin-body');
+  const balBody = document.getElementById('pp-balance-body');
+  if (!body || !balBody) return;
+  const all = _ppAdminReqs;
+  const q = (document.getElementById('pp-search-name')?.value||'').trim().toLowerCase();
+  const from = document.getElementById('pp-from')?.value||'';
+  const to = document.getElementById('pp-to')?.value||'';
+  const filtered = !!(q||from||to);
+
+  // ── جدول رصيد كل موظف ──
+  const curPeriod = periodForDate(todayStr());
+  const periods = Array.from(new Set(all.filter(r=>r.kind==='permission' && r.period).map(r=>r.period).concat([curPeriod]))).sort().reverse();
+  const period = (_ppBalPeriod && periods.includes(_ppBalPeriod)) ? _ppBalPeriod : curPeriod;
+  const scopedEmps = _employees.filter(e=> CU.role==='admin' || !CU.departmentId || e.departmentId===CU.departmentId);
+  const balRows = ppBalanceRows(all, scopedEmps, period).filter(r=> !q || String(r.name||'').toLowerCase().includes(q));
+  const usersCount = balRows.filter(r=>r.used>0).length;
+  balBody.innerHTML = `<div class="card" style="margin-bottom:14px"><div class="card-body">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:10px">
+      <div>
+        <div style="font-weight:800">رصيد الإذن الشخصي لكل موظف</div>
+        <div style="font-size:12px;color:var(--slate-500);margin-top:2px">${usersCount} من ${balRows.length} موظف استهلكوا جزءًا من رصيدهم في هذه الدورة (المحتسَب: المستهلك تلقائيًا والموافق عليه فقط)</div>
+      </div>
+      <label style="font-size:12px;color:var(--slate-500)">الدورة: <select class="fc" style="width:auto;display:inline-block" onchange="ppBalPeriodChanged(this.value)">${periods.map(p=>`<option value="${esc(p)}"${p===period?' selected':''}>${esc(ppPeriodLabel(p))}</option>`).join('')}</select></label>
+    </div>
+    ${balRows.length ? `<div style="max-height:380px;overflow:auto"><table class="tbl"><thead><tr><th>الموظف</th><th>الحد في الدورة</th><th>المستهلك</th><th>المتبقي</th></tr></thead><tbody>${
+      balRows.map(r=>`<tr><td style="font-weight:700">${esc(r.name)}</td><td>${esc(minutesToHoursLabel(r.cap))}</td><td>${r.used>0?esc(minutesToHoursLabel(r.used)):'—'}</td><td style="font-weight:700;color:${r.remaining>0?'var(--ok-700)':'var(--danger-600)'}">${esc(minutesToHoursLabel(r.remaining))}</td></tr>`).join('')
+    }</tbody></table></div>` : `<div class="empty" style="padding:16px"><p>لا يوجد موظفون يطابقون البحث</p></div>`}
+  </div></div>`;
+
+  // ── قايمة الطلبات ──
+  let list = all.filter(r=>{
+    if (q && !String(r.employeeName||'').toLowerCase().includes(q)) return false;
+    if (from && (r.date||'') < from) return false;
+    if (to && (r.date||'') > to) return false;
+    return true;
+  });
+  if (!filtered && !_ppShowAll) {
+    const cutoff = ppSixMonthsAgoStr();
+    list = list.filter(r=> r.status==='pending' || r.status==='pending_hr_decision' || (r.date||'') >= cutoff);
+  }
+  if (!list.length) {
+    body.innerHTML = filtered
+      ? '<div class="empty"><i class="fas fa-user-clock"></i><p>لا توجد طلبات إذن شخصي تطابق البحث</p></div>'
+      : _ppShowAll
+      ? '<div class="empty"><i class="fas fa-user-clock"></i><p>لا توجد طلبات إذن شخصي بعد</p></div>'
+      : '<div class="empty"><i class="fas fa-user-clock"></i><p>لا توجد طلبات إذن شخصي في آخر 6 شهور</p><button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="togglePPShowAll()">عرض كل التاريخ</button></div>';
+    return;
+  }
+  body.innerHTML = list.map(ppCardHtml).join('') + ((filtered || _ppShowAll) ? '' : `<div style="text-align:center;margin-top:10px"><button class="btn btn-ghost btn-sm" onclick="togglePPShowAll()"><i class="fas fa-history"></i> عرض كل التاريخ (قبل آخر 6 شهور)</button></div>`);
+}
+
 async function renderPersonalPermissionAdmin() {
   const body = document.getElementById('pp-admin-body');
   if (!body) return;
   body.innerHTML = '<div class="empty"><i class="fas fa-spinner fa-spin"></i><p>جاري التحميل...</p></div>';
   let snap;
   try { snap = await getDocs(query(collection(db,'personalPermissionRequests'), orderBy('requestedAt','desc'))); }
-  catch(e) { body.innerHTML = `<div class="empty"><p>${formatFirestoreError('خطأ', e)}</p></div>`; return; }
+  catch(e) { body.innerHTML = `<div class="empty"><p>${formatFirestoreError('خطأ', e)}</p></div>`; const bb = document.getElementById('pp-balance-body'); if (bb) bb.innerHTML = ''; return; }
   let reqs = snap.docs.map(d=>({id:d.id,...d.data()}));
   if (CU.role!=='admin' && CU.departmentId) reqs = reqs.filter(r=>r.departmentId===CU.departmentId);
-
-  const pendingPlanned = reqs.filter(r=>r.kind==='permission' && r.mode==='planned' && r.status==='pending');
-  const pendingLeaveCut = reqs.filter(r=>r.kind==='leaveCut' && r.status==='pending_hr_decision');
-  const history = reqs.filter(r=> !pendingPlanned.includes(r) && !pendingLeaveCut.includes(r)).slice(0,20);
-
-  let html = '';
-
-  html += `<div style="font-weight:800;font-size:13.5px;margin:14px 0 8px">طلبات مستقبلية بانتظار الموافقة (${pendingPlanned.length})</div>`;
-  if (!pendingPlanned.length) {
-    html += `<div class="empty" style="padding:16px"><p>لا توجد طلبات معلّقة</p></div>`;
-  } else {
-    pendingPlanned.forEach(r=>{
-      const mgrDone = r.managerApproved===true, hrDone = r.hrApproved===true;
-      let actions = '';
-      if (hasPerm('leaves_manage')) {
-        actions = `<button class="btn btn-ac btn-sm" onclick="approvePersonalPermissionStage('${r.id}','manager',true);approvePersonalPermissionStage('${r.id}','hr',true)"><i class="fas fa-check"></i>موافقة (أدمن/شؤون كاملة)</button>
-          <button class="btn btn-ghost btn-sm" onclick="rejectPersonalPermissionRequest('${r.id}')"><i class="fas fa-times"></i>رفض</button>`;
-      } else if (hasPerm('leaves_dept_approve') && !mgrDone) {
-        actions = `<button class="btn btn-ac btn-sm" onclick="approvePersonalPermissionStage('${r.id}','manager',true)"><i class="fas fa-check"></i>موافقة (مدير)</button>
-          <button class="btn btn-ghost btn-sm" onclick="rejectPersonalPermissionRequest('${r.id}')"><i class="fas fa-times"></i>رفض</button>`;
-      }
-      html += `<div class="card" style="margin-bottom:8px;padding:12px 14px">
-        <div style="font-weight:700;font-size:13px">${esc(r.employeeName)} — ${esc(r.date)} — ${r.position==='start'?'أول الوردية':'آخر الوردية'} — ${esc(minutesToHoursLabel(r.minutes))}</div>
-        ${r.note?`<div style="font-size:12px;color:var(--slate-500);margin-top:3px">ملاحظة: ${esc(r.note)}</div>`:''}
-        <div style="font-size:11.5px;color:var(--slate-500);margin-top:4px">موافقة المدير: ${mgrDone?'✅':'—'} · موافقة الشؤون: ${hrDone?'✅':'—'}</div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">${actions}</div>
-      </div>`;
-    });
-  }
-
-  html += `<div style="font-weight:800;font-size:13.5px;margin:18px 0 8px">قرارات قطع إجازة بانتظار الشؤون (${pendingLeaveCut.length})</div>`;
-  if (!hasPerm('leaves_manage')) {
-    html += `<div class="empty" style="padding:16px"><p>قرار قطع الإجازة مقصور على الشؤون فقط</p></div>`;
-  } else if (!pendingLeaveCut.length) {
-    html += `<div class="empty" style="padding:16px"><p>لا توجد قرارات معلّقة</p></div>`;
-  } else {
-    pendingLeaveCut.forEach(r=>{
-      const pct = Math.round((r.suggestedRefundFraction||0)*100);
-      html += `<div class="card" style="margin-bottom:8px;padding:12px 14px">
-        <div style="font-weight:700;font-size:13px">${esc(r.employeeName)} — ${esc(r.date)} — رجع الشغل وقطع إجازته (${esc(LEAVE_TYPES[r.leaveType]?.label||'')})</div>
-        <div style="font-size:11.5px;color:var(--slate-500);margin-top:4px">سجّل حضوره الساعة ${esc(r.checkinAt)} — نسبة الوقت المتوقع اشتغاله من الوردية: ${pct}%</div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
-          <button class="btn btn-ac btn-sm" onclick="resolveLeaveCut('${r.id}','full')"><i class="fas fa-check"></i>رجّع اليوم كامل</button>
-          <button class="btn btn-ghost btn-sm" onclick="resolveLeaveCut('${r.id}','partial')"><i class="fas fa-percent"></i>رجّع نسبيًا (${pct}%)</button>
-          <button class="btn btn-ghost btn-sm" onclick="resolveLeaveCut('${r.id}','none')"><i class="fas fa-ban"></i>من غير استرجاع</button>
-        </div>
-      </div>`;
-    });
-  }
-
-  html += `<div style="font-weight:800;font-size:13.5px;margin:18px 0 8px">آخر الحركات</div>`;
-  if (!history.length) {
-    html += `<div class="empty" style="padding:16px"><p>لا يوجد سجل بعد</p></div>`;
-  } else {
-    html += history.map(r=>{
-      let label;
-      if (r.kind==='leaveCut') label = `قطع إجازة${r.status==='pending_hr_decision'?'':' — '+(r.refundDecision==='full'?'رجّع اليوم كامل':r.refundDecision==='partial'?'رجّع نسبيًا':'من غير استرجاع')}`;
-      else label = `${r.mode==='instant'?'تأخير فوري':'طلب مستقبلي'} — ${r.position==='start'?'أول الوردية':'آخر الوردية'} — ${esc(minutesToHoursLabel(r.minutes))} — ${r.status==='auto'?'مستهلك تلقائيًا':r.status==='approved'?'متوافق عليه':r.status==='rejected'?'مرفوض':'معلّق'}`;
-      return `<div style="font-size:12px;color:var(--slate-600);padding:6px 4px;border-bottom:1px solid var(--slate-100)">${esc(r.employeeName)} — ${esc(r.date)} — ${label}</div>`;
-    }).join('');
-  }
-
-  body.innerHTML = html;
+  _ppAdminReqs = reqs;
+  paintPersonalPermissionAdmin();
 }
 window.renderPersonalPermissionAdmin = renderPersonalPermissionAdmin;
+window.paintPersonalPermissionAdmin = paintPersonalPermissionAdmin;
+window.ppBalPeriodChanged = (v) => { _ppBalPeriod = v; paintPersonalPermissionAdmin(); };
+window.togglePPShowAll = () => { _ppShowAll = true; paintPersonalPermissionAdmin(); };
 
 window.approvePersonalPermissionStage = async (id, stage, approved) => {
   try {
@@ -6077,6 +6175,24 @@ window.rejectPersonalPermissionRequest = async (id) => {
   try {
     await updateDoc(doc(db,'personalPermissionRequests',id), { status:'rejected', rejectedBy: CU.email, rejectedAt: Date.now() });
     toast('تم تسجيل الرفض بنجاح', 'success');
+    renderPersonalPermissionAdmin();
+  } catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
+};
+window.deletePersonalPermissionRequest = async (id) => {
+  const cached = _ppAdminReqs.find(x=>x.id===id);
+  const counted = !!cached && (cached.status==='auto' || cached.status==='approved');
+  const msg = counted
+    ? 'هل أنت متأكد من حذف طلب الإذن الشخصي هذا نهائيًا؟ الوقت المحتسَب منه سيعود إلى رصيد الموظف، وإن كان الإذن معتمدًا فسيختفي أيضًا من متابعة الحضور اليومي لتاريخه.'
+    : 'هل أنت متأكد من حذف طلب الإذن الشخصي هذا نهائيًا؟';
+  if (!(await confirmDialog(msg))) return;
+  try {
+    const rdoc = await getDoc(doc(db,'personalPermissionRequests',id));
+    if (!rdoc.exists()) { toast('الطلب غير موجود (ربما تم حذفه بالفعل)', 'error'); renderPersonalPermissionAdmin(); return; }
+    const r = rdoc.data();
+    if (r.kind!=='permission') { toast('لا يمكن حذف هذا النوع من السجلات من هنا', 'error'); return; }
+    await deleteDoc(doc(db,'personalPermissionRequests',id));
+    await logAudit('حذف طلب إذن شخصي', r.employeeId, r.employeeName, { status:r.status, mode:r.mode, date:r.date, minutes:r.minutes, period:r.period });
+    toast('تم حذف الطلب بنجاح', 'success');
     renderPersonalPermissionAdmin();
   } catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
