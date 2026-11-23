@@ -157,6 +157,9 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
   .mbtn{display:flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:9px;background:var(--navy-900);color:#fff;border:none;font-size:16px;cursor:pointer;margin-bottom:14px}
   #sb-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:140}
   #sb-backdrop.open{display:block}
+  /* الجداول داخل الكروت: تمرير أفقي بدل القص على الشاشات الصغيرة */
+  .card:has(> .tbl){overflow:auto hidden}
+  .card:has(> .tbl) .tbl th,.card:has(> .tbl) .tbl td{white-space:nowrap}
 }
 </style>
 </head>
@@ -4327,6 +4330,28 @@ window.kioskDoAction = async (type) => {
 // ══════════════════════════════════════════════
 // DAILY CHECK-IN DASHBOARD
 // ══════════════════════════════════════════════
+// ── إجازات معتمدة تغطي تاريخًا معيّنًا → { employeeId: [طلبات] } — محسوبة لحظيًا من طلبات الإجازة نفسها،
+// فحذف الطلب من صفحة الإجازات يشيلها من الدخول اليومي وتسجيل حالة اليوم تلقائيًا (مفيش نسخة مخزّنة)
+function pickLeavesForDate(rows, date) {
+  const map = {};
+  rows.forEach(v=>{
+    if (v.status==='approved' && (v.dateFrom||'')<=date && date<=(v.dateTo||v.dateFrom||'')) (map[v.employeeId]=map[v.employeeId]||[]).push(v);
+  });
+  return map;
+}
+window.pickLeavesForDate = pickLeavesForDate;
+async function approvedLeavesMapForDate(date) {
+  try {
+    const s = await getDocs(query(collection(db,'leaveRequests'), where('status','==','approved')));
+    return pickLeavesForDate(s.docs.map(d=>({id:d.id,...d.data()})), date);
+  } catch(e) { return {}; } // لو الصلاحيات ما سمحتش بالقراءة: الصفحة تفضل شغالة بدون بيان الإجازات
+}
+function leaveBadgeHtml(list) {
+  const labels = Array.from(new Set(list.map(v=>LEAVE_TYPES[v.leaveType||'regular']?.label||'إجازة')));
+  const f = list.map(v=>v.dateFrom).sort()[0], t = list.map(v=>v.dateTo||v.dateFrom).sort().slice(-1)[0];
+  return `<span class="badge bg-ac" title="${esc('من '+f+' إلى '+t)}"><i class="fas fa-umbrella-beach"></i> في إجازة معتمدة (${esc(labels.join(' + '))})</span>`;
+}
+
 async function renderDaily() {
   const dateInput = document.getElementById('daily-date');
   if (!dateInput.value) dateInput.value = todayStr();
@@ -4347,6 +4372,7 @@ async function renderDaily() {
   } catch(e) { body.innerHTML = `<div class="empty"><p>${formatFirestoreError('خطأ', e)}</p></div>`; return; }
   const approvedPermsByEmp = {};
   ppSnapDaily.docs.forEach(d=>{ const v=d.data(); (approvedPermsByEmp[v.employeeId]=approvedPermsByEmp[v.employeeId]||[]).push(v); });
+  const leavesToday = await approvedLeavesMapForDate(date);
 
   const checkins = {}, checkouts = {};
   attSnap.docs.forEach(d=>{
@@ -4433,7 +4459,7 @@ async function renderDaily() {
       <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:6px">
         <span style="font-weight:700">${esc(e.name)}</span>
         <span style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-          <span class="badge bg-ok"><i class="fas fa-check-circle"></i> حضور ${chk.time}</span>
+          <span class="badge bg-ok"><i class="fas fa-check-circle"></i> حضور ${chk.time}</span>${leavesToday[e.id]?` <span class="badge bg-slate" title="لديه إجازة معتمدة تغطي هذا اليوم">إجازة معتمدة</span>`:''}
           ${canDel?`<button class="btn btn-red btn-ic btn-xs" onclick="deleteAttendanceRecord('${chk.id}','${date}')"><i class="fas fa-trash"></i></button>`:''}
           ${co
             ? `<span class="badge bg-ac"><i class="fas fa-check-circle"></i> انصراف ${co.time}</span>${canDel?`<button class="btn btn-red btn-ic btn-xs" onclick="deleteAttendanceRecord('${co.id}','${date}')"><i class="fas fa-trash"></i></button>`:''}`
@@ -4452,6 +4478,17 @@ async function renderDaily() {
         if (date < todayStr() || (isToday && nowM > windowEnd)) {
           ppFlag = `<span class="badge bg-danger" title="لديه إذن شخصي معتمد لتأخير الحضور ولم يسجّل الحضور بعد"><i class="fas fa-exclamation-triangle"></i> لم يُستخدم الإذن الشخصي</span>`;
         }
+      }
+      const lv = leavesToday[e.id];
+      if (lv) {
+        const mLabel = mark ? (mark.status==='leave' ? 'إجازة من الرصيد' : mark.status==='deduct' ? 'خصم يوم (جزاء)' : 'غياب بدون إذن') : '';
+        const mCls = mark ? (mark.status==='leave' ? 'bg-ac' : mark.status==='deduct' ? 'bg-warn' : 'bg-danger') : '';
+        const markBits = mark ? `<span class="badge ${mCls}" style="cursor:pointer" onclick="openDailyMark('${e.id}','${date}')">${mLabel} <i class="fas fa-edit"></i></span>${canDel?`<button class="btn btn-red btn-ic btn-xs" onclick="deleteDailyMarkRecord('${mark.id}','${date}')"><i class="fas fa-trash"></i></button>`:''}` : '';
+        const conflict = (mark && mark.status!=='leave') ? `<span class="badge bg-warn" title="توجد حالة يوم مسجّلة على يوم تغطيه إجازة معتمدة"><i class="fas fa-exclamation-triangle"></i> تعارض: حالة مسجّلة مع إجازة معتمدة</span>` : '';
+        return `<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:6px">
+          <span style="font-weight:700">${esc(e.name)}</span>
+          <span style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">${leaveBadgeHtml(lv)}${markBits}${conflict}${manualBtn(e.id,'checkin')}${ppFlag}</span>
+        </div>`;
       }
       if (mark) {
         const label = mark.status==='leave' ? 'إجازة من الرصيد' : mark.status==='deduct' ? 'خصم يوم (جزاء)' : 'غياب بدون إذن';
@@ -4663,6 +4700,7 @@ async function renderDailyMarkPage() {
 
   const checkins = {}; attSnap.docs.forEach(d=>{ const v=d.data(); if (v.type==='checkin') checkins[v.employeeId]={id:d.id,...v}; });
   const marks = {}; markSnap.docs.forEach(d=>{ const v=d.data(); marks[v.employeeId]={id:d.id,...v}; });
+  const leavesM = await approvedLeavesMapForDate(date);
 
   const activeEmps0 = _employees.filter(e=>e.category!=='rep' && e.category!=='driver' && employeeHiredBy(e,date))
     .sort((a,b)=>a.name.localeCompare(b.name,'ar'));
@@ -4676,6 +4714,7 @@ async function renderDailyMarkPage() {
     const dept = _departments.find(d=>d.id===e.departmentId);
     const chk = checkins[e.id];
     const mark = marks[e.id];
+    const lv = leavesM[e.id];
     let statusCell;
     if (chk) {
       statusCell = `<span class="badge bg-ok"><i class="fas fa-sign-in-alt"></i> حضر الساعة ${chk.time}</span>`;
@@ -4686,11 +4725,12 @@ async function renderDailyMarkPage() {
     } else {
       statusCell = `<span class="badge bg-slate">لا يوجد سجل</span>`;
     }
+    if (!chk && lv) statusCell = leaveBadgeHtml(lv) + (mark ? ' ' + statusCell : '');
     return `<tr>
       <td style="font-weight:700">${esc(e.name)}</td>
       <td>${dept ? esc(dept.name) : '—'}</td>
       <td>${statusCell}</td>
-      <td>${!chk?`<button class="btn btn-ghost btn-xs" onclick="openDailyMark('${e.id}','${date}')"><i class="fas fa-edit"></i> ${mark?'تعديل':'تسجيل حالة'}</button>`:''}${mark&&canDel?` <button class="btn btn-red btn-ic btn-xs" onclick="deleteDailyMarkRecord('${mark.id}','${date}')"><i class="fas fa-trash"></i></button>`:''}</td>
+      <td>${(!chk && !(lv && !mark))?`<button class="btn btn-ghost btn-xs" onclick="openDailyMark('${e.id}','${date}')"><i class="fas fa-edit"></i> ${mark?'تعديل':'تسجيل حالة'}</button>`:''}${mark&&canDel?` <button class="btn btn-red btn-ic btn-xs" onclick="deleteDailyMarkRecord('${mark.id}','${date}')"><i class="fas fa-trash"></i></button>`:''}</td>
     </tr>`;
   }).join('');
 }
