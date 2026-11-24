@@ -104,6 +104,7 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
 .stat-ic{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;margin-bottom:10px}
 .stat-val{font-size:24px;font-weight:900;color:var(--navy-900)}
 .stat-lbl{font-size:12px;color:var(--slate-500);margin-top:2px}
+#confirm-message{white-space:pre-line}
 .tbl{width:100%;border-collapse:collapse}
 .tbl th{background:var(--slate-100);color:var(--slate-500);font-size:11.5px;font-weight:700;text-align:right;padding:11px 14px}
 .tbl td{padding:11px 14px;font-size:13px;border-top:1px solid var(--border);color:var(--navy-900)}
@@ -243,7 +244,7 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
       <div class="nav-link" data-page="settings" data-perm="settings_manage" onclick="goPage('settings')"><i class="fas fa-cog"></i>الإعدادات</div>
       <div class="nav-link" data-page="users" data-adminonly onclick="goPage('users')"><i class="fas fa-user-shield"></i>المستخدمون والصلاحيات</div>
       <div class="nav-link" data-page="auditlog" data-adminonly onclick="goPage('auditlog')"><i class="fas fa-history"></i>سجل التدقيق</div>
-      <div class="nav-link" data-page="healthcheck" data-adminonly onclick="goPage('healthcheck')"><i class="fas fa-heart-pulse"></i>صحة النظام</div>
+      <div class="nav-link" data-page="healthcheck" data-adminonly onclick="goPage('healthcheck')"><i class="fas fa-heart-pulse"></i>صحة النظام<span id="hc-badge" class="badge bg-danger" style="display:none;margin-inline-start:auto"></span></div>
     </div>
     <div class="sb-user">
       <div class="sb-user-row">
@@ -615,7 +616,7 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
     <div class="page" id="page-healthcheck">
       <div class="ph">
         <div><div class="ph-title">صحة النظام</div><div class="ph-sub">فحص تلقائي لأي بيانات محتاجة انتباهك — من غير ما تحتاج تدوّر يدوي زي أي وقت فات</div></div>
-        <div class="ph-acts"><button class="btn btn-ghost btn-sm" onclick="renderHealthCheck()"><i class="fas fa-rotate"></i>تحديث الفحص</button></div>
+        <div class="ph-acts"><button class="btn btn-ghost btn-sm" id="hc-badge-toggle" onclick="toggleHealthBadge()">تفعيل العدّاد الأحمر</button><button class="btn btn-ghost btn-sm" onclick="renderHealthCheck()"><i class="fas fa-rotate"></i>تحديث الفحص</button></div>
       </div>
       <div id="healthcheck-body"></div>
     </div>
@@ -903,7 +904,7 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
         </select>
       </div>
       <div class="fg"><label class="fl">الساعة</label><input class="fc" type="time" id="ma-time"></div>
-      <div class="fg"><label class="fl">ملاحظات (اختياري)</label><textarea class="fc" id="ma-note" rows="2" placeholder="مثال: تليفونه ضاع"></textarea></div>
+      <div class="fg"><label class="fl">سبب التسجيل اليدوي (إجباري)</label><textarea class="fc" id="ma-note" rows="2" placeholder="مثال: تليفونه ضاع" required></textarea></div>
     </div>
     <div class="mf">
       <button class="btn btn-ghost" onclick="closeM('mo-manualatt')">إلغاء</button>
@@ -1479,6 +1480,75 @@ function renderAttentionWidget() {
 // ══════════════════════════════════════════════
 // صحة النظام — فحص تلقائي لحالات بيانات غريبة/منسية، بدل ما نكتشفها بالصدفة زي ما حصل قبل كده
 // ══════════════════════════════════════════════
+// ══════════════════════════════════════════════
+// فحص تناقضات بيانات الحضور والإجازات (للقراءة فقط — ما بيصلّحش حاجة لوحده) — آخر 60 يوم
+// ══════════════════════════════════════════════
+function consistencyIssues(d) {
+  const nm = id => (d.emps.find(e=>e.id===id)?.name) || 'موظف محذوف';
+  const act = d.emps.filter(e=>e.status!=='resigned');
+  const raw = { overlap:[], attOnLeave:[], markOnLeave:[], orphanLeaveMark:[], negBalance:[], dup:[], coNoCi:[], overCap:[] };
+  const load = (emp, date) => leaveLoadForDate(d.leaves, emp, date);
+  // 1) إجازتان معتمدتان أو أكتر على نفس اليوم (مجموعهم أكتر من يوم)
+  const seen = new Set();
+  d.leaves.forEach(v=>{ if (v.status!=='approved') return; billableDatesOf(v).forEach(dt=>{ const k=v.employeeId+'|'+dt; if (seen.has(k)||dt<d.cutoff) return; seen.add(k); if (load(v.employeeId,dt)>1+1e-9) raw.overlap.push([v.employeeId,dt]); }); });
+  // 2) حضور فعلي في يوم إجازة معتمدة (إلا لو قطع الإجازة بقرار مسجّل)
+  const sk = new Set();
+  d.att.forEach(a=>{ if (a.type!=='checkin') return; const k=a.employeeId+'|'+a.date; if (sk.has(k)) return; if (load(a.employeeId,a.date)>1e-9 && !d.cuts.has(k)) { sk.add(k); raw.attOnLeave.push([a.employeeId,a.date]); } });
+  // 3) غياب/خصم مسجّل على يوم إجازة معتمدة،  4) حالة "إجازة" بدون إجازة معتمدة تغطيها
+  d.marks.forEach(m=>{ const l=load(m.employeeId,m.date); if (m.status==='leave') { if (l<=1e-9) raw.orphanLeaveMark.push([m.employeeId,m.date]); } else if (l>1e-9) raw.markOnLeave.push([m.employeeId,m.date,m.status]); });
+  // 5) رصيد إجازة بالسالب
+  act.forEach(e=>Object.keys(LEAVE_TYPES).forEach(t=>{ const b=leaveBalanceOf(e,t); if (b<0) raw.negBalance.push([e.id,t,b]); }));
+  // 6) تسجيلات مكررة (نفس اليوم والنوع)،  7) انصراف بدون حضور (اليوم نفسه أو اليوم السابق للورديات الليلية)
+  const cnt = {}; d.att.forEach(a=>{ const k=a.employeeId+'|'+a.date+'|'+a.type; cnt[k]=(cnt[k]||0)+1; });
+  Object.keys(cnt).forEach(k=>{ if (cnt[k]>1) { const [e,dt,t]=k.split('|'); raw.dup.push([e,dt,t,cnt[k]]); } });
+  const ci = new Set(d.att.filter(a=>a.type==='checkin').map(a=>a.employeeId+'|'+a.date)); const cs=new Set();
+  d.att.forEach(a=>{ if (a.type!=='checkout') return; const k=a.employeeId+'|'+a.date; if (cs.has(k)) return; cs.add(k); if (!ci.has(k) && !ci.has(a.employeeId+'|'+addDaysStr(a.date,-1))) raw.coNoCi.push([a.employeeId,a.date]); });
+  // 8) إذن شخصي مستهلك أكتر من الحد في الدورة الحالية
+  ppBalanceRows(d.pp, act, d.period).forEach(r=>{ const u = r.used; if (u>r.cap) raw.overCap.push([r.id,u,r.cap]); });
+  const cap = (arr,f)=>{ const it=arr.slice(0,50).map(f); if (arr.length>50) it.push(`… و${arr.length-50} حالة أخرى`); return it; };
+  const out = [];
+  const add = (a,title,icon,sev,f)=>{ if (a.length) out.push({ title, icon, severity:sev, items:cap(a,f) }); };
+  add(raw.overlap,'إجازات معتمدة متداخلة على نفس اليوم (قد تكون خُصمت من الرصيد مرتين)','fa-layer-group','danger',x=>`${nm(x[0])} — يوم ${x[1]}`);
+  add(raw.attOnLeave,'حضور فعلي مسجّل في يوم إجازة معتمدة (بدون قرار قطع إجازة)','fa-user-clock','danger',x=>`${nm(x[0])} — يوم ${x[1]}`);
+  add(raw.markOnLeave,'غياب/خصم مسجّل على يوم إجازة معتمدة','fa-triangle-exclamation','danger',x=>`${nm(x[0])} — يوم ${x[1]}`);
+  add(raw.orphanLeaveMark,'حالة "إجازة من الرصيد" بدون طلب إجازة معتمد يغطّيها (ربما حُذف الطلب)','fa-link-slash','warning',x=>`${nm(x[0])} — يوم ${x[1]}`);
+  add(raw.negBalance,'رصيد إجازة بالسالب','fa-minus-circle','danger',x=>`${nm(x[0])} — ${LEAVE_TYPES[x[1]].label}: ${x[2]}`);
+  add(raw.dup,'تسجيلات حضور/انصراف مكررة لنفس اليوم','fa-clone','warning',x=>`${nm(x[0])} — ${x[1]}: ${x[3]} تسجيلات ${x[2]==='checkin'?'حضور':'انصراف'}`);
+  add(raw.coNoCi,'انصراف بدون تسجيل حضور','fa-right-from-bracket','warning',x=>`${nm(x[0])} — يوم ${x[1]}`);
+  add(raw.overCap,'إذن شخصي مستهلك أكثر من الحد في الدورة الحالية','fa-hourglass-end','warning',x=>`${nm(x[0])} — ${minutesToHoursLabel(x[1])} من ${minutesToHoursLabel(x[2])}`);
+  return { issues:out, raw, count: out.reduce((s,i)=>s+i.items.length,0) };
+}
+window.consistencyIssues = consistencyIssues;
+async function loadConsistencyIssues() {
+  const today = todayStr(), cutoff = addDaysStr(today,-60), period = periodForDate(today);
+  const [attS, markS, leaveS, cutS, ppS] = await Promise.all([
+    getDocs(query(collection(db,'attendance'), where('date','>=',cutoff))),
+    getDocs(query(collection(db,'dailyMarks'), where('date','>=',cutoff))),
+    getDocs(query(collection(db,'leaveRequests'), where('status','==','approved'))),
+    getDocs(query(collection(db,'personalPermissionRequests'), where('kind','==','leaveCut'))),
+    getDocs(query(collection(db,'personalPermissionRequests'), where('period','==',period)))
+  ]);
+  const rows = s => s.docs.map(x=>({id:x.id,...x.data()}));
+  return consistencyIssues({ emps:_employees, att:rows(attS), marks:rows(markS), leaves:rows(leaveS).filter(v=>(v.dateTo||v.dateFrom||'')>=cutoff),
+    cuts:new Set(rows(cutS).map(r=>r.employeeId+'|'+r.date)), pp:rows(ppS), period, cutoff });
+}
+function hcBadgeOn() { try { return localStorage.getItem('hcBadge')==='1'; } catch(e) { return false; } }
+function setHealthBadge(n) {
+  const b = document.getElementById('hc-badge'); if (!b) return;
+  if (hcBadgeOn() && n>0) { b.textContent = n; b.style.display = ''; } else b.style.display = 'none';
+  const t = document.getElementById('hc-badge-toggle'); if (t) t.textContent = hcBadgeOn() ? 'إيقاف العدّاد الأحمر' : 'تفعيل العدّاد الأحمر';
+}
+async function refreshHealthBadge() {
+  if (!hcBadgeOn() || !CU || CU.role!=='admin') return;
+  try { setHealthBadge((await loadConsistencyIssues()).count); } catch(e) {}
+}
+window.toggleHealthBadge = async () => {
+  try { localStorage.setItem('hcBadge', hcBadgeOn() ? '0' : '1'); } catch(e) {}
+  if (hcBadgeOn()) await refreshHealthBadge(); else setHealthBadge(0);
+  const t = document.getElementById('hc-badge-toggle'); if (t) t.textContent = hcBadgeOn() ? 'إيقاف العدّاد الأحمر' : 'تفعيل العدّاد الأحمر';
+};
+window.refreshHealthBadge = refreshHealthBadge;
+
 async function renderHealthCheck() {
   const body = document.getElementById('healthcheck-body');
   body.innerHTML = '<div class="empty"><i class="fas fa-spinner fa-spin"></i><p>جاري الفحص...</p></div>';
@@ -1529,6 +1599,8 @@ async function renderHealthCheck() {
   if (noPasskey.length) issues.push({ title:'موظفون نشطون لم يسجّلوا بصمتهم بعد (ستُسجَّل تلقائيًا عند أول حضور)', icon:'fa-fingerprint', severity:'warning',
     items: noPasskey.map(e=>e.name) });
 
+  try { const c = await loadConsistencyIssues(); issues.push(...c.issues); setHealthBadge(c.count); }
+  catch(e) { issues.push({ title:'تعذّر تشغيل فحص تناقضات الحضور والإجازات', icon:'fa-triangle-exclamation', severity:'warning', items:[formatFirestoreError('السبب', e)] }); }
   if (!issues.length) {
     body.innerHTML = `<div class="card"><div class="card-body" style="display:flex;align-items:center;gap:10px;color:var(--slate-500)"><i class="fas fa-circle-check" style="color:var(--ac-600);font-size:18px"></i><span>لا توجد أي مشكلات في البيانات حاليًا — كل شيء سليم</span></div></div>`;
     return;
@@ -1542,6 +1614,7 @@ async function renderHealthCheck() {
 window.renderHealthCheck = renderHealthCheck;
 
 function renderDashboard() {
+  refreshHealthBadge();
   document.getElementById('dash-date').textContent = new Date().toLocaleDateString('ar-EG', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
   renderAttentionWidget();
   const active = _employees.filter(e=>e.status!=='resigned' && e.category!=='rep' && e.category!=='driver');
@@ -1677,7 +1750,7 @@ window.deleteShift = async (id) => {
   const usedBy = _employees.filter(e=>e.shiftId===id && e.status!=='resigned').length;
   if (usedBy>0) { toast(`هذه الوردية بها ${usedBy} موظف — يُرجى تغيير ورديتهم أولًا`, 'error'); return; }
   if (!(await confirmDialog('هل أنت متأكد من حذف هذه الوردية؟'))) return;
-  try { await deleteDoc(doc(db,'shifts',id)); toast('تم الحذف بنجاح', 'success'); }
+  try { await deleteDocAudited('shifts',id); toast('تم الحذف بنجاح', 'success'); }
   catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
 
@@ -1788,7 +1861,7 @@ window.saveRep = async () => {
 
 window.deleteRep = async (id) => {
   if (!(await confirmDialog('هل أنت متأكد من حذف هذا المندوب نهائيًا؟'))) return;
-  try { const e=_employees.find(x=>x.id===id); await deleteDoc(doc(db,'employees',id)); await removeEmployeeCode(e?.code); toast('تم الحذف بنجاح', 'success'); }
+  try { const e=_employees.find(x=>x.id===id); await deleteDocAudited('employees',id); await removeEmployeeCode(e?.code); toast('تم الحذف بنجاح', 'success'); }
   catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
 
@@ -1929,7 +2002,7 @@ window.saveDriver = async () => {
 
 window.deleteDriver = async (id) => {
   if (!(await confirmDialog('هل أنت متأكد من حذف هذا السائق نهائيًا؟'))) return;
-  try { const e=_employees.find(x=>x.id===id); await deleteDoc(doc(db,'employees',id)); await removeEmployeeCode(e?.code); toast('تم الحذف بنجاح', 'success'); }
+  try { const e=_employees.find(x=>x.id===id); await deleteDocAudited('employees',id); await removeEmployeeCode(e?.code); toast('تم الحذف بنجاح', 'success'); }
   catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
 
@@ -2089,7 +2162,7 @@ window.saveShiftOverride = async () => {
 
 window.deleteShiftOverride = async (id) => {
   if (!(await confirmDialog('هل أنت متأكد من حذف هذا التعديل؟ ستعود الوردية إلى مواعيدها الأساسية في هذا اليوم.'))) return;
-  try { await deleteDoc(doc(db,'shiftOverrides',id)); toast('تم الحذف بنجاح', 'success'); renderShiftOverrides(); }
+  try { await deleteDocAudited('shiftOverrides',id); toast('تم الحذف بنجاح', 'success'); renderShiftOverrides(); }
   catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
 
@@ -2175,7 +2248,7 @@ window.deleteLocation = async (id) => {
   const usedBy = _employees.filter(e=>e.locationId===id && e.status!=='resigned').length;
   if (usedBy) { toast(`هذا الفرع مرتبط بـ ${usedBy} موظف — يُرجى تغيير فرعهم أولًا`, 'error'); return; }
   if (!(await confirmDialog('هل أنت متأكد من حذف هذا الفرع؟'))) return;
-  try { await deleteDoc(doc(db,'locations',id)); toast('تم الحذف بنجاح', 'success'); }
+  try { await deleteDocAudited('locations',id); toast('تم الحذف بنجاح', 'success'); }
   catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
 
@@ -2226,7 +2299,7 @@ window.deleteDept = async (id) => {
   const usedBy = _employees.filter(e=>e.departmentId===id && e.status!=='resigned').length;
   if (usedBy>0) { toast(`هذا القسم يضم ${usedBy} موظف — يُرجى نقلهم إلى قسم آخر أولًا`, 'error'); return; }
   if (!(await confirmDialog('هل أنت متأكد من حذف هذا القسم؟'))) return;
-  try { await deleteDoc(doc(db,'departments',id)); toast('تم الحذف بنجاح', 'success'); }
+  try { await deleteDocAudited('departments',id); toast('تم الحذف بنجاح', 'success'); }
   catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
 
@@ -2834,7 +2907,7 @@ window.deleteEmployee = async (id) => {
       const dept = _departments.find(d=>d.managerEmployeeId===id);
       if (dept) await updateDoc(doc(db,'departments',dept.id), { managerEmployeeId:null });
     }
-    await deleteDoc(doc(db,'employees',id));
+    await deleteDocAudited('employees',id);
     await removeEmployeeCode(e?.code);
     toast('تم الحذف بنجاح', 'success');
   } catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
@@ -4352,6 +4425,21 @@ function leaveBadgeHtml(list) {
   return `<span class="badge bg-ac" title="${esc('من '+f+' إلى '+t)}"><i class="fas fa-umbrella-beach"></i> في إجازة معتمدة (${esc(labels.join(' + '))})</span>`;
 }
 
+// ── وسم التسجيل اليدوي: شارة "يدوي" + سطر (بواسطة / وقت / السبب). البيانات متخزنة أصلًا في سجل الحضور (method / note / markedBy / markedAt)
+function manualTag(rec) {
+  if (!rec || rec.method!=='manual_admin') return '';
+  const noNote = !String(rec.note||'').trim();
+  return ` <span class="badge ${noNote?'bg-warn':'bg-slate'}"><i class="fas fa-hand-pointer"></i> يدوي${noNote?' — بدون سبب':''}</span>`;
+}
+function manualDetail(rec, label) {
+  if (!rec || rec.method!=='manual_admin') return '';
+  let ts = '';
+  if (rec.markedAt) { const d = new Date(rec.markedAt), p = n=>String(n).padStart(2,'0'); ts = `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; }
+  const note = String(rec.note||'').trim();
+  return `<div style="flex-basis:100%;font-size:11.5px;color:var(--slate-500);margin-top:2px">${label} يدوي${rec.markedBy?' — بواسطة '+esc(rec.markedBy):''}${ts?' — '+ts:''} — ${note?'السبب: '+esc(note):'<b>بدون سبب مسجّل</b>'}</div>`;
+}
+window.manualTag = manualTag; window.manualDetail = manualDetail;
+
 async function renderDaily() {
   const dateInput = document.getElementById('daily-date');
   if (!dateInput.value) dateInput.value = todayStr();
@@ -4459,13 +4547,14 @@ async function renderDaily() {
       <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:6px">
         <span style="font-weight:700">${esc(e.name)}</span>
         <span style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-          <span class="badge bg-ok"><i class="fas fa-check-circle"></i> حضور ${chk.time}</span>${leavesToday[e.id]?` <span class="badge bg-slate" title="لديه إجازة معتمدة تغطي هذا اليوم">إجازة معتمدة</span>`:''}
+          <span class="badge bg-ok"><i class="fas fa-check-circle"></i> حضور ${chk.time}</span>${manualTag(chk)}${leavesToday[e.id]?` <span class="badge bg-slate" title="لديه إجازة معتمدة تغطي هذا اليوم">إجازة معتمدة</span>`:''}
           ${canDel?`<button class="btn btn-red btn-ic btn-xs" onclick="deleteAttendanceRecord('${chk.id}','${date}')"><i class="fas fa-trash"></i></button>`:''}
           ${co
-            ? `<span class="badge bg-ac"><i class="fas fa-check-circle"></i> انصراف ${co.time}</span>${canDel?`<button class="btn btn-red btn-ic btn-xs" onclick="deleteAttendanceRecord('${co.id}','${date}')"><i class="fas fa-trash"></i></button>`:''}`
+            ? `<span class="badge bg-ac"><i class="fas fa-check-circle"></i> انصراف ${co.time}</span>${manualTag(co)}${canDel?`<button class="btn btn-red btn-ic btn-xs" onclick="deleteAttendanceRecord('${co.id}','${date}')"><i class="fas fa-trash"></i></button>`:''}`
             : `<span class="badge bg-slate"><i class="far fa-circle"></i> لم يسجّل الانصراف بعد</span>${manualBtn(e.id,'checkout')}`}
           ${ppFlag}
         </span>
+        ${manualDetail(chk,'الحضور')}${manualDetail(co,'الانصراف')}
       </div>`;
     }).join('');
 
@@ -4521,15 +4610,59 @@ async function renderDaily() {
 }
 window.renderDaily = renderDaily;
 
+// ══════════════════════════════════════════════
+// حارس العمليات الحساسة — منع/تنبيه قبل الأخطاء الشائعة + تسجيل الحذف في سجل التدقيق
+// ══════════════════════════════════════════════
+function addDaysStr(s, n) { const d = new Date(s+'T00:00:00Z'); d.setUTCDate(d.getUTCDate()+n); return d.toISOString().slice(0,10); }
+// حجم الإجازات المعتمدة لموظف في يوم معيّن (1 = يوم كامل). طلب فيه billableDates: daysCount ÷ عدد الأيام، وإلا يوم كامل لكل تاريخ في النطاق
+function leaveLoadForDate(rows, employeeId, date, excludeId) {
+  let sum = 0;
+  rows.forEach(v=>{
+    if (v.status!=='approved' || v.employeeId!==employeeId || v.id===excludeId) return;
+    const bd = (v.billableDates && v.billableDates.length) ? v.billableDates : null;
+    if (bd) { if (bd.includes(date)) sum += (v.daysCount||bd.length)/bd.length; }
+    else if ((v.dateFrom||'')<=date && date<=(v.dateTo||v.dateFrom||'')) sum += 1;
+  });
+  return sum;
+}
+window.leaveLoadForDate = leaveLoadForDate;
+async function approvedLeavesOfEmp(employeeId) {
+  // لو الصلاحيات (أو الشبكة) ما سمحتش بالقراءة: الحارس ما بيمنعش ولا بيحذّر، والعملية تكمل زي ما كانت قبل الحارس
+  try {
+    const s = await getDocs(query(collection(db,'leaveRequests'), where('employeeId','==',employeeId), where('status','==','approved')));
+    return s.docs.map(d=>({id:d.id,...d.data()}));
+  } catch(e) { return []; }
+}
+// أول يوم من الأيام دي تغطيه إجازة معتمدة بالفعل (أو null)
+async function leaveOverlapDate(employeeId, dates, excludeId) {
+  const rows = await approvedLeavesOfEmp(employeeId);
+  return [...dates].sort().find(dt=>leaveLoadForDate(rows, employeeId, dt, excludeId)>1e-9) || null;
+}
+async function confirmWarnings(title, warns) {
+  if (!warns.length) return true;
+  return await confirmDialog(title+'\n\n'+warns.map(w=>'• '+w).join('\n')+'\n\nهل تريد المتابعة رغم ذلك؟');
+}
+const DEL_LABELS = { shifts:'وردية', penaltyRewards:'جزاء/مكافأة', shiftOverrides:'استثناء وردية', locations:'موقع', departments:'قسم', employees:'موظف/مندوب/سائق', monthlySheets:'كشف شهري', evaluations:'تقييم', officialHolidays:'إجازة رسمية', users:'مستخدم', attendance:'حضور/انصراف', dailyMarks:'حالة يوم' };
+// حذف مع تسجيل في سجل التدقيق (بيقرا السجل قبل الحذف عشان يسجّل بياناته). فشل التسجيل ما بيمنعش الحذف
+async function deleteDocAudited(col, id) {
+  let d = {}; try { const s = await getDoc(doc(db,col,id)); if (s.exists()) d = s.data(); } catch(e) {}
+  await deleteDoc(doc(db,col,id));
+  const keep = {}; ['date','type','time','status','period','month','amount','days','reason','code','email'].forEach(k=>{ if (d[k]!==undefined) keep[k]=d[k]; });
+  await logAudit('حذف سجل ('+(DEL_LABELS[col]||col)+')', d.employeeId || (col==='employees' ? id : null), d.employeeName || d.name || null, { collection:col, id, ...keep });
+}
 window.deleteAttendanceRecord = async (id, date) => {
-  if (!(await confirmDialog('هل أنت متأكد من حذف سجل الحضور هذا؟'))) return;
-  try { await deleteDoc(doc(db,'attendance',id)); toast('تم الحذف بنجاح', 'success'); renderDaily(); }
+  if (!(await confirmDialog('هل أنت متأكد من حذف سجل الحضور/الانصراف هذا نهائيًا؟ قد يؤثر ذلك على احتساب التأخير والوقت الإضافي لهذا اليوم.'))) return;
+  try { await deleteDocAudited('attendance', id); toast('تم الحذف بنجاح', 'success'); renderDaily(); }
   catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
 window.deleteDailyMarkRecord = async (id, date) => {
-  if (!(await confirmDialog('هل أنت متأكد من حذف هذه الحالة المسجّلة؟'))) return;
+  let isLeave = false; try { const s = await getDoc(doc(db,'dailyMarks',id)); isLeave = s.exists() && s.data().status==='leave'; } catch(e) {}
+  const msg = isLeave
+    ? 'هل أنت متأكد من حذف هذه الحالة؟ تنبيه: حذف الحالة لا يحذف طلب الإجازة ولا يرجّع الرصيد — لإلغاء الإجازة نهائيًا واسترجاع الرصيد احذف طلبها من صفحة الإجازات.'
+    : 'هل أنت متأكد من حذف هذه الحالة المسجّلة؟';
+  if (!(await confirmDialog(msg))) return;
   try {
-    await deleteDoc(doc(db,'dailyMarks',id)); toast('تم الحذف بنجاح', 'success');
+    await deleteDocAudited('dailyMarks', id); toast('تم الحذف بنجاح', 'success');
     if (_page==='dailymark') renderDailyMarkPage(); else renderDaily();
   }
   catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
@@ -4586,6 +4719,17 @@ window.saveDailyMark = async () => {
   const note = document.getElementById('dm-note').value.trim();
   const empId = window._dmEmpId, dateStr = window._dmDate;
   try {
+    const gLoad = leaveLoadForDate(await approvedLeavesOfEmp(empId), empId, dateStr);
+    const gAtt = await findAttendanceConflictDate(empId, [dateStr], db).catch(()=>null);
+    if (status==='leave') {
+      if (gLoad>1e-9) throw new Error('لا يمكن تسجيل إجازة من الرصيد — الموظف لديه إجازة معتمدة تغطي هذا اليوم بالفعل (تسجيلها مرة ثانية يخصم من رصيده مرتين)');
+      if (gAtt) throw new Error('لا يمكن تسجيل إجازة من الرصيد — الموظف سجّل حضورًا فعليًا في هذا اليوم');
+    } else {
+      const gw = [];
+      if (gLoad>1e-9) gw.push('الموظف لديه إجازة معتمدة تغطي هذا اليوم');
+      if (gAtt) gw.push('الموظف سجّل حضورًا فعليًا في هذا اليوم');
+      if (!(await confirmWarnings('تنبيه قبل تسجيل '+(status==='deduct'?'خصم يوم':'غياب')+':', gw))) return;
+    }
     if (status==='leave') {
       if (!hasPerm('leaves_manage')) throw new Error('يلزم صلاحية "إدارة الإجازات" لتسجيل إجازة من الرصيد');
       await applyLeaveFromBalanceCascade(empId, dateStr);
@@ -4609,6 +4753,7 @@ window.saveDailyMark = async () => {
     } else {
       await addDoc(collection(db,'dailyMarks'), { employeeId:empId, date:dateStr, status, note, markedBy: CU?.email||'admin', markedAt: Date.now() });
     }
+    if (status!=='leave' && status!=='deduct') await logAudit('تسجيل حالة يوم (غياب)', empId, _employees.find(x=>x.id===empId)?.name||null, { date:dateStr, status, note });
     toast('تم حفظ البيانات بنجاح', 'success');
     closeM('mo-dailymark');
     if (_page==='dailymark') renderDailyMarkPage(); else renderDaily();
@@ -4631,8 +4776,22 @@ window.saveManualAttendance = async () => {
   const time = document.getElementById('ma-time').value;
   const note = document.getElementById('ma-note').value.trim();
   if (!time) { toast('يُرجى تحديد الساعة', 'error'); return; }
+  if (!note) { toast('يُرجى كتابة سبب التسجيل اليدوي في خانة الملاحظات — حقل إجباري', 'error'); return; }
   try {
     const emp = _employees.find(x=>x.id===window._maEmpId);
+    const mDate = window._maDate;
+    const [dayAtt, mLeaves] = await Promise.all([
+      getDocs(query(collection(db,'attendance'), where('employeeId','==',window._maEmpId), where('date','==',mDate))).catch(()=>({docs:[]})),
+      approvedLeavesOfEmp(window._maEmpId)
+    ]);
+    const dayRecs = dayAtt.docs.map(x=>x.data()), sameRec = dayRecs.find(x=>x.type===type), mw = [];
+    if (sameRec) mw.push(`يوجد تسجيل ${type==='checkin'?'حضور':'انصراف'} لنفس اليوم الساعة ${sameRec.time} وسيُستبدل بالوقت الجديد`);
+    if (type==='checkout' && !dayRecs.some(x=>x.type==='checkin')) mw.push('لا يوجد تسجيل حضور لهذا اليوم قبل هذا الانصراف');
+    if (leaveLoadForDate(mLeaves, window._maEmpId, mDate)>1e-9) mw.push('الموظف لديه إجازة معتمدة تغطي هذا اليوم');
+    if (emp && !employeeHiredBy(emp, mDate)) mw.push('التاريخ خارج فترة عمل الموظف (قبل تعيينه أو بعد استقالته)');
+    if (mDate > todayStr()) mw.push('التاريخ في المستقبل');
+    else if (mDate < addDaysStr(todayStr(),-31)) mw.push('التاريخ أقدم من 31 يومًا');
+    if (!(await confirmWarnings('تنبيه قبل حفظ التسجيل اليدوي:', mw))) return;
     let extra = {};
     let shiftWarning = '';
     if (emp && emp.category!=='rep' && emp.category!=='driver') {
@@ -4671,6 +4830,7 @@ window.saveManualAttendance = async () => {
         method: 'manual_admin', markedBy: CU?.email||'admin', markedAt: Date.now(), ...extra
       });
     }
+    await logAudit('تسجيل حضور/انصراف يدوي', window._maEmpId, emp?.name||null, { date:mDate, type, time, replacedTime: sameRec?.time||null });
     if (shiftWarning) {
       toast(shiftWarning, 'error');
     } else if (extra.pendingOvertimeMinutes) {
@@ -4717,7 +4877,7 @@ async function renderDailyMarkPage() {
     const lv = leavesM[e.id];
     let statusCell;
     if (chk) {
-      statusCell = `<span class="badge bg-ok"><i class="fas fa-sign-in-alt"></i> حضر الساعة ${chk.time}</span>`;
+      statusCell = `<span class="badge bg-ok"><i class="fas fa-sign-in-alt"></i> حضر الساعة ${chk.time}</span>${manualTag(chk)}${manualDetail(chk,'الحضور')}`;
     } else if (mark) {
       const label = mark.status==='leave' ? 'إجازة من الرصيد' : mark.status==='deduct' ? 'خصم يوم (جزاء)' : 'غياب بدون إذن';
       const cls = mark.status==='leave' ? 'bg-ac' : mark.status==='deduct' ? 'bg-warn' : 'bg-danger';
@@ -4784,6 +4944,7 @@ async function renderOvertime() {
       <div>
         <div style="font-weight:800">${esc(r.employeeName)}</div>
         <div style="font-size:12px;color:var(--slate-500)">${r.date} — انصرف الساعة ${r.time} — ${durationLabel} وقت إضافي (${amount} ج.م تقريباً)</div>
+        ${r.method==='manual_admin'?`<div style="margin-top:4px">${manualTag(r)}</div>${manualDetail(r,'الانصراف')}`:''}
       </div>
       <div style="display:flex;gap:8px">
         <button class="btn btn-red btn-sm" onclick="rejectOvertime('${r.id}')"><i class="fas fa-times"></i> رفض</button>
@@ -4941,7 +5102,7 @@ window.deleteMonthlyRow = async (docId) => {
         if (field) await updateDoc(doc(db,'employees',s.employeeId), { [field]: leaveBalanceOf(emp, s.leaveFromBalanceType) + s.leaveFromBalance });
       }
     }
-    await deleteDoc(doc(db,'monthlySheets',docId));
+    await deleteDocAudited('monthlySheets',docId);
     toast('تم الحذف بنجاح', 'success'); renderMonthly();
   } catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
@@ -5443,7 +5604,7 @@ window.renderEvaluation = renderEvaluation;
 
 window.deleteEvalRow = async (docId) => {
   if (!(await confirmDialog('هل أنت متأكد من حذف تقييم هذا الشهر؟'))) return;
-  try { await deleteDoc(doc(db,'evaluations',docId)); toast('تم الحذف بنجاح', 'success'); renderEvaluation(); }
+  try { await deleteDocAudited('evaluations',docId); toast('تم الحذف بنجاح', 'success'); renderEvaluation(); }
   catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
 
@@ -6331,6 +6492,9 @@ window.saveLeaveRequest = async () => {
     if (!billableDates.length) { toast('هذه التواريخ إجازة أسبوعية أو رسمية أصلًا — لا داعي لتسجيل إجازة عليها', 'error'); return; }
     const daysCount = billableDates.length;
 
+    const overlapDate = await leaveOverlapDate(employeeId, billableDates);
+    if (overlapDate) { toast(`الموظف لديه إجازة معتمدة بالفعل تغطي تاريخ ${overlapDate} — لا يمكن تسجيل إجازة ثانية على نفس اليوم`, 'error'); return; }
+
     // مايصحش يكون عنده حضور فعلي مسجّل (بصمة دخول أو انصراف) وإجازة معتمدة في نفس اليوم مع بعض
     const conflictDate = await findAttendanceConflictDate(employeeId, billableDates, db);
     if (conflictDate) { toast(`الموظف لديه سجل حضور فعلي بالفعل بتاريخ ${conflictDate} — لا يمكن تسجيل إجازة عن يوم سُجِّل فيه حضوره`, 'error'); return; }
@@ -6390,6 +6554,8 @@ async function settleLeaveStage(id, stage, approved, override=false) {
   const needsManagerStage = !!r.departmentId;
   const effectiveManagerApproved = needsManagerStage ? merged.managerApproved : true;
   if (effectiveManagerApproved===true && merged.hrApproved===true) {
+    const overlapDate = await leaveOverlapDate(r.employeeId, billableDatesOf(r), id);
+    if (overlapDate) throw new Error(`تعذّر اعتماد الطلب — الموظف لديه إجازة معتمدة بالفعل تغطي تاريخ ${overlapDate}. راجع الإجازات المتداخلة أولًا (الطلب ما زال معلّقًا).`);
     // قبل ما نخصم أي حاجة فعليًا، لازم نتأكد إن الموظف مسجّلش حضور فعلي في نفس أيام الإجازة —
     // ممكن يكون سجّل حضور بعد ما قدّم الطلب وقبل ما حد يوافق عليه
     const conflictDate = await findAttendanceConflictDate(r.employeeId, billableDatesOf(r), db);
@@ -6432,6 +6598,8 @@ window.approveLeaveRequest = async (id, override) => {
   try {
     const rdoc = await getDoc(doc(db,'leaveRequests',id));
     const r = rdoc.data();
+    const overlapDate = await leaveOverlapDate(r.employeeId, billableDatesOf(r), id);
+    if (overlapDate) throw new Error(`تعذّر اعتماد الطلب — الموظف لديه إجازة معتمدة بالفعل تغطي تاريخ ${overlapDate}. راجع الإجازات المتداخلة أولًا (الطلب ما زال معلّقًا).`);
     const conflictDate = await findAttendanceConflictDate(r.employeeId, billableDatesOf(r), db);
     if (conflictDate) {
       await updateDoc(doc(db,'leaveRequests',id), { status:'rejected', autoRejectedReason: `تم رفض الطلب تلقائيًا — الموظف سجّل حضورًا فعليًا في تاريخ ${conflictDate}` });
@@ -6593,7 +6761,7 @@ window.saveHoliday = async () => {
 // وأي تصحيح رجعي هيحتاج مراجعة يدوية عشان نتأكد إنه مش هيتعارض مع تعديلات تانية حصلت في الوقت ده)
 window.deleteHoliday = async (id) => {
   if (!(await confirmDialog('هل أنت متأكد من حذف هذه الإجازة الرسمية؟'))) return;
-  try { await deleteDoc(doc(db,'officialHolidays',id)); toast('تم الحذف بنجاح', 'success'); renderHolidays(); }
+  try { await deleteDocAudited('officialHolidays',id); toast('تم الحذف بنجاح', 'success'); renderHolidays(); }
   catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
 
@@ -6880,7 +7048,7 @@ window.saveUser = async () => {
 
 window.revokeUser = async (id) => {
   if (!(await confirmDialog('سيتم إلغاء وصول هذا المستخدم إلى النظام. سيبقى حساب الدخول في Firebase Authentication موجودًا، ويجب حذفه يدويًا من الـ Console إذا رغبت في حذفه نهائيًا. هل أنت متأكد؟'))) return;
-  try { await deleteDoc(doc(db,'users',id)); toast('تم إلغاء وصول المستخدم بنجاح', 'success'); renderUsers(); }
+  try { await deleteDocAudited('users',id); toast('تم إلغاء وصول المستخدم بنجاح', 'success'); renderUsers(); }
   catch(e) { toast(formatFirestoreError('حدث خطأ', e), 'error'); }
 };
 
