@@ -616,8 +616,9 @@ button,input,select,textarea{font-family:'Cairo',sans-serif}
     <div class="page" id="page-healthcheck">
       <div class="ph">
         <div><div class="ph-title">صحة النظام</div><div class="ph-sub">فحص تلقائي لأي بيانات محتاجة انتباهك — من غير ما تحتاج تدوّر يدوي زي أي وقت فات</div></div>
-        <div class="ph-acts"><button class="btn btn-ghost btn-sm" id="hc-badge-toggle" onclick="toggleHealthBadge()">تفعيل العدّاد الأحمر</button><button class="btn btn-ghost btn-sm" onclick="renderHealthCheck()"><i class="fas fa-rotate"></i>تحديث الفحص</button></div>
+        <div class="ph-acts"><button class="btn btn-ghost btn-sm" id="hc-badge-toggle" onclick="toggleHealthBadge()">تفعيل العدّاد الأحمر</button><button class="btn btn-ghost btn-sm" onclick="renderHealthCheck(true)"><i class="fas fa-rotate"></i>تحديث الفحص</button></div>
       </div>
+      <div id="hc-note" style="font-size:12px;color:var(--slate-500);margin:0 2px 10px"></div>
       <div id="healthcheck-body"></div>
     </div>
   </div>
@@ -1163,7 +1164,7 @@ window.doLogin = async () => {
   }
 };
 
-window.doLogout = async () => { await signOut(auth); };
+window.doLogout = async () => { try { localStorage.removeItem('hcCache'); } catch(e) {} await signOut(auth); };
 
 onAuthStateChanged(auth, async user => {
   if (user) {
@@ -1481,8 +1482,21 @@ function renderAttentionWidget() {
 // صحة النظام — فحص تلقائي لحالات بيانات غريبة/منسية، بدل ما نكتشفها بالصدفة زي ما حصل قبل كده
 // ══════════════════════════════════════════════
 // ══════════════════════════════════════════════
-// فحص تناقضات بيانات الحضور والإجازات (للقراءة فقط — ما بيصلّحش حاجة لوحده) — آخر 60 يوم
+// فحص تناقضات بيانات الحضور والإجازات (للقراءة فقط — ما بيصلّحش حاجة لوحده) — آخر 30 يوم
 // ══════════════════════════════════════════════
+const HC_DAYS = 30, HC_TTL_MS = 6*3600*1000;   // نافذة الفحص (أيام) ومدة صلاحية آخر نتيجة محفوظة
+function hcCacheGet() {
+  try { const c = JSON.parse(localStorage.getItem('hcCache')||'null'); if (c && c.v===2 && c.u===(CU&&CU.id) && Date.now()-c.ts<HC_TTL_MS) return c; } catch(e) {}
+  return null;
+}
+function hcCacheSet(r) { try { localStorage.setItem('hcCache', JSON.stringify({ v:2, u:CU&&CU.id, ts:Date.now(), issues:r.issues, count:r.count })); } catch(e) {} }
+// القراءة التقيلة (آلاف السجلات) بتحصل بس لو مفيش نتيجة محفوظة صالحة (6 ساعات) أو الأدمن طلب تحديث صريح
+async function getConsistency(force) {
+  if (!force) { const c = hcCacheGet(); if (c) return { issues:c.issues, count:c.count, cachedAt:c.ts }; }
+  const r = await loadConsistencyIssues(); hcCacheSet(r);
+  return { issues:r.issues, count:r.count, cachedAt:null };
+}
+window.getConsistency = getConsistency;
 function consistencyIssues(d) {
   const nm = id => (d.emps.find(e=>e.id===id)?.name) || 'موظف محذوف';
   const act = d.emps.filter(e=>e.status!=='resigned');
@@ -1520,7 +1534,7 @@ function consistencyIssues(d) {
 }
 window.consistencyIssues = consistencyIssues;
 async function loadConsistencyIssues() {
-  const today = todayStr(), cutoff = addDaysStr(today,-60), period = periodForDate(today);
+  const today = todayStr(), cutoff = addDaysStr(today,-HC_DAYS), period = periodForDate(today);
   const [attS, markS, leaveS, cutS, ppS] = await Promise.all([
     getDocs(query(collection(db,'attendance'), where('date','>=',cutoff))),
     getDocs(query(collection(db,'dailyMarks'), where('date','>=',cutoff))),
@@ -1540,7 +1554,7 @@ function setHealthBadge(n) {
 }
 async function refreshHealthBadge() {
   if (!hcBadgeOn() || !CU || CU.role!=='admin') return;
-  try { setHealthBadge((await loadConsistencyIssues()).count); } catch(e) {}
+  try { setHealthBadge((await getConsistency(false)).count); } catch(e) {}
 }
 window.toggleHealthBadge = async () => {
   try { localStorage.setItem('hcBadge', hcBadgeOn() ? '0' : '1'); } catch(e) {}
@@ -1549,7 +1563,7 @@ window.toggleHealthBadge = async () => {
 };
 window.refreshHealthBadge = refreshHealthBadge;
 
-async function renderHealthCheck() {
+async function renderHealthCheck(force) {
   const body = document.getElementById('healthcheck-body');
   body.innerHTML = '<div class="empty"><i class="fas fa-spinner fa-spin"></i><p>جاري الفحص...</p></div>';
   let advSnap, leaveSnap, ppSnap;
@@ -1599,7 +1613,7 @@ async function renderHealthCheck() {
   if (noPasskey.length) issues.push({ title:'موظفون نشطون لم يسجّلوا بصمتهم بعد (ستُسجَّل تلقائيًا عند أول حضور)', icon:'fa-fingerprint', severity:'warning',
     items: noPasskey.map(e=>e.name) });
 
-  try { const c = await loadConsistencyIssues(); issues.push(...c.issues); setHealthBadge(c.count); }
+  try { const c = await getConsistency(force===true); issues.push(...c.issues); setHealthBadge(c.count); const hn=document.getElementById('hc-note'); if (hn) hn.textContent = c.cachedAt ? `فحص التناقضات (آخر ${HC_DAYS} يوم): من نتيجة محفوظة الساعة ${new Date(c.cachedAt).toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'})} — اضغط "تحديث الفحص" لإعادة الفحص (بيقرا آلاف السجلات)` : `فحص التناقضات (آخر ${HC_DAYS} يوم): تم الآن`; }
   catch(e) { issues.push({ title:'تعذّر تشغيل فحص تناقضات الحضور والإجازات', icon:'fa-triangle-exclamation', severity:'warning', items:[formatFirestoreError('السبب', e)] }); }
   if (!issues.length) {
     body.innerHTML = `<div class="card"><div class="card-body" style="display:flex;align-items:center;gap:10px;color:var(--slate-500)"><i class="fas fa-circle-check" style="color:var(--ac-600);font-size:18px"></i><span>لا توجد أي مشكلات في البيانات حاليًا — كل شيء سليم</span></div></div>`;
@@ -1778,9 +1792,9 @@ async function renderReps() {
     else if (v.type==='checkout') checkouts[v.employeeId] = {id:d.id,...v};
   });
 
-  const mapLink = r => r.location ? `<a href="https://www.google.com/maps?q=${r.location.lat},${r.location.lng}" target="_blank" rel="noopener" style="color:var(--ac-600);font-weight:700"><i class="fas fa-map-marker-alt"></i> عرض الموقع</a>` : '';
+  const mapLink = r => (r.location && isFinite(r.location.lat) && isFinite(r.location.lng)) ? `<a href="https://www.google.com/maps?q=${Number(r.location.lat)},${Number(r.location.lng)}" target="_blank" rel="noopener" style="color:var(--ac-600);font-weight:700"><i class="fas fa-map-marker-alt"></i> عرض الموقع</a>` : '';
   const canDel = hasPerm('data_delete');
-  const cell = r => r ? `<div style="font-weight:700">${r.time}</div><div style="font-size:11px">${mapLink(r)}${canDel?` <button class="btn btn-red btn-ic btn-xs" onclick="deleteAttendanceRecord('${r.id}','${date}');setTimeout(renderReps,400)"><i class="fas fa-trash"></i></button>`:''}</div>` : '<span class="badge bg-slate">لا يوجد</span>';
+  const cell = r => r ? `<div style="font-weight:700">${esc(r.time)}</div><div style="font-size:11px">${mapLink(r)}${canDel?` <button class="btn btn-red btn-ic btn-xs" onclick="deleteAttendanceRecord('${r.id}','${date}');setTimeout(renderReps,400)"><i class="fas fa-trash"></i></button>`:''}</div>` : '<span class="badge bg-slate">لا يوجد</span>';
 
   body.innerHTML = reps.map(e=>{
     const statusBadge = e.status==='resigned' ? '<span class="badge bg-danger">مستقيل</span>' : '';
@@ -1902,9 +1916,9 @@ async function renderDrivers() {
     }
   });
 
-  const mapLink = r => r.location ? `<a href="https://www.google.com/maps?q=${r.location.lat},${r.location.lng}" target="_blank" rel="noopener" style="color:var(--ac-600);font-weight:700"><i class="fas fa-map-marker-alt"></i> عرض الموقع</a>` : '';
+  const mapLink = r => (r.location && isFinite(r.location.lat) && isFinite(r.location.lng)) ? `<a href="https://www.google.com/maps?q=${Number(r.location.lat)},${Number(r.location.lng)}" target="_blank" rel="noopener" style="color:var(--ac-600);font-weight:700"><i class="fas fa-map-marker-alt"></i> عرض الموقع</a>` : '';
   const canDel = hasPerm('data_delete');
-  const cell = r => r ? `<div style="font-weight:700">${r.time}${r.crossedMidnight?' <span style="color:var(--slate-500);font-weight:400;font-size:10.5px">(بعد نص الليل)</span>':''}</div><div style="font-size:11px">${mapLink(r)}${canDel?` <button class="btn btn-red btn-ic btn-xs" onclick="deleteAttendanceRecord('${r.id}','${date}');setTimeout(renderDrivers,400)"><i class="fas fa-trash"></i></button>`:''}</div>` : '<span class="badge bg-slate">لا يوجد</span>';
+  const cell = r => r ? `<div style="font-weight:700">${esc(r.time)}${r.crossedMidnight?' <span style="color:var(--slate-500);font-weight:400;font-size:10.5px">(بعد نص الليل)</span>':''}</div><div style="font-size:11px">${mapLink(r)}${canDel?` <button class="btn btn-red btn-ic btn-xs" onclick="deleteAttendanceRecord('${r.id}','${date}');setTimeout(renderDrivers,400)"><i class="fas fa-trash"></i></button>`:''}</div>` : '<span class="badge bg-slate">لا يوجد</span>';
 
   body.innerHTML = drivers.map(e=>{
     const statusBadge = e.status==='resigned' ? '<span class="badge bg-danger">مستقيل</span>' : '';
@@ -2391,7 +2405,7 @@ function renderEmpPasskeys(empId, listElId) {
   if (!list.length) { el.innerHTML = '<div>لم يسجّل أي بصمة بعد — سيتم تسجيلها تلقائياً في أول مرة يدخل بها بكوده.</div>'; return; }
   el.innerHTML = list.map(p=>`
     <div style="display:flex;align-items:center;justify-content:space-between;background:var(--slate-100);padding:7px 10px;border-radius:8px">
-      <span><i class="fas fa-fingerprint"></i>&nbsp; ${p.label||'جهاز'} — ${new Date(p.createdAt).toLocaleDateString('ar-EG')}</span>
+      <span><i class="fas fa-fingerprint"></i>&nbsp; ${esc(p.label||'جهاز')} — ${new Date(p.createdAt).toLocaleDateString('ar-EG')}</span>
       <button class="btn btn-red btn-xs btn-ic" onclick="removePasskey('${empId}','${p.id}','${listElId}')"><i class="fas fa-trash"></i></button>
     </div>`).join('');
 }
@@ -3518,7 +3532,7 @@ async function kioskLoadStatus() {
         <div style="font-size:12px;color:var(--slate-500);margin-top:2px">سائق — 8 ساعات من وقت الحضور، بدون وردية ثابتة</div>
       </div>`;
     if (isOpenCheckin) {
-      bodyHtml += `<div style="font-size:12px;color:var(--slate-500);margin-bottom:8px">حاضر من الساعة ${lastRec.time}${lastRec.date!==today?` (${lastRec.date})`:''}</div>
+      bodyHtml += `<div style="font-size:12px;color:var(--slate-500);margin-bottom:8px">حاضر من الساعة ${esc(lastRec.time)}${lastRec.date!==today?` (${esc(lastRec.date)})`:''}</div>
         <button class="auth-btn" id="kiosk-act-btn" onclick="kioskDoAction('checkout')"><i class="fas fa-fingerprint"></i>تسجيل انصراف</button>`;
     } else {
       bodyHtml += `<button class="auth-btn" id="kiosk-act-btn" onclick="kioskDoAction('checkin')"><i class="fas fa-fingerprint"></i>تسجيل حضور</button>`;
@@ -4055,7 +4069,7 @@ window.kioskShowMyLeaveRequests = async () => {
     const rows = reqs.map(r => `
       <div style="text-align:right;background:var(--slate-100);border-radius:10px;padding:12px 14px;margin-bottom:8px">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
-          <div style="font-weight:700;font-size:13px">${(LEAVE_TYPES[r.leaveType]||LEAVE_TYPES.regular).label} — ${r.dateFrom} → ${r.dateTo} (${r.daysCount} يوم)</div>
+          <div style="font-weight:700;font-size:13px">${(LEAVE_TYPES[r.leaveType]||LEAVE_TYPES.regular).label} — ${esc(r.dateFrom)} → ${esc(r.dateTo)} (${r.daysCount} يوم)</div>
         </div>
         <div style="display:flex;gap:12px;margin-top:6px;font-size:11.5px;flex-wrap:wrap">
           ${approvalBit(r.managerApproved,'مديرك المباشر')}
@@ -4547,10 +4561,10 @@ async function renderDaily() {
       <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:6px">
         <span style="font-weight:700">${esc(e.name)}</span>
         <span style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-          <span class="badge bg-ok"><i class="fas fa-check-circle"></i> حضور ${chk.time}</span>${manualTag(chk)}${leavesToday[e.id]?` <span class="badge bg-slate" title="لديه إجازة معتمدة تغطي هذا اليوم">إجازة معتمدة</span>`:''}
+          <span class="badge bg-ok"><i class="fas fa-check-circle"></i> حضور ${esc(chk.time)}</span>${manualTag(chk)}${leavesToday[e.id]?` <span class="badge bg-slate" title="لديه إجازة معتمدة تغطي هذا اليوم">إجازة معتمدة</span>`:''}
           ${canDel?`<button class="btn btn-red btn-ic btn-xs" onclick="deleteAttendanceRecord('${chk.id}','${date}')"><i class="fas fa-trash"></i></button>`:''}
           ${co
-            ? `<span class="badge bg-ac"><i class="fas fa-check-circle"></i> انصراف ${co.time}</span>${manualTag(co)}${canDel?`<button class="btn btn-red btn-ic btn-xs" onclick="deleteAttendanceRecord('${co.id}','${date}')"><i class="fas fa-trash"></i></button>`:''}`
+            ? `<span class="badge bg-ac"><i class="fas fa-check-circle"></i> انصراف ${esc(co.time)}</span>${manualTag(co)}${canDel?`<button class="btn btn-red btn-ic btn-xs" onclick="deleteAttendanceRecord('${co.id}','${date}')"><i class="fas fa-trash"></i></button>`:''}`
             : `<span class="badge bg-slate"><i class="far fa-circle"></i> لم يسجّل الانصراف بعد</span>${manualBtn(e.id,'checkout')}`}
           ${ppFlag}
         </span>
@@ -4877,7 +4891,7 @@ async function renderDailyMarkPage() {
     const lv = leavesM[e.id];
     let statusCell;
     if (chk) {
-      statusCell = `<span class="badge bg-ok"><i class="fas fa-sign-in-alt"></i> حضر الساعة ${chk.time}</span>${manualTag(chk)}${manualDetail(chk,'الحضور')}`;
+      statusCell = `<span class="badge bg-ok"><i class="fas fa-sign-in-alt"></i> حضر الساعة ${esc(chk.time)}</span>${manualTag(chk)}${manualDetail(chk,'الحضور')}`;
     } else if (mark) {
       const label = mark.status==='leave' ? 'إجازة من الرصيد' : mark.status==='deduct' ? 'خصم يوم (جزاء)' : 'غياب بدون إذن';
       const cls = mark.status==='leave' ? 'bg-ac' : mark.status==='deduct' ? 'bg-warn' : 'bg-danger';
@@ -4943,7 +4957,7 @@ async function renderOvertime() {
     return `<div class="card" style="margin-bottom:12px"><div class="card-body" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
       <div>
         <div style="font-weight:800">${esc(r.employeeName)}</div>
-        <div style="font-size:12px;color:var(--slate-500)">${r.date} — انصرف الساعة ${r.time} — ${durationLabel} وقت إضافي (${amount} ج.م تقريباً)</div>
+        <div style="font-size:12px;color:var(--slate-500)">${esc(r.date)} — انصرف الساعة ${esc(r.time)} — ${durationLabel} وقت إضافي (${amount} ج.م تقريباً)</div>
         ${r.method==='manual_admin'?`<div style="margin-top:4px">${manualTag(r)}</div>${manualDetail(r,'الانصراف')}`:''}
       </div>
       <div style="display:flex;gap:8px">
@@ -5768,7 +5782,7 @@ async function renderProfile() {
         const statusLabel = r.status==='approved' ? '<span class="badge bg-ok">معتمدة</span>'
           : r.status==='rejected' ? '<span class="badge bg-danger">مرفوضة</span>'
           : '<span class="badge bg-slate">قيد المراجعة</span>';
-        return `<tr><td>${r.dateFrom||'—'}</td><td>${r.dateTo||'—'}</td><td style="font-size:12.5px">${LEAVE_TYPES[r.leaveType]?.label||r.leaveType||'—'}</td><td>${r.daysCount??'—'}</td><td>${statusLabel}</td></tr>`;
+        return `<tr><td>${esc(r.dateFrom||'—')}</td><td>${esc(r.dateTo||'—')}</td><td style="font-size:12.5px">${esc(LEAVE_TYPES[r.leaveType]?.label||r.leaveType||'—')}</td><td>${r.daysCount??'—'}</td><td>${statusLabel}</td></tr>`;
       }).join('')}</tbody></table>
     </div></div>` : '';
 
@@ -6182,7 +6196,7 @@ async function renderLeaves() {
     return `<div class="card" style="margin-bottom:12px"><div class="card-body" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
       <div>
         <div style="font-weight:800">${esc(r.employeeName)} ${statusBadge}${r.source==='kiosk'?' <span class="badge bg-slate"><i class="fas fa-fingerprint"></i> من الكيوسك</span>':''}</div>
-        <div style="font-size:12.5px;color:var(--slate-500);margin-top:3px">${typeLabel} — من ${r.dateFrom} حتى ${r.dateTo} — ${r.daysCount} يوم — رصيده الحالي من هذا النوع: ${balance} يوم</div>
+        <div style="font-size:12.5px;color:var(--slate-500);margin-top:3px">${typeLabel} — من ${esc(r.dateFrom)} حتى ${esc(r.dateTo)} — ${r.daysCount} يوم — رصيده الحالي من هذا النوع: ${balance} يوم</div>
         ${r.note?`<div style="font-size:12px;color:var(--slate-500);margin-top:3px">ملاحظة: ${esc(r.note)}</div>`:''}
         ${approvalLine}
         ${extra}
